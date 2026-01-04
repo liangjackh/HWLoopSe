@@ -1,0 +1,232 @@
+[tasks]
+bmc_basic
+
+[options]
+bmc_basic: mode bmc
+bmc_basic: depth 20
+
+[engines]
+smtbmc
+
+[script]
+# Read include files first (packages and defines)
+read -sv apu_core_package.sv
+read -sv apu_macros.sv
+read -sv riscv_config.sv
+read -sv riscv_defines.sv
+read -sv pulp_soc_defines.sv
+read -sv periph_bus_defines.sv
+read -sv soc_bus_defines.sv
+
+# Read other SystemVerilog files
+read -sv cluster_clock_gating.sv
+read -sv riscv_L0_buffer.sv
+read -sv riscv_alu.sv
+read -sv riscv_alu_basic.sv
+read -sv riscv_alu_div.sv
+read -sv riscv_apu_disp.sv
+read -sv riscv_compressed_decoder.sv
+read -sv riscv_controller.sv
+read -sv riscv_core.sv
+read -sv riscv_cs_registers.sv
+read -sv riscv_debug_unit.sv
+read -sv riscv_decoder.sv
+read -sv riscv_ex_stage.sv
+read -sv riscv_fetch_fifo.sv
+read -sv riscv_hwloop_controller.sv
+read -sv riscv_hwloop_regs.sv
+read -sv riscv_id_stage.sv
+read -sv riscv_if_stage.sv
+read -sv riscv_int_controller.sv
+read -sv riscv_load_store_unit.sv
+read -sv riscv_mult.sv
+read -sv riscv_prefetch_L0_buffer.sv
+read -sv riscv_prefetch_buffer.sv
+read -sv riscv_register_file_latch.sv
+
+read -sv apb_gpio.sv
+read -sv pulp_clock_gating.sv
+read -sv apb_node_wrap.sv
+read -sv pulp_interfaces.sv
+read -sv periph_bus_wrap.sv
+read -sv soc_interconnect.sv
+
+# L2 interconnect files
+read -sv XBAR_L2.sv
+read -sv RR_Flag_Req_L2.sv
+read -sv ResponseTree_L2.sv
+read -sv ResponseBlock_L2.sv
+read -sv RequestBlock_L2_1CH.sv
+read -sv RequestBlock_L2_2CH.sv
+read -sv MUX2_REQ_L2.sv
+read -sv FanInPrimitive_Req_L2.sv
+read -sv FanInPrimitive_Resp_L2.sv
+read -sv ArbitrationTree_L2.sv
+read -sv AddressDecoder_Resp_L2.sv
+read -sv AddressDecoder_Req_L2.sv
+read -sv XBAR_BRIDGE.sv
+read -sv RR_Flag_Req_BRIDGE.sv
+read -sv ResponseTree_BRIDGE.sv
+read -sv ResponseBlock_BRIDGE.sv
+read -sv RequestBlock2CH_BRIDGE.sv
+read -sv RequestBlock1CH_BRIDGE.sv
+read -sv MUX2_REQ_BRIDGE.sv
+read -sv FanInPrimitive_Resp_BRIDGE.sv
+read -sv FanInPrimitive_Req_BRIDGE.sv
+read -sv ArbitrationTree_BRIDGE.sv
+read -sv AddressDecoder_Resp_BRIDGE.sv
+read -sv AddressDecoder_Req_BRIDGE.sv
+read -sv axi64_2_lint32.sv
+read -sv axi_read_ctrl.sv
+read -sv axi_write_ctrl.sv
+read -sv lint64_to_32.sv
+read -sv l2_tcdm_demux.sv
+read -sv lint_2_apb.sv
+read -sv lint_2_axi.sv
+
+# AXI files
+read -sv axi_aw_buffer.sv
+read -sv axi_ar_buffer.sv
+read -sv axi_w_buffer.sv
+read -sv axi_r_buffer.sv
+read -sv axi_b_buffer.sv
+read -sv generic_fifo.sv
+read -sv apb_node.sv
+read -sv axi_address_decoder_AR.sv
+read -sv cluster_clock_inverter.sv
+read -sv cluster_clock_mux2.sv
+
+# Verilog files  
+read -formal adbg_defines.v
+read -formal adbg_tap_top.v
+read -sv rtc_clock.sv
+read -sv mux_func.sv
+read -formal SubBytes.v
+read -formal SubBytes_sbox.v
+read -formal aes_1cc.v
+read -formal keccak.v
+read -formal md5.v
+read -formal tempsen.v
+read -formal KeyExpansion.v
+read -formal AddRoundKey.v
+read -formal ShiftRows.v
+read -formal MixColumns.v
+read -formal padder.v
+read -formal f_permutation.v
+read -formal padder1.v
+read -formal rconst2in1.v
+read -formal round2in1.v
+read -sv jtag_tap_top.sv
+read -sv jtagreg.sv
+read -sv bscell.sv
+read -formal tap_top.v
+
+# Read top module
+read -sv top_wrapper.sv
+
+# Prepare design
+prep -top top_wrapper
+
+[files]
+hackatdac18-2018-soc/ips/riscv/include/apu_core_package.sv
+hackatdac18-2018-soc/ips/riscv/include/apu_macros.sv
+hackatdac18-2018-soc/ips/riscv/include/riscv_config.sv
+hackatdac18-2018-soc/ips/riscv/include/riscv_defines.sv
+hackatdac18-2018-soc/rtl/includes/pulp_soc_defines.sv
+hackatdac18-2018-soc/rtl/includes/periph_bus_defines.sv
+hackatdac18-2018-soc/rtl/includes/soc_bus_defines.sv
+hackatdac18-2018-soc/ips/riscv/verilator-model/cluster_clock_gating.sv
+hackatdac18-2018-soc/ips/riscv/riscv_L0_buffer.sv
+hackatdac18-2018-soc/ips/riscv/riscv_alu.sv
+hackatdac18-2018-soc/ips/riscv/riscv_alu_basic.sv
+hackatdac18-2018-soc/ips/riscv/riscv_alu_div.sv
+hackatdac18-2018-soc/ips/riscv/riscv_apu_disp.sv
+hackatdac18-2018-soc/ips/riscv/riscv_compressed_decoder.sv
+hackatdac18-2018-soc/ips/riscv/riscv_controller.sv
+hackatdac18-2018-soc/ips/riscv/riscv_core.sv
+hackatdac18-2018-soc/ips/riscv/riscv_cs_registers.sv
+hackatdac18-2018-soc/ips/riscv/riscv_debug_unit.sv
+hackatdac18-2018-soc/ips/riscv/riscv_decoder.sv
+hackatdac18-2018-soc/ips/riscv/riscv_ex_stage.sv
+hackatdac18-2018-soc/ips/riscv/riscv_fetch_fifo.sv
+hackatdac18-2018-soc/ips/riscv/riscv_hwloop_controller.sv
+hackatdac18-2018-soc/ips/riscv/riscv_hwloop_regs.sv
+hackatdac18-2018-soc/ips/riscv/riscv_id_stage.sv
+hackatdac18-2018-soc/ips/riscv/riscv_if_stage.sv
+hackatdac18-2018-soc/ips/riscv/riscv_int_controller.sv
+hackatdac18-2018-soc/ips/riscv/riscv_load_store_unit.sv
+hackatdac18-2018-soc/ips/riscv/riscv_mult.sv
+hackatdac18-2018-soc/ips/riscv/riscv_prefetch_L0_buffer.sv
+hackatdac18-2018-soc/ips/riscv/riscv_prefetch_buffer.sv
+hackatdac18-2018-soc/ips/riscv/riscv_register_file_latch.sv
+hackatdac18-2018-soc/ips/apb/apb_gpio/apb_gpio.sv
+hackatdac18-2018-soc/ips/tech_cells_generic/pulp_clock_gating.sv
+hackatdac18-2018-soc/ips/apb/apb_node/apb_node_wrap.sv
+hackatdac18-2018-soc/ips/pulp_soc/rtl/components/pulp_interfaces.sv
+hackatdac18-2018-soc/ips/pulp_soc/rtl/pulp_soc/periph_bus_wrap.sv
+hackatdac18-2018-soc/ips/pulp_soc/rtl/pulp_soc/soc_interconnect.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_L2/XBAR_L2.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_L2/RR_Flag_Req_L2.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_L2/ResponseTree_L2.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_L2/ResponseBlock_L2.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_L2/RequestBlock_L2_1CH.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_L2/RequestBlock_L2_2CH.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_L2/MUX2_REQ_L2.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_L2/FanInPrimitive_Req_L2.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_L2/FanInPrimitive_Resp_L2.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_L2/ArbitrationTree_L2.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_L2/AddressDecoder_Resp_L2.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_L2/AddressDecoder_Req_L2.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_BRIDGE/XBAR_BRIDGE.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_BRIDGE/RR_Flag_Req_BRIDGE.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_BRIDGE/ResponseTree_BRIDGE.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_BRIDGE/ResponseBlock_BRIDGE.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_BRIDGE/RequestBlock2CH_BRIDGE.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_BRIDGE/RequestBlock1CH_BRIDGE.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_BRIDGE/MUX2_REQ_BRIDGE.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_BRIDGE/FanInPrimitive_Resp_BRIDGE.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_BRIDGE/FanInPrimitive_Req_BRIDGE.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_BRIDGE/ArbitrationTree_BRIDGE.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_BRIDGE/AddressDecoder_Resp_BRIDGE.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/XBAR_BRIDGE/AddressDecoder_Req_BRIDGE.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/axi_2_lint/axi64_2_lint32.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/axi_2_lint/axi_read_ctrl.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/axi_2_lint/axi_write_ctrl.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/axi_2_lint/lint64_to_32.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/l2_tcdm_demux.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/lint_2_apb.sv
+hackatdac18-2018-soc/ips/L2_tcdm_hybrid_interco/RTL/lint_2_axi.sv
+hackatdac18-2018-soc/ips/axi/axi_slice/axi_aw_buffer.sv
+hackatdac18-2018-soc/ips/axi/axi_slice/axi_ar_buffer.sv
+hackatdac18-2018-soc/ips/axi/axi_slice/axi_w_buffer.sv
+hackatdac18-2018-soc/ips/axi/axi_slice/axi_r_buffer.sv
+hackatdac18-2018-soc/ips/axi/axi_slice/axi_b_buffer.sv
+hackatdac18-2018-soc/ips/common_cells/generic_fifo.sv
+hackatdac18-2018-soc/ips/apb/apb_node/apb_node.sv
+hackatdac18-2018-soc/ips/axi/axi_node/axi_address_decoder_AR.sv
+hackatdac18-2018-soc/ips/tech_cells_generic/cluster_clock_inverter.sv
+hackatdac18-2018-soc/ips/tech_cells_generic/cluster_clock_mux2.sv
+hackatdac18-2018-soc/ips/adv_dbg_if/rtl/adbg_defines.v
+hackatdac18-2018-soc/ips/adv_dbg_if/rtl/adbg_tap_top.v
+hackatdac18-2018-soc/rtl/pulpissimo/rtc_clock.sv
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/mux_func.sv
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/SubBytes.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/SubBytes_sbox.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/aes_1cc.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/keccak.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/md5.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/tempsen.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/KeyExpansion.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/AddRoundKey.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/ShiftRows.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/MixColumns.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/padder.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/f_permutation.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/padder1.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/rconst2in1.v
+hackatdac18-2018-soc/ips/hwpe-mac-engine/rtl/round2in1.v
+hackatdac18-2018-soc/rtl/pulpissimo/jtag_tap_top.sv
+hackatdac18-2018-soc/ips/jtag_pulp/src/jtagreg.sv
+hackatdac18-2018-soc/ips/jtag_pulp/src/bscell.sv
+hackatdac18-2018-soc/ips/jtag_pulp/src/tap_top.v
+top_wrapper.sv

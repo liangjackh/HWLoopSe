@@ -1,0 +1,63 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2025  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.56+186 (git sha1 51eaaffe0, clang++ 18.1.8 -fPIC -O3)
+
+-- Executing script file `../model/design.ys' --
+
+1. Executing Verilog-2005 frontend: apu_core_package.sv
+Parsing SystemVerilog input from `apu_core_package.sv' to AST representation.
+Successfully finished Verilog frontend.
+
+2. Executing Verilog-2005 frontend: apu_macros.sv
+Parsing SystemVerilog input from `apu_macros.sv' to AST representation.
+Successfully finished Verilog frontend.
+
+3. Executing Verilog-2005 frontend: riscv_config.sv
+Parsing SystemVerilog input from `riscv_config.sv' to AST representation.
+Successfully finished Verilog frontend.
+
+4. Executing Verilog-2005 frontend: riscv_defines.sv
+Parsing SystemVerilog input from `riscv_defines.sv' to AST representation.
+Successfully finished Verilog frontend.
+
+5. Executing Verilog-2005 frontend: pulp_soc_defines.sv
+Parsing SystemVerilog input from `pulp_soc_defines.sv' to AST representation.
+Successfully finished Verilog frontend.
+
+6. Executing Verilog-2005 frontend: periph_bus_defines.sv
+Parsing SystemVerilog input from `periph_bus_defines.sv' to AST representation.
+Successfully finished Verilog frontend.
+
+7. Executing Verilog-2005 frontend: soc_bus_defines.sv
+Parsing SystemVerilog input from `soc_bus_defines.sv' to AST representation.
+Successfully finished Verilog frontend.
+
+8. Executing Verilog-2005 frontend: cluster_clock_gating.sv
+Parsing SystemVerilog input from `cluster_clock_gating.sv' to AST representation.
+Storing AST representation for module `$abstract\cluster_clock_gating'.
+Successfully finished Verilog frontend.
+
+9. Executing Verilog-2005 frontend: riscv_L0_buffer.sv
+Parsing SystemVerilog input from `riscv_L0_buffer.sv' to AST representation.
+Storing AST representation for module `$abstract\riscv_L0_buffer'.
+Successfully finished Verilog frontend.
+
+10. Executing Verilog-2005 frontend: riscv_alu.sv
+Parsing SystemVerilog input from `riscv_alu.sv' to AST representation.
+Storing AST representation for module `$abstract\riscv_alu'.
+Storing AST representation for module `$abstract\alu_ff'.
+Storing AST representation for module `$abstract\alu_popcnt'.
+Successfully finished Verilog frontend.
+
+11. Executing Verilog-2005 frontend: riscv_alu_basic.sv
+Parsing SystemVerilog input from `riscv_alu_basic.sv' to AST representation.
+Storing AST representation for module `$abstract\riscv_alu_basic'.
+Successfully finished Verilog frontend.
+
+12. Executing Verilog-2005 frontend: riscv_alu_div.sv
+Parsing SystemVerilog input from `riscv_alu_div.sv' to AST representation.
+riscv_alu_div.sv:89: ERROR: syntax error, unexpected OP_SHL

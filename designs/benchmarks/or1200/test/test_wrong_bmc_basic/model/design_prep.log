@@ -1,0 +1,337 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2025  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.56+186 (git sha1 51eaaffe0, clang++ 18.1.8 -fPIC -O3)
+
+-- Executing script file `design_prep.ys' --
+
+1. Executing RTLIL frontend.
+Input filename: design.il
+
+2. Executing SCC pass (detecting logic loops).
+Found 0 SCCs in module or1200_ctrl.
+Found 0 SCCs.
+
+3. Executing SIMPLEMAP pass (map simple cells to gate primitives).
+
+4. Executing MEMORY_NORDFF pass (extracting $dff cells from memories).
+
+5. Executing ASYNC2SYNC pass.
+Replacing or1200_ctrl.$procdff$81 ($adff): ARST=\rst, D=$0\sp_return_counter[5:0], Q=\sp_return_counter
+Replacing or1200_ctrl.$procdff$78 ($adff): ARST=\rst, D=$0\id_insn[31:0], Q=\id_insn
+
+6. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \or1200_ctrl..
+
+7. Executing FORMALFF pass.
+
+8. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \or1200_ctrl..
+Removed 1 unused cells and 1 unused wires.
+<suppressed ~2 debug messages>
+
+9. Executing CHECK pass (checking for obvious problems).
+Checking module or1200_ctrl...
+Warning: Wire or1200_ctrl.\wb_insn [31] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [30] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [29] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [28] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [27] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [26] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [25] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [24] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [23] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [22] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [21] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [20] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [19] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [18] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [17] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [16] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [15] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [14] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [13] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [12] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [11] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [10] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [9] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [8] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [7] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [6] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [5] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [4] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\wb_insn [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\wait_on [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\wait_on [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\sig_trap is used but has no driver.
+Warning: Wire or1200_ctrl.\sel_b [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\sel_b [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\sel_a [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\sel_a [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\rfwb_op [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\rfwb_op [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\rfwb_op [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\rfwb_op [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\rfe is used but has no driver.
+Warning: Wire or1200_ctrl.\rf_addrw [4] is used but has no driver.
+Warning: Wire or1200_ctrl.\rf_addrw [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\rf_addrw [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\rf_addrw [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\rf_addrw [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\multicycle [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\multicycle [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\multicycle [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\mac_op [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\mac_op [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\mac_op [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [31] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [30] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [29] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [28] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [27] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [26] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [25] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [24] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [23] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [22] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [21] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [20] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [19] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [18] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [17] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [16] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [15] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [14] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [13] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [12] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [11] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [10] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [9] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [8] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [7] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [6] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [5] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [4] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_simm [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_macrc_op is used but has no driver.
+Warning: Wire or1200_ctrl.\id_mac_op [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_mac_op [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_mac_op [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_lsu_op [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_lsu_op [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_lsu_op [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_lsu_op [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_op [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_op [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_op [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [29] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [28] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [27] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [26] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [25] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [24] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [23] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [22] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [21] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [20] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [19] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [18] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [17] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [16] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [15] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [14] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [13] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [12] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [11] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [10] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [9] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [8] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [7] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [6] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [5] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [4] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\id_branch_addrtarget [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\fpu_op [7] is used but has no driver.
+Warning: Wire or1200_ctrl.\fpu_op [6] is used but has no driver.
+Warning: Wire or1200_ctrl.\fpu_op [5] is used but has no driver.
+Warning: Wire or1200_ctrl.\fpu_op [4] is used but has no driver.
+Warning: Wire or1200_ctrl.\fpu_op [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\fpu_op [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\fpu_op [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\fpu_op [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\except_illegal is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [31] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [30] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [29] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [28] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [27] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [26] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [25] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [24] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [23] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [22] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [21] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [20] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [19] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [18] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [17] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [16] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [15] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [14] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [13] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [12] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [11] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [10] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [9] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [8] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [7] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [6] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [5] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [4] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_simm [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_macrc_op is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [25] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [24] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [23] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [22] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [21] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [20] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [19] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [18] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [17] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [15] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [14] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [13] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [12] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [11] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [10] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [9] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [8] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [7] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [6] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [5] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [4] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [29] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [28] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [27] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [26] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [25] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [24] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [23] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [22] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [21] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [20] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [19] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [18] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [17] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [16] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [15] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [14] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [13] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [12] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [11] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [10] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [9] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [8] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [7] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [6] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [5] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [4] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_addrtarget [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\dc_no_writethrough is used but has no driver.
+Warning: Wire or1200_ctrl.\cust5_op [4] is used but has no driver.
+Warning: Wire or1200_ctrl.\cust5_op [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\cust5_op [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\cust5_op [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\cust5_op [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\cust5_limm [5] is used but has no driver.
+Warning: Wire or1200_ctrl.\cust5_limm [4] is used but has no driver.
+Warning: Wire or1200_ctrl.\cust5_limm [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\cust5_limm [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\cust5_limm [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\cust5_limm [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\comp_op [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\comp_op [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\comp_op [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\comp_op [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\alu_op2 [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\alu_op2 [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\alu_op2 [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\alu_op2 [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\alu_op [4] is used but has no driver.
+Warning: Wire or1200_ctrl.\alu_op [3] is used but has no driver.
+Warning: Wire or1200_ctrl.\alu_op [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\alu_op [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\alu_op [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\syscall_prev_prev is used but has no driver.
+Warning: Wire or1200_ctrl.\syscall_prev is used but has no driver.
+Warning: Wire or1200_ctrl.\sig_syscall is used but has no driver.
+Warning: Wire or1200_ctrl.\if_maci_op is used but has no driver.
+Warning: Wire or1200_ctrl.\spr_read is used but has no driver.
+Warning: Wire or1200_ctrl.\spr_write is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [31] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [30] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [29] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [28] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [27] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [26] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_op [2] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_op [1] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_branch_op [0] is used but has no driver.
+Warning: Wire or1200_ctrl.\ex_insn [16] is used but has no driver.
+Found and reported 266 problems.
+
+10. Executing SETUNDEF pass (replace undef values with defined constants).
+
+11. Executing OPT pass (performing simple optimizations).
+
+11.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module or1200_ctrl.
+
+11.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\or1200_ctrl'.
+Removed a total of 0 cells.
+
+11.3. Executing OPT_DFF pass (perform DFF optimizations).
+
+11.4. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \or1200_ctrl..
+Removed 3 unused cells and 211 unused wires.
+<suppressed ~4 debug messages>
+
+11.5. Finished fast OPT passes.
+
+12. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \or1200_ctrl..
+Removed 0 unused cells and 2 unused wires.
+<suppressed ~1 debug messages>
+
+13. Executing RTLIL backend.
+Output filename: ../model/design_prep.il
+
+Warnings: 266 unique messages, 266 total
+End of script. Logfile hash: 815330d7ce, CPU: user 0.01s system 0.01s, MEM: 14.63 MB peak
+Yosys 0.56+186 (git sha1 51eaaffe0, clang++ 18.1.8 -fPIC -O3)
+Time spent: 46% 4x opt_clean (0 sec), 9% 1x opt_expr (0 sec), ...

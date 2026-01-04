@@ -1,0 +1,8 @@
+# running in test_wrong_bmc_basic/src/
+read -formal test.v
+
+prep -top or1200_ctrl
+hierarchy -smtcheck
+rename -witness
+write_jny -no-connections ../model/design.json
+write_rtlil ../model/design.il

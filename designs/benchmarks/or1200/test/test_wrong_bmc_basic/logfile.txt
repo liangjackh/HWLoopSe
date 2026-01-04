@@ -1,0 +1,593 @@
+SBY 14:47:00 [test_wrong_bmc_basic] Removing directory '/home/ljh/haveFun/sybolicExecution/sylvia-related/DepSiu/designs/benchmarks/or1200/test/test_wrong_bmc_basic'.
+SBY 14:47:00 [test_wrong_bmc_basic] Copy '/home/ljh/haveFun/sybolicExecution/sylvia-related/DepSiu/designs/benchmarks/or1200/test/test.v' to '/home/ljh/haveFun/sybolicExecution/sylvia-related/DepSiu/designs/benchmarks/or1200/test/test_wrong_bmc_basic/src/test.v'.
+SBY 14:47:00 [test_wrong_bmc_basic] Copy '/home/ljh/haveFun/sybolicExecution/sylvia-related/DepSiu/designs/benchmarks/or1200/test/or1200_defines.v' to '/home/ljh/haveFun/sybolicExecution/sylvia-related/DepSiu/designs/benchmarks/or1200/test/test_wrong_bmc_basic/src/or1200_defines.v'.
+SBY 14:47:00 [test_wrong_bmc_basic] Copy '/home/ljh/haveFun/sybolicExecution/sylvia-related/DepSiu/designs/benchmarks/or1200/test/timescale.v' to '/home/ljh/haveFun/sybolicExecution/sylvia-related/DepSiu/designs/benchmarks/or1200/test/test_wrong_bmc_basic/src/timescale.v'.
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: smtbmc
+SBY 14:47:00 [test_wrong_bmc_basic] base: starting process "cd test_wrong_bmc_basic/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [31] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [30] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [29] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [28] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [27] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [26] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [25] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [24] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [23] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [22] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [21] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [20] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [19] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [18] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [17] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [16] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [15] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [14] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [13] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [12] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [11] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [10] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [9] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [8] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wb_insn [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wait_on [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\wait_on [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\sig_trap is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\sel_b [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\sel_b [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\sel_a [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\sel_a [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\rfwb_op [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\rfwb_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\rfwb_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\rfwb_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\rfe is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\rf_addrw [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\rf_addrw [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\rf_addrw [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\rf_addrw [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\rf_addrw [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\multicycle [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\multicycle [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\multicycle [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\mac_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\mac_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\mac_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [31] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [30] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [29] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [28] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [27] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [26] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [25] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [24] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [23] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [22] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [21] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [20] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [19] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [18] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [17] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [16] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [15] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [14] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [13] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [12] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [11] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [10] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [9] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [8] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_simm [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_macrc_op is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_mac_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_mac_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_mac_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_lsu_op [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_lsu_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_lsu_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_lsu_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [29] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [28] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [27] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [26] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [25] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [24] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [23] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [22] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [21] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [20] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [19] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [18] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [17] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [16] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [15] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [14] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [13] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [12] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [11] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [10] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [9] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [8] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\id_branch_addrtarget [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\fpu_op [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\fpu_op [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\fpu_op [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\fpu_op [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\fpu_op [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\fpu_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\fpu_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\fpu_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\except_illegal is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [31] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [30] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [29] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [28] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [27] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [26] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [25] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [24] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [23] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [22] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [21] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [20] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [19] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [18] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [17] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [16] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [15] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [14] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [13] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [12] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [11] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [10] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [9] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [8] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_simm [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_macrc_op is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [25] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [24] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [23] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [22] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [21] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [20] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [19] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [18] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [17] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [15] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [14] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [13] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [12] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [11] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [10] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [9] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [8] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [29] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [28] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [27] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [26] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [25] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [24] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [23] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [22] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [21] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [20] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [19] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [18] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [17] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [16] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [15] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [14] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [13] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [12] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [11] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [10] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [9] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [8] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\dc_no_writethrough is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\cust5_op [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\cust5_op [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\cust5_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\cust5_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\cust5_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\cust5_limm [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\cust5_limm [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\cust5_limm [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\cust5_limm [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\cust5_limm [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\cust5_limm [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\comp_op [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\comp_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\comp_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\comp_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\alu_op2 [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\alu_op2 [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\alu_op2 [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\alu_op2 [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\alu_op [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\alu_op [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\alu_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\alu_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\alu_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\syscall_prev_prev is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\syscall_prev is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\sig_syscall is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\if_maci_op is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\spr_read is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\spr_write is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [31] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [30] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [29] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [28] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [27] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [26] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_branch_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: Warning: Wire or1200_ctrl.\ex_insn [16] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] base: finished (returncode=0)
+SBY 14:47:00 [test_wrong_bmc_basic] prep: starting process "cd test_wrong_bmc_basic/model; yosys -ql design_prep.log design_prep.ys"
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [31] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [30] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [29] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [28] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [27] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [26] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [25] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [24] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [23] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [22] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [21] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [20] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [19] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [18] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [17] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [16] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [15] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [14] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [13] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [12] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [11] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [10] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [9] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [8] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wb_insn [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wait_on [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\wait_on [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\sig_trap is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\sel_b [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\sel_b [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\sel_a [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\sel_a [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\rfwb_op [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\rfwb_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\rfwb_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\rfwb_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\rfe is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\rf_addrw [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\rf_addrw [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\rf_addrw [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\rf_addrw [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\rf_addrw [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\multicycle [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\multicycle [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\multicycle [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\mac_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\mac_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\mac_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [31] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [30] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [29] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [28] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [27] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [26] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [25] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [24] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [23] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [22] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [21] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [20] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [19] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [18] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [17] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [16] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [15] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [14] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [13] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [12] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [11] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [10] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [9] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [8] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_simm [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_macrc_op is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_mac_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_mac_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_mac_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_lsu_op [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_lsu_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_lsu_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_lsu_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [29] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [28] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [27] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [26] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [25] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [24] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [23] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [22] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [21] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [20] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [19] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [18] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [17] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [16] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [15] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [14] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [13] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [12] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [11] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [10] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [9] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [8] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\id_branch_addrtarget [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\fpu_op [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\fpu_op [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\fpu_op [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\fpu_op [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\fpu_op [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\fpu_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\fpu_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\fpu_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\except_illegal is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [31] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [30] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [29] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [28] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [27] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [26] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [25] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [24] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [23] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [22] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [21] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [20] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [19] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [18] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [17] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [16] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [15] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [14] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [13] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [12] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [11] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [10] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [9] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [8] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_simm [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_macrc_op is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [25] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [24] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [23] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [22] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [21] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [20] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [19] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [18] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [17] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [15] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [14] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [13] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [12] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [11] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [10] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [9] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [8] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [29] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [28] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [27] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [26] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [25] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [24] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [23] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [22] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [21] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [20] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [19] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [18] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [17] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [16] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [15] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [14] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [13] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [12] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [11] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [10] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [9] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [8] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [7] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [6] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_addrtarget [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\dc_no_writethrough is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\cust5_op [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\cust5_op [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\cust5_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\cust5_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\cust5_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\cust5_limm [5] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\cust5_limm [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\cust5_limm [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\cust5_limm [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\cust5_limm [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\cust5_limm [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\comp_op [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\comp_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\comp_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\comp_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\alu_op2 [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\alu_op2 [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\alu_op2 [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\alu_op2 [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\alu_op [4] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\alu_op [3] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\alu_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\alu_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\alu_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\syscall_prev_prev is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\syscall_prev is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\sig_syscall is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\if_maci_op is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\spr_read is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\spr_write is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [31] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [30] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [29] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [28] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [27] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [26] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_op [2] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_op [1] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_branch_op [0] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: Warning: Wire or1200_ctrl.\ex_insn [16] is used but has no driver.
+SBY 14:47:00 [test_wrong_bmc_basic] prep: finished (returncode=0)
+SBY 14:47:00 [test_wrong_bmc_basic] smt2: starting process "cd test_wrong_bmc_basic/model; yosys -ql design_smt2.log design_smt2.ys"
+SBY 14:47:00 [test_wrong_bmc_basic] smt2: finished (returncode=0)
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: starting process "cd test_wrong_bmc_basic; yosys-smtbmc --presat --unroll --noprogress -t 20  --append 0 --dump-vcd engine_0/trace.vcd --dump-yw engine_0/trace.yw --dump-vlogtb engine_0/trace_tb.v --dump-smtc engine_0/trace.smtc model/design_smt2.smt2"
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Solver: yices
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 0..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 0..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 1..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 1..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 2..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 2..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 3..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 3..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 4..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 4..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 5..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 5..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 6..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 6..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 7..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 7..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 8..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 8..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 9..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 9..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 10..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 10..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 11..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 11..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 12..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 12..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 13..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 13..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 14..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 14..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 15..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 15..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 16..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 16..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 17..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 17..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 18..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 18..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assumptions in step 19..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Checking assertions in step 19..
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: ##   0:00:00  Status: passed
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: finished (returncode=0)
+SBY 14:47:00 [test_wrong_bmc_basic] engine_0: Status returned by engine: pass
+SBY 14:47:00 [test_wrong_bmc_basic] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 14:47:00 [test_wrong_bmc_basic] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 14:47:00 [test_wrong_bmc_basic] summary: engine_0 (smtbmc) returned pass
+SBY 14:47:00 [test_wrong_bmc_basic] summary: engine_0 did not produce any traces
+SBY 14:47:00 [test_wrong_bmc_basic] DONE (PASS, rc=0)

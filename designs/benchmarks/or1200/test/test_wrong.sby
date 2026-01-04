@@ -1,0 +1,17 @@
+[tasks]
+bmc_basic
+[options]
+bmc_basic: mode bmc
+bmc_basic: depth 20
+
+[engines]
+smtbmc
+
+[script]
+read -formal test.v
+
+prep -top or1200_ctrl
+[files]
+test.v
+or1200_defines.v
+timescale.v

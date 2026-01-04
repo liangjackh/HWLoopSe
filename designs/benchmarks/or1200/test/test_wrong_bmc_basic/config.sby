@@ -1,0 +1,15 @@
+[options]
+mode bmc
+depth 20
+
+[engines]
+smtbmc
+
+[script]
+read -formal test.v
+
+prep -top or1200_ctrl
+[files]
+test.v
+or1200_defines.v
+timescale.v

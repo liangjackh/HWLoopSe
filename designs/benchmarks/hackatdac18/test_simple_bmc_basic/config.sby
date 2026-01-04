@@ -1,0 +1,12 @@
+[options]
+mode bmc
+depth 5
+
+[engines]
+smtbmc
+
+[script]
+read -sv apu_core_package.sv
+
+[files]
+hackatdac18-2018-soc/ips/riscv/include/apu_core_package.sv

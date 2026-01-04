@@ -1,0 +1,64 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2025  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.56+186 (git sha1 51eaaffe0, clang++ 18.1.8 -fPIC -O3)
+
+-- Executing script file `design_smt2.ys' --
+
+1. Executing RTLIL frontend.
+Input filename: design_prep.il
+
+2. Executing HIERARCHY pass (managing design hierarchy).
+Attribute `top' found on module `or1200_ctrl'. Setting top module to or1200_ctrl.
+
+2.1. Analyzing design hierarchy..
+Top module:  \or1200_ctrl
+
+2.2. Analyzing design hierarchy..
+Top module:  \or1200_ctrl
+Removed 0 unused modules.
+
+3. Executing FORMALFF pass.
+
+4. Executing DFFUNMAP pass (unmap clock enable and synchronous reset from FFs).
+
+5. Printing statistics.
+
+=== or1200_ctrl ===
+
+        +----------Local Count, excluding submodules.
+        | 
+      108 wires
+      790 wire bits
+       71 public wires
+      506 public wire bits
+       63 ports
+      462 port bits
+      259 cells
+        7   $and
+        2   $anyinit
+      208   $anyseq
+        1   $assume
+        5   $eq
+        3   $logic_and
+        5   $logic_not
+        2   $logic_or
+       14   $mux
+        3   $not
+        7   $or
+        1   $reduce_or
+        1   $sub
+
+6. Executing SMT2 backend.
+
+6.1. Executing BMUXMAP pass.
+
+6.2. Executing DEMUXMAP pass.
+Creating SMT-LIBv2 representation of module or1200_ctrl.
+
+End of script. Logfile hash: 3f162c96a7, CPU: user 0.00s system 0.00s, MEM: 14.64 MB peak
+Yosys 0.56+186 (git sha1 51eaaffe0, clang++ 18.1.8 -fPIC -O3)
+Time spent: 65% 2x write_smt2 (0 sec), 22% 2x read_rtlil (0 sec), ...

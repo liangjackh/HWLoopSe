@@ -1,0 +1,402 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2025  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.56+186 (git sha1 51eaaffe0, clang++ 18.1.8 -fPIC -O3)
+
+-- Executing script file `../model/design.ys' --
+
+1. Executing Verilog-2005 frontend: or1200_defines.v
+Parsing formal SystemVerilog input from `or1200_defines.v' to AST representation.
+Successfully finished Verilog frontend.
+
+2. Executing Verilog-2005 frontend: timescale.v
+Parsing formal SystemVerilog input from `timescale.v' to AST representation.
+Successfully finished Verilog frontend.
+
+3. Executing Verilog-2005 frontend: or1200_alu.v
+Parsing formal SystemVerilog input from `or1200_alu.v' to AST representation.
+Warning: Encountered `translate_off' comment! Such legacy hot comments are supported by Yosys, but are not part of any formal language specification. Using a portable and standards-compliant construct such as `ifdef is recommended!
+Warning: Encountered `parallel_case' comment! Such legacy hot comments are supported by Yosys, but are not part of any formal language specification. Using the Verilog `parallel_case' attribute or the SystemVerilog `unique' or `priority' keywords is recommended!
+Storing AST representation for module `$abstract\or1200_alu'.
+Successfully finished Verilog frontend.
+
+4. Executing Verilog-2005 frontend: or1200_amultp2_32x32.v
+Parsing formal SystemVerilog input from `or1200_amultp2_32x32.v' to AST representation.
+Successfully finished Verilog frontend.
+
+5. Executing Verilog-2005 frontend: or1200_cfgr.v
+Parsing formal SystemVerilog input from `or1200_cfgr.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_cfgr'.
+Successfully finished Verilog frontend.
+
+6. Executing Verilog-2005 frontend: or1200_ctrl.v
+Parsing formal SystemVerilog input from `or1200_ctrl.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_ctrl'.
+Successfully finished Verilog frontend.
+
+7. Executing Verilog-2005 frontend: or1200_dc_fsm.v
+Parsing formal SystemVerilog input from `or1200_dc_fsm.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_dc_fsm'.
+Successfully finished Verilog frontend.
+
+8. Executing Verilog-2005 frontend: or1200_dc_ram.v
+Parsing formal SystemVerilog input from `or1200_dc_ram.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_dc_ram'.
+Successfully finished Verilog frontend.
+
+9. Executing Verilog-2005 frontend: or1200_dc_tag.v
+Parsing formal SystemVerilog input from `or1200_dc_tag.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_dc_tag'.
+Successfully finished Verilog frontend.
+
+10. Executing Verilog-2005 frontend: or1200_dc_top.v
+Parsing formal SystemVerilog input from `or1200_dc_top.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_dc_top'.
+Successfully finished Verilog frontend.
+
+11. Executing Verilog-2005 frontend: or1200_dmmu_tlb.v
+Parsing formal SystemVerilog input from `or1200_dmmu_tlb.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_dmmu_tlb'.
+Successfully finished Verilog frontend.
+
+12. Executing Verilog-2005 frontend: or1200_dmmu_top.v
+Parsing formal SystemVerilog input from `or1200_dmmu_top.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_dmmu_top'.
+Successfully finished Verilog frontend.
+
+13. Executing Verilog-2005 frontend: or1200_dpram_256x32.v
+Parsing formal SystemVerilog input from `or1200_dpram_256x32.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_dpram_256x32'.
+Successfully finished Verilog frontend.
+
+14. Executing Verilog-2005 frontend: or1200_dpram_32x32.v
+Parsing formal SystemVerilog input from `or1200_dpram_32x32.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_dpram_32x32'.
+Successfully finished Verilog frontend.
+
+15. Executing Verilog-2005 frontend: or1200_dpram.v
+Parsing formal SystemVerilog input from `or1200_dpram.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_dpram'.
+Successfully finished Verilog frontend.
+
+16. Executing Verilog-2005 frontend: or1200_du.v
+Parsing formal SystemVerilog input from `or1200_du.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_du'.
+Successfully finished Verilog frontend.
+
+17. Executing Verilog-2005 frontend: or1200_except.v
+Parsing formal SystemVerilog input from `or1200_except.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_except'.
+Successfully finished Verilog frontend.
+
+18. Executing Verilog-2005 frontend: or1200_fpu_addsub.v
+Parsing formal SystemVerilog input from `or1200_fpu_addsub.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu_addsub'.
+Successfully finished Verilog frontend.
+
+19. Executing Verilog-2005 frontend: or1200_fpu_arith.v
+Parsing formal SystemVerilog input from `or1200_fpu_arith.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu_arith'.
+Successfully finished Verilog frontend.
+
+20. Executing Verilog-2005 frontend: or1200_fpu_div.v
+Parsing formal SystemVerilog input from `or1200_fpu_div.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu_div'.
+Successfully finished Verilog frontend.
+
+21. Executing Verilog-2005 frontend: or1200_fpu_fcmp.v
+Parsing formal SystemVerilog input from `or1200_fpu_fcmp.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu_fcmp'.
+Successfully finished Verilog frontend.
+
+22. Executing Verilog-2005 frontend: or1200_fpu_intfloat_conv_except.v
+Parsing formal SystemVerilog input from `or1200_fpu_intfloat_conv_except.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu_intfloat_conv_except'.
+Successfully finished Verilog frontend.
+
+23. Executing Verilog-2005 frontend: or1200_fpu_intfloat_conv.v
+Parsing formal SystemVerilog input from `or1200_fpu_intfloat_conv.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu_intfloat_conv'.
+Successfully finished Verilog frontend.
+
+24. Executing Verilog-2005 frontend: or1200_fpu_mul.v
+Parsing formal SystemVerilog input from `or1200_fpu_mul.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu_mul'.
+Successfully finished Verilog frontend.
+
+25. Executing Verilog-2005 frontend: or1200_fpu_post_norm_addsub.v
+Parsing formal SystemVerilog input from `or1200_fpu_post_norm_addsub.v' to AST representation.
+Warning: Encountered `full_case' comment! Such legacy hot comments are supported by Yosys, but are not part of any formal language specification. Using the Verilog `full_case' attribute or the SystemVerilog `unique' or `unique0' keywords is recommended!
+Storing AST representation for module `$abstract\or1200_fpu_post_norm_addsub'.
+Successfully finished Verilog frontend.
+
+26. Executing Verilog-2005 frontend: or1200_fpu_post_norm_div.v
+Parsing formal SystemVerilog input from `or1200_fpu_post_norm_div.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu_post_norm_div'.
+Successfully finished Verilog frontend.
+
+27. Executing Verilog-2005 frontend: or1200_fpu_post_norm_intfloat_conv.v
+Parsing formal SystemVerilog input from `or1200_fpu_post_norm_intfloat_conv.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu_post_norm_intfloat_conv'.
+Successfully finished Verilog frontend.
+
+28. Executing Verilog-2005 frontend: or1200_fpu_post_norm_mul.v
+Parsing formal SystemVerilog input from `or1200_fpu_post_norm_mul.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu_post_norm_mul'.
+Successfully finished Verilog frontend.
+
+29. Executing Verilog-2005 frontend: or1200_fpu_pre_norm_addsub.v
+Parsing formal SystemVerilog input from `or1200_fpu_pre_norm_addsub.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu_pre_norm_addsub'.
+Successfully finished Verilog frontend.
+
+30. Executing Verilog-2005 frontend: or1200_fpu_pre_norm_div.v
+Parsing formal SystemVerilog input from `or1200_fpu_pre_norm_div.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu_pre_norm_div'.
+Successfully finished Verilog frontend.
+
+31. Executing Verilog-2005 frontend: or1200_fpu_pre_norm_mul.v
+Parsing formal SystemVerilog input from `or1200_fpu_pre_norm_mul.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu_pre_norm_mul'.
+Successfully finished Verilog frontend.
+
+32. Executing Verilog-2005 frontend: or1200_fpu.v
+Parsing formal SystemVerilog input from `or1200_fpu.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_fpu'.
+Successfully finished Verilog frontend.
+
+33. Executing Verilog-2005 frontend: or1200_freeze.v
+Parsing formal SystemVerilog input from `or1200_freeze.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_freeze'.
+Successfully finished Verilog frontend.
+
+34. Executing Verilog-2005 frontend: or1200_genpc.v
+Parsing formal SystemVerilog input from `or1200_genpc.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_genpc'.
+Successfully finished Verilog frontend.
+
+35. Executing Verilog-2005 frontend: or1200_gmultp2_32x32.v
+Parsing formal SystemVerilog input from `or1200_gmultp2_32x32.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_gmultp2_32x32'.
+Successfully finished Verilog frontend.
+
+36. Executing Verilog-2005 frontend: or1200_ic_fsm.v
+Parsing formal SystemVerilog input from `or1200_ic_fsm.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_ic_fsm'.
+Successfully finished Verilog frontend.
+
+37. Executing Verilog-2005 frontend: or1200_ic_ram.v
+Parsing formal SystemVerilog input from `or1200_ic_ram.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_ic_ram'.
+Successfully finished Verilog frontend.
+
+38. Executing Verilog-2005 frontend: or1200_ic_tag.v
+Parsing formal SystemVerilog input from `or1200_ic_tag.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_ic_tag'.
+Successfully finished Verilog frontend.
+
+39. Executing Verilog-2005 frontend: or1200_ic_top.v
+Parsing formal SystemVerilog input from `or1200_ic_top.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_ic_top'.
+Successfully finished Verilog frontend.
+
+40. Executing Verilog-2005 frontend: or1200_if.v
+Parsing formal SystemVerilog input from `or1200_if.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_if'.
+Successfully finished Verilog frontend.
+
+41. Executing Verilog-2005 frontend: or1200_immu_tlb.v
+Parsing formal SystemVerilog input from `or1200_immu_tlb.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_immu_tlb'.
+Successfully finished Verilog frontend.
+
+42. Executing Verilog-2005 frontend: or1200_immu_top.v
+Parsing formal SystemVerilog input from `or1200_immu_top.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_immu_top'.
+Successfully finished Verilog frontend.
+
+43. Executing Verilog-2005 frontend: or1200_iwb_biu.v
+Parsing formal SystemVerilog input from `or1200_iwb_biu.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_iwb_biu'.
+Successfully finished Verilog frontend.
+
+44. Executing Verilog-2005 frontend: or1200_lsu.v
+Parsing formal SystemVerilog input from `or1200_lsu.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_lsu'.
+Successfully finished Verilog frontend.
+
+45. Executing Verilog-2005 frontend: or1200_mem2reg.v
+Parsing formal SystemVerilog input from `or1200_mem2reg.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_mem2reg'.
+Successfully finished Verilog frontend.
+
+46. Executing Verilog-2005 frontend: or1200_mult_mac.v
+Parsing formal SystemVerilog input from `or1200_mult_mac.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_mult_mac'.
+Successfully finished Verilog frontend.
+
+47. Executing Verilog-2005 frontend: or1200_operandmuxes.v
+Parsing formal SystemVerilog input from `or1200_operandmuxes.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_operandmuxes'.
+Successfully finished Verilog frontend.
+
+48. Executing Verilog-2005 frontend: or1200_pic.v
+Parsing formal SystemVerilog input from `or1200_pic.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_pic'.
+Successfully finished Verilog frontend.
+
+49. Executing Verilog-2005 frontend: or1200_pm.v
+Parsing formal SystemVerilog input from `or1200_pm.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_pm'.
+Successfully finished Verilog frontend.
+
+50. Executing Verilog-2005 frontend: or1200_qmem_top.v
+Parsing formal SystemVerilog input from `or1200_qmem_top.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_qmem_top'.
+Successfully finished Verilog frontend.
+
+51. Executing Verilog-2005 frontend: or1200_reg2mem.v
+Parsing formal SystemVerilog input from `or1200_reg2mem.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_reg2mem'.
+Successfully finished Verilog frontend.
+
+52. Executing Verilog-2005 frontend: or1200_rfram_generic.v
+Parsing formal SystemVerilog input from `or1200_rfram_generic.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_rfram_generic'.
+Successfully finished Verilog frontend.
+
+53. Executing Verilog-2005 frontend: or1200_rf.v
+Parsing formal SystemVerilog input from `or1200_rf.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_rf'.
+Successfully finished Verilog frontend.
+
+54. Executing Verilog-2005 frontend: or1200_sb_fifo.v
+Parsing formal SystemVerilog input from `or1200_sb_fifo.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_sb_fifo'.
+Successfully finished Verilog frontend.
+
+55. Executing Verilog-2005 frontend: or1200_sb.v
+Parsing formal SystemVerilog input from `or1200_sb.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_sb'.
+Successfully finished Verilog frontend.
+
+56. Executing Verilog-2005 frontend: or1200_spram_1024x32_bw.v
+Parsing formal SystemVerilog input from `or1200_spram_1024x32_bw.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_1024x32_bw'.
+Successfully finished Verilog frontend.
+
+57. Executing Verilog-2005 frontend: or1200_spram_1024x32.v
+Parsing formal SystemVerilog input from `or1200_spram_1024x32.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_1024x32'.
+Successfully finished Verilog frontend.
+
+58. Executing Verilog-2005 frontend: or1200_spram_1024x8.v
+Parsing formal SystemVerilog input from `or1200_spram_1024x8.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_1024x8'.
+Successfully finished Verilog frontend.
+
+59. Executing Verilog-2005 frontend: or1200_spram_128x32.v
+Parsing formal SystemVerilog input from `or1200_spram_128x32.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_128x32'.
+Successfully finished Verilog frontend.
+
+60. Executing Verilog-2005 frontend: or1200_spram_2048x32_bw.v
+Parsing formal SystemVerilog input from `or1200_spram_2048x32_bw.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_2048x32_bw'.
+Successfully finished Verilog frontend.
+
+61. Executing Verilog-2005 frontend: or1200_spram_2048x32.v
+Parsing formal SystemVerilog input from `or1200_spram_2048x32.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_2048x32'.
+Successfully finished Verilog frontend.
+
+62. Executing Verilog-2005 frontend: or1200_spram_2048x8.v
+Parsing formal SystemVerilog input from `or1200_spram_2048x8.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_2048x8'.
+Successfully finished Verilog frontend.
+
+63. Executing Verilog-2005 frontend: or1200_spram_256x21.v
+Parsing formal SystemVerilog input from `or1200_spram_256x21.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_256x21'.
+Successfully finished Verilog frontend.
+
+64. Executing Verilog-2005 frontend: or1200_spram_32_bw.v
+Parsing formal SystemVerilog input from `or1200_spram_32_bw.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_32_bw'.
+Successfully finished Verilog frontend.
+
+65. Executing Verilog-2005 frontend: or1200_spram_32x24.v
+Parsing formal SystemVerilog input from `or1200_spram_32x24.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_32x24'.
+Successfully finished Verilog frontend.
+
+66. Executing Verilog-2005 frontend: or1200_spram_512x20.v
+Parsing formal SystemVerilog input from `or1200_spram_512x20.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_512x20'.
+Successfully finished Verilog frontend.
+
+67. Executing Verilog-2005 frontend: or1200_spram_64x14.v
+Parsing formal SystemVerilog input from `or1200_spram_64x14.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_64x14'.
+Successfully finished Verilog frontend.
+
+68. Executing Verilog-2005 frontend: or1200_spram_64x22.v
+Parsing formal SystemVerilog input from `or1200_spram_64x22.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_64x22'.
+Successfully finished Verilog frontend.
+
+69. Executing Verilog-2005 frontend: or1200_spram_64x24.v
+Parsing formal SystemVerilog input from `or1200_spram_64x24.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram_64x24'.
+Successfully finished Verilog frontend.
+
+70. Executing Verilog-2005 frontend: or1200_spram.v
+Parsing formal SystemVerilog input from `or1200_spram.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_spram'.
+Successfully finished Verilog frontend.
+
+71. Executing Verilog-2005 frontend: or1200_sprs.v
+Parsing formal SystemVerilog input from `or1200_sprs.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_sprs'.
+Successfully finished Verilog frontend.
+
+72. Executing Verilog-2005 frontend: or1200_tpram_32x32.v
+Parsing formal SystemVerilog input from `or1200_tpram_32x32.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_tpram_32x32'.
+Successfully finished Verilog frontend.
+
+73. Executing Verilog-2005 frontend: or1200_tt.v
+Parsing formal SystemVerilog input from `or1200_tt.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_tt'.
+Successfully finished Verilog frontend.
+
+74. Executing Verilog-2005 frontend: or1200_wb_biu.v
+Parsing formal SystemVerilog input from `or1200_wb_biu.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_wb_biu'.
+Successfully finished Verilog frontend.
+
+75. Executing Verilog-2005 frontend: or1200_wbmux.v
+Parsing formal SystemVerilog input from `or1200_wbmux.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_wbmux'.
+Successfully finished Verilog frontend.
+
+76. Executing Verilog-2005 frontend: or1200_xcv_ram32x8d.v
+Parsing formal SystemVerilog input from `or1200_xcv_ram32x8d.v' to AST representation.
+Successfully finished Verilog frontend.
+
+77. Executing Verilog-2005 frontend: or1200_cpu.v
+Parsing formal SystemVerilog input from `or1200_cpu.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_cpu'.
+Successfully finished Verilog frontend.
+
+78. Executing Verilog-2005 frontend: or1200_top.v
+Parsing formal SystemVerilog input from `or1200_top.v' to AST representation.
+Storing AST representation for module `$abstract\or1200_top'.
+Successfully finished Verilog frontend.
+
+79. Executing Verilog-2005 frontend: properties.v
+Parsing formal SystemVerilog input from `properties.v' to AST representation.
+properties.v:1: ERROR: syntax error, unexpected '{'

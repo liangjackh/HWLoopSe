@@ -1,0 +1,7 @@
+# running in test_simple_bmc_basic/src/
+read -sv apu_core_package.sv
+
+hierarchy -smtcheck
+rename -witness
+write_jny -no-connections ../model/design.json
+write_rtlil ../model/design.il
