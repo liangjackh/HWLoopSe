@@ -120,87 +120,21 @@ def main():
     
     if options.sv:
         start = time.process_time()
-        
-        # 1. 初始化 SourceManager (用于管理源代码文件和位置信息)
-        source_manager = ps.SourceManager()
-        
-        # 2. 配置预处理器 (如果需要 include 路径等，在这里设置)
-        pp_options = ps.PreprocessorOptions()
-        # pp_options.includePaths = ["./include"] 
-        
-        bag = ps.Bag([pp_options])
-        
-        # 3. 创建 Compilation
-        compilation = ps.Compilation(bag)
-        
-        # 4. 加载源文件
-        input_file = filelist[0]
-        if not os.path.exists(input_file):
-            print(f"[Error] File not found: {input_file}")
-            exit(1)
-            
-        try:
-            # 使用 SourceManager 加载文件，这样报错时能显示文件名和行号
-            tree = ps.SyntaxTree.fromFile(input_file, source_manager, bag)
-            compilation.addSyntaxTree(tree)
-        except Exception as e:
-            print(f"[Error] Failed to parse syntax tree: {e}")
-            exit(1)
+        driver = ps.Driver()
+        driver.addStandardArgs()
+        driver.parseCommandLine(" ".join(filelist))
 
-        # 5. 获取模块 (适配 pyslang 9.0+)
+        successful_compilation = driver.runFullCompilation(False)
+        compilation = driver.createCompilation()
         modules = compilation.getRoot().topInstances
         
-        if not modules:
-            print("No top instances found, searching syntax trees for definitions...")
-            syntax_trees = compilation.getSyntaxTrees()
-            for tree in syntax_trees:
-                for member in tree.root.members:
-                    if hasattr(member, 'kind') and 'ModuleDeclaration' in str(member.kind):
-                        modules.append(member)
-
-        # 6. --- 关键修改：正确的错误打印逻辑 ---
-        # 获取所有诊断信息
-        diags = compilation.getAllDiagnostics()
-        
-        # 创建诊断引擎和文本客户端
-        diag_engine = ps.DiagnosticEngine(source_manager)
-        client = ps.TextDiagnosticClient()
-        diag_engine.addClient(client)
-        
-        # 将诊断信息交给引擎处理
-        for d in diags:
-            diag_engine.issue(d)
-            
-        # 获取格式化后的错误信息字符串
-        report = client.getString()
-        
-        # 检查是否有 Error 级别的诊断
-        has_errors = any(d.isError() for d in diags)
-        
-        if report:
-            print("\n" + "="*40)
-            print("COMPILATION DIAGNOSTICS:")
-            print("="*40)
-            print(report)
-            print("="*40 + "\n")
-            
-        if has_errors:
-            print("[Fatal] Compilation failed with errors. See above.")
-            exit(1)
-            
-        if not modules:
-            print("[Error] No modules found in the design! (And no syntax errors reported?)")
-            exit(1)
-
-        # 7. 编译成功，开始执行符号执行
-        successful_compilation = not has_errors
-        
         if successful_compilation:
+            #print(driver.reportMacros())
             my_visitor_for_symbol = SymbolicDFS(num_cycles)
-            # delegate method from z3Visitor
+            #delegate method from z3Visitor
             my_visitor_for_symbol.expr_to_z3 = lambda m, s, e: parse_expr_to_Z3(e, s, m)
 
-            symbol_visitor = SlangSymbolVisitor() 
+            symbol_visitor = SlangSymbolVisitor() #Post processor visitor -> doesn't depend on the num_cycles
             engine.execute_sv(my_visitor_for_symbol, modules, None, num_cycles)
             symbol_visitor.visit(modules)
             print(symbol_visitor.branch_points)

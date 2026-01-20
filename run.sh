@@ -1,5 +1,6 @@
 #!/bin/bash
 
 #git pull
-rm out.txt
-python3 -m main 1 designs/TrustHub/RHI011/simple_spi.v > out.txt
+rm -f out.txt
+python3 -m main 1 designs/test-designs/test_2.v --sv
+#python3 -m main 1 filelist.F --sv

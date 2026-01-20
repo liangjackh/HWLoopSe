@@ -353,6 +353,22 @@ class ExecutionEngine:
         # self.assertions_always_intersect(manager) # Where is this function defined?
 
         manager.seen = {}
+        
+        # === 新增代码开始  gemini ===
+        if not manager.names_list:
+            print("[Error] No modules found to execute. Please check if the input file contains valid modules.")
+            return
+        # === 新增代码结束 ===
+
+        for name in manager.names_list:
+            manager.seen[name] = []
+
+            # each module has a mapping table of cfg idx to path list
+            mapped_paths[name] = {}
+        
+        # 原来的出错行
+        manager.curr_module = manager.names_list[0]
+        # ... (之后的代码)
         for name in manager.names_list:
             manager.seen[name] = []
 
