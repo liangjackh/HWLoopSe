@@ -112,6 +112,20 @@ class CFG:
 
     def get_always_sv(self, m: ExecutionManager, s: SymbolicState, ast):
         """Extracts always blocks from PySlang AST"""
+        # Handle InstanceSymbol (from topInstances or child instances)
+        if ast is not None and ast.__class__.__name__ == "InstanceSymbol":
+            # Iterate over the body to find ProceduralBlockSymbol and child instances
+            if hasattr(ast, 'body'):
+                for item in ast.body:
+                    if item.__class__.__name__ == "ProceduralBlockSymbol":
+                        # Get the syntax node from the symbol
+                        if hasattr(item, 'syntax') and item.syntax is not None:
+                            self.always_blocks.append(item.syntax)
+                    elif item.__class__.__name__ == "InstanceSymbol":
+                        # Recursively process child instances (submodules)
+                        self.get_always_sv(m, s, item)
+            return
+
         if (ast != None and isinstance(ast, ps.DefinitionSymbol)):
             self.get_always_sv(m, s, ast.syntax)
             return
@@ -219,6 +233,13 @@ class CFG:
         self.edgelist.append((parent_idx, then_start_idx))
 
         if else_body is None:
+            # No else clause: create a "skip" path (condition false -> fall through)
+            # This represents the path where the if condition is false and body is skipped
+            skip_idx = self.curr_idx
+            self.partition_points.add(self.curr_idx)
+            self.all_nodes.append(None)  # Dummy node for the skip path
+            self.curr_idx += 1
+            self.edgelist.append((parent_idx, skip_idx))
             return
 
         if isinstance(else_body, ps.ConditionalStatementSyntax):

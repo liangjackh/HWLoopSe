@@ -120,32 +120,56 @@ def main():
     
     if options.sv:
         start = time.process_time()
-        
+
         # 1. 初始化 SourceManager (用于管理源代码文件和位置信息)
         source_manager = ps.SourceManager()
-        
+
         # 2. 配置预处理器 (如果需要 include 路径等，在这里设置)
         pp_options = ps.PreprocessorOptions()
-        # pp_options.includePaths = ["./include"] 
-        
+        # pp_options.includePaths = ["./include"]
+
         bag = ps.Bag([pp_options])
-        
+
         # 3. 创建 Compilation
         compilation = ps.Compilation(bag)
-        
-        # 4. 加载源文件
+
+        # 4. 加载源文件 (支持 .F 文件列表)
         input_file = filelist[0]
         if not os.path.exists(input_file):
             print(f"[Error] File not found: {input_file}")
             exit(1)
-            
-        try:
-            # 使用 SourceManager 加载文件，这样报错时能显示文件名和行号
-            tree = ps.SyntaxTree.fromFile(input_file, source_manager, bag)
-            compilation.addSyntaxTree(tree)
-        except Exception as e:
-            print(f"[Error] Failed to parse syntax tree: {e}")
-            exit(1)
+
+        # Check if input is a .F file list
+        source_files = []
+        if input_file.endswith('.F') or input_file.endswith('.f'):
+            # Parse the .F file to get list of source files
+            f_file_dir = os.path.dirname(os.path.abspath(input_file))
+            with open(input_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    # Skip empty lines and comments
+                    if not line or line.startswith('#') or line.startswith('//'):
+                        continue
+                    # Resolve relative paths relative to the .F file's directory
+                    if not os.path.isabs(line):
+                        line = os.path.join(f_file_dir, line)
+                    source_files.append(line)
+            print(f"[Info] Loaded {len(source_files)} files from {input_file}")
+        else:
+            source_files = [input_file]
+
+        # Load all source files
+        for src_file in source_files:
+            if not os.path.exists(src_file):
+                print(f"[Error] File not found: {src_file}")
+                exit(1)
+            try:
+                # 使用 SourceManager 加载文件，这样报错时能显示文件名和行号
+                tree = ps.SyntaxTree.fromFile(src_file, source_manager, bag)
+                compilation.addSyntaxTree(tree)
+            except Exception as e:
+                print(f"[Error] Failed to parse syntax tree for {src_file}: {e}")
+                exit(1)
 
         # 5. 获取模块 (适配 pyslang 9.0+)
         modules = compilation.getRoot().topInstances

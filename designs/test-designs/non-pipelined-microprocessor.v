@@ -50,7 +50,7 @@ wire [0:`PROG_ADDR] progCntr;
 
 
 	memory M( clk, opcode, readLoc1, readLoc2, writeLoc, aluOut, memOut1, memOut2 );
-	program P( clk, progCntr, instruction );
+	program_rom P( clk, progCntr, instruction );
 
 	decodeOpcd Opcode( clk, instruction, opcode );
 	decodeLoc1 Loc1( clk, instruction, readLoc1 );
@@ -69,8 +69,7 @@ endmodule
 
 /* reg  file */
 
-module 
-memory( clk, opcode, readLoc1, readLoc2, writeLoc, data, memOut1, memOut2 );
+module memory( clk, opcode, readLoc1, readLoc2, writeLoc, data, memOut1, memOut2 );
      
 input clk;
 input[0:`OPCODE]  opcode;
@@ -161,8 +160,7 @@ endmodule
    
 /* rom containing program */
 
-module 
-program( clk, progCntr, instruction );
+module program_rom( clk, progCntr, instruction );
 
      input  clk;
      input[0:`PROG_ADDR] progCntr;
@@ -205,8 +203,7 @@ program( clk, progCntr, instruction );
 endmodule
 
 /* split instruction; this gets opcode */
-module 
-decodeOpcd( clk, instruction, opcode );
+module decodeOpcd( clk, instruction, opcode );
 	
 	input  clk;
 	input[0:`INSTR] instruction;
@@ -218,8 +215,7 @@ endmodule
 
 
 /* split instruction; this gets src_reg1 */
-module 
-decodeLoc1( clk, instruction, readLoc1 );
+module decodeLoc1( clk, instruction, readLoc1 );
 	
 	input  clk;
 	input[0:`INSTR] instruction;
@@ -230,8 +226,7 @@ decodeLoc1( clk, instruction, readLoc1 );
 endmodule
 
 /* split instruction; this gets src_reg2 */
-module 
-decodeLoc2( clk, instruction, readLoc2 );
+module decodeLoc2( clk, instruction, readLoc2 );
 	
 	input  clk;
 	input[0:`INSTR] instruction;
@@ -242,8 +237,7 @@ decodeLoc2( clk, instruction, readLoc2 );
 endmodule
 
 /* split instruction; this gets destn_reg1 */
-module 
-decodeLoc3( clk, instruction, writeLoc );
+module decodeLoc3( clk, instruction, writeLoc );
 	
 	input  clk;
 	input[0:`INSTR] instruction;
@@ -254,8 +248,7 @@ decodeLoc3( clk, instruction, writeLoc );
 endmodule
 
 /* 4 instruction alu */
-module
-alu( clk, opcode, operand1, operand2, aluOut );
+module alu( clk, opcode, operand1, operand2, aluOut );
 
 	input clk;
 	input[0:`OPCODE] opcode;
@@ -269,8 +262,7 @@ assign aluOut = (opcode == `ADD) ? (operand1 + operand2) :
 endmodule
 
 /* program counter - increment by one unless jmp */
-module 
-pc( clk, opcode, operand1, operand2, progCntr );
+module pc( clk, opcode, operand1, operand2, progCntr );
   
 	input clk;
 	input[0:`OPCODE] opcode;

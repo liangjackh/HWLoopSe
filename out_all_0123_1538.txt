@@ -1,0 +1,872 @@
+================== Testing ACW.v ==================
+
+========================================
+COMPILATION DIAGNOSTICS:
+========================================
+designs/test-designs/ACW.v:810:1: error: unknown module 'AXI_M_Generic_Module'
+AXI_M_Generic_Module MyAXI_M_Generic_Module(
+^~~~~~~~~~~~~~~~~~~~
+designs/test-designs/ACW.v:912:24: warning: implicit conversion truncates from 32 to 16 bits [-Wwidth-trunc]
+assign AW_HIGH_ADDR = (M_AXI_AWADDR_wire + ((M_AXI_AWLEN_wire + 1) << C_LOG_BUS_SIZE_BYTE));
+                    ~  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+designs/test-designs/ACW.v:937:83: warning: cannot refer to element 31 of 'logic[15:0]' [-Windex-oob]
+assign AW_OVERFLOW_DETC = M_AXI_AWADDR_wire[C_M_AXI_ADDR_WIDTH-1] & ~AW_HIGH_ADDR[C_M_AXI_ADDR_WIDTH-1];
+                                                                                  ^~~~~~~~~~~~~~~~~~~~
+designs/test-designs/ACW.v:988:88: warning: implicit conversion expands from 1 to 2 bits [-Wwidth-expand]
+                                                        slv_reg5[C_M_AXI_DATA_WIDTH - 1 : C_M_AXI_DATA_WIDTH - 1 - C_M_AXI_ID_WIDTH] <= M_AXI_AWID_wire;
+                                                                                                                                     ~~ ^~~~~~~~~~~~~~~
+designs/test-designs/ACW.v:989:119: warning: implicit conversion expands from 3 to 4 bits [-Wwidth-expand]
+                                                        slv_reg5[C_M_AXI_DATA_WIDTH - 1 - C_M_AXI_ID_WIDTH - 1 : C_M_AXI_DATA_WIDTH - 1 - C_M_AXI_ID_WIDTH - 1 - 3] <= M_AXI_AWPROT_wire;
+                                                                                                                                                                    ~~ ^~~~~~~~~~~~~~~~~
+designs/test-designs/ACW.v:1066:12: warning: extra ';' has no effect [-Wempty-stmt]
+                      end;
+                         ^
+designs/test-designs/ACW.v:1067:12: warning: extra ';' has no effect [-Wempty-stmt]
+        end;
+           ^
+designs/test-designs/ACW.v:1089:24: warning: implicit conversion truncates from 32 to 16 bits [-Wwidth-trunc]
+assign AR_HIGH_ADDR = (M_AXI_ARADDR_wire + ((M_AXI_ARLEN_wire + 1) << C_LOG_BUS_SIZE_BYTE));
+                    ~  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+designs/test-designs/ACW.v:1113:83: warning: cannot refer to element 31 of 'logic[15:0]' [-Windex-oob]
+assign AR_OVERFLOW_DETC = M_AXI_ARADDR_wire[C_M_AXI_ADDR_WIDTH-1] & ~AR_HIGH_ADDR[C_M_AXI_ADDR_WIDTH-1];
+                                                                                  ^~~~~~~~~~~~~~~~~~~~
+designs/test-designs/ACW.v:1165:88: warning: implicit conversion expands from 1 to 2 bits [-Wwidth-expand]
+                                                        slv_reg3[C_M_AXI_DATA_WIDTH - 1 : C_M_AXI_DATA_WIDTH - 1 - C_M_AXI_ID_WIDTH] <= M_AXI_ARID_wire;
+                                                                                                                                     ~~ ^~~~~~~~~~~~~~~
+designs/test-designs/ACW.v:1166:119: warning: implicit conversion expands from 3 to 4 bits [-Wwidth-expand]
+                                                        slv_reg3[C_M_AXI_DATA_WIDTH - 1 - C_M_AXI_ID_WIDTH - 1 : C_M_AXI_DATA_WIDTH - 1 - C_M_AXI_ID_WIDTH - 1 - 3] <= M_AXI_ARPROT_wire;
+                                                                                                                                                                    ~~ ^~~~~~~~~~~~~~~~~
+
+========================================
+
+[Fatal] Compilation failed with errors. See above.
+================== Testing comb_loop.F ==================
+No top instances found, searching syntax trees for definitions...
+
+========================================
+COMPILATION DIAGNOSTICS:
+========================================
+designs/test-designs/comb_loop.F:1:12: error: expected a declaration name
+comb_loop.v
+           ^
+
+========================================
+
+[Fatal] Compilation failed with errors. See above.
+================== Testing comb_loop.v ==================
+Executing for 1 clock cycles
+Module demo single instance
+Here
+Branch points explored: 0
+Module demo has 0 always blocks
+Module demo paths: [((),)]
+total_paths: [{'demo': [()]}]
+Initial state:
+{'demo': {}}
+Cycle 0 final state:
+{'demo': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Branch points explored: 0
+Paths explored: 1
+0
+0
+Elapsed time 0.01145813200000001
+================== Testing daio.v ==================
+
+========================================
+COMPILATION DIAGNOSTICS:
+========================================
+designs/test-designs/daio.v:173:6: warning: 'case' missing 'default' label [-Wcase-default]
+            case (pc)
+            ^~~~
+designs/test-designs/daio.v:174:8: warning: comparison of different types in 'case' statement ('logic signed[31:0]' and 'reg[3:0]') [-Wcase-type]
+              L0: if (rx_control[2]) pc = L1;   // wait for enable
+              ^~
+designs/test-designs/daio.v:175:8: warning: comparison of different types in 'case' statement ('logic signed[31:0]' and 'reg[3:0]') [-Wcase-type]
+              L1: begin
+              ^~
+designs/test-designs/daio.v:176:5: warning: 'case' missing 'default' label [-Wcase-default]
+                  case (rx_control[1:0])
+                  ^~~~
+designs/test-designs/daio.v:184:8: warning: comparison of different types in 'case' statement ('logic signed[31:0]' and 'reg[3:0]') [-Wcase-type]
+              L2: // checking for start of block - preamble_1
+              ^~
+designs/test-designs/daio.v:190:8: warning: comparison of different types in 'case' statement ('logic signed[31:0]' and 'reg[3:0]') [-Wcase-type]
+              L3: if (bit_count_A < 32) begin
+              ^~
+designs/test-designs/daio.v:200:8: warning: comparison of different types in 'case' statement ('logic signed[31:0]' and 'reg[3:0]') [-Wcase-type]
+              L4: begin
+              ^~
+designs/test-designs/daio.v:207:8: warning: comparison of different types in 'case' statement ('logic signed[31:0]' and 'reg[3:0]') [-Wcase-type]
+              L5: if (bit_count_B < 32) begin
+              ^~
+designs/test-designs/daio.v:216:8: warning: comparison of different types in 'case' statement ('logic signed[31:0]' and 'reg[3:0]') [-Wcase-type]
+              L6: if (frame_counter < 191) begin
+              ^~
+designs/test-designs/daio.v:221:8: warning: comparison of different types in 'case' statement ('logic signed[31:0]' and 'reg[3:0]') [-Wcase-type]
+              L7: if (bit_count_A < 32) begin
+              ^~
+designs/test-designs/daio.v:235:8: warning: comparison of different types in 'case' statement ('logic signed[31:0]' and 'reg[3:0]') [-Wcase-type]
+              L8: begin
+              ^~
+designs/test-designs/daio.v:239:8: warning: comparison of different types in 'case' statement ('logic signed[31:0]' and 'reg[3:0]') [-Wcase-type]
+              L9: // subframe B
+              ^~
+designs/test-designs/daio.v:249:8: warning: comparison of different types in 'case' statement ('logic signed[31:0]' and 'reg[3:0]') [-Wcase-type]
+              L10: begin
+              ^~~
+designs/test-designs/daio.v:261:18: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+        end else if (pc != L0 && pc != L1) begin
+                     ~~ ^~ ~~
+designs/test-designs/daio.v:261:30: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+        end else if (pc != L0 && pc != L1) begin
+                                 ~~ ^~ ~~
+designs/test-designs/daio.v:269:19: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+         if (reset || pc == L2 || pc == L4 || pc == L6 || pc == L8) begin
+                      ~~ ^~ ~~
+designs/test-designs/daio.v:269:31: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+         if (reset || pc == L2 || pc == L4 || pc == L6 || pc == L8) begin
+                                  ~~ ^~ ~~
+designs/test-designs/daio.v:269:43: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+         if (reset || pc == L2 || pc == L4 || pc == L6 || pc == L8) begin
+                                              ~~ ^~ ~~
+designs/test-designs/daio.v:269:55: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+         if (reset || pc == L2 || pc == L4 || pc == L6 || pc == L8) begin
+                                                          ~~ ^~ ~~
+designs/test-designs/daio.v:271:19: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+         end else if (pc != L0 && pc != L1) begin
+                      ~~ ^~ ~~
+designs/test-designs/daio.v:271:31: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+         end else if (pc != L0 && pc != L1) begin
+                                  ~~ ^~ ~~
+
+========================================
+
+Executing for 1 clock cycles
+Module main single instance
+Here
+Branch points explored: 0
+Module main has 5 always blocks
+Module main paths: [(([-1, 0, -2], [-1, 0, 1, -2], [-1, 0, 1, -2], [-1, 0, 1, -2], [-1, 0, -2]),), (([-1, 0, -2], [-1, 0, 1, -2], [-1, 0, 1, -2], [-1, 0, 2, 3, -2], [-1, 0, -2]),), (([-1, 0, -2], [-1, 0, 1, -2], [-1, 0, 2, 3, -2], [-1, 0, 1, -2], [-1, 0, -2]),), (([-1, 0, -2], [-1, 0, 1, -2], [-1, 0, 2, 3, -2], [-1, 0, 2, 3, -2], [-1, 0, -2]),), (([-1, 0, -2], [-1, 0, 2, -2], [-1, 0, 1, -2], [-1, 0, 1, -2], [-1, 0, -2]),), (([-1, 0, -2], [-1, 0, 2, -2], [-1, 0, 1, -2], [-1, 0, 2, 3, -2], [-1, 0, -2]),), (([-1, 0, -2], [-1, 0, 2, -2], [-1, 0, 2, 3, -2], [-1, 0, 1, -2], [-1, 0, -2]),), (([-1, 0, -2], [-1, 0, 2, -2], [-1, 0, 2, 3, -2], [-1, 0, 2, 3, -2], [-1, 0, -2]),)]
+total_paths: [{'main': [([-1, 0, -2], [-1, 0, 1, -2], [-1, 0, 1, -2], [-1, 0, 1, -2], [-1, 0, -2])]}, {'main': [([-1, 0, -2], [-1, 0, 1, -2], [-1, 0, 1, -2], [-1, 0, 2, 3, -2], [-1, 0, -2])]}, {'main': [([-1, 0, -2], [-1, 0, 1, -2], [-1, 0, 2, 3, -2], [-1, 0, 1, -2], [-1, 0, -2])]}, {'main': [([-1, 0, -2], [-1, 0, 1, -2], [-1, 0, 2, 3, -2], [-1, 0, 2, 3, -2], [-1, 0, -2])]}, {'main': [([-1, 0, -2], [-1, 0, 2, -2], [-1, 0, 1, -2], [-1, 0, 1, -2], [-1, 0, -2])]}, {'main': [([-1, 0, -2], [-1, 0, 2, -2], [-1, 0, 1, -2], [-1, 0, 2, 3, -2], [-1, 0, -2])]}, {'main': [([-1, 0, -2], [-1, 0, 2, -2], [-1, 0, 2, 3, -2], [-1, 0, 1, -2], [-1, 0, -2])]}, {'main': [([-1, 0, -2], [-1, 0, 2, -2], [-1, 0, 2, 3, -2], [-1, 0, 2, 3, -2], [-1, 0, -2])]}]
+Initial state:
+{'main': {}}
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+Cycle 0 final state:
+{'main': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'main': {}}
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+Cycle 0 final state:
+{'main': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'main': {}}
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+Cycle 0 final state:
+{'main': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'main': {}}
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+Cycle 0 final state:
+{'main': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'main': {}}
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+Cycle 0 final state:
+{'main': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'main': {}}
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+Cycle 0 final state:
+{'main': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'main': {}}
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+Cycle 0 final state:
+{'main': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'main': {}}
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+Cycle 0 final state:
+{'main': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Branch points explored: 32
+Paths explored: 8
+0
+0
+Elapsed time 0.017702600999999873
+================== Testing demo2.v ==================
+Executing for 1 clock cycles
+Module demo single instance
+Here
+Branch points explored: 0
+Module demo has 1 always blocks
+Module demo paths: [(([-1, 0, 1, -2],),)]
+total_paths: [{'demo': [([-1, 0, 1, -2],)]}]
+Initial state:
+{'demo': {}}
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+Cycle 0 final state:
+{'demo': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Branch points explored: 1
+Paths explored: 1
+0
+0
+Elapsed time 0.012372247000000058
+================== Testing mini_daio.v ==================
+
+========================================
+COMPILATION DIAGNOSTICS:
+========================================
+designs/test-designs/mini_daio.v:82:18: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+        end else if (pc != L0 && pc != L1) begin
+                     ~~ ^~ ~~
+designs/test-designs/mini_daio.v:82:30: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+        end else if (pc != L0 && pc != L1) begin
+                                 ~~ ^~ ~~
+designs/test-designs/mini_daio.v:90:19: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+         if (reset || pc == L2 || pc == L4 || pc == L6 || pc == L8) begin
+                      ~~ ^~ ~~
+designs/test-designs/mini_daio.v:90:31: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+         if (reset || pc == L2 || pc == L4 || pc == L6 || pc == L8) begin
+                                  ~~ ^~ ~~
+designs/test-designs/mini_daio.v:90:43: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+         if (reset || pc == L2 || pc == L4 || pc == L6 || pc == L8) begin
+                                              ~~ ^~ ~~
+designs/test-designs/mini_daio.v:90:55: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+         if (reset || pc == L2 || pc == L4 || pc == L6 || pc == L8) begin
+                                                          ~~ ^~ ~~
+designs/test-designs/mini_daio.v:92:19: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+         end else if (pc != L0 && pc != L1) begin
+                      ~~ ^~ ~~
+designs/test-designs/mini_daio.v:92:31: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
+         end else if (pc != L0 && pc != L1) begin
+                                  ~~ ^~ ~~
+
+========================================
+
+Executing for 1 clock cycles
+Module main single instance
+Here
+Branch points explored: 0
+Module main has 4 always blocks
+Module main paths: [(([-1, 0, -2], [-1, 0, 1, -2], [-1, 0, 1, -2], [-1, 0, -2]),), (([-1, 0, -2], [-1, 0, 1, -2], [-1, 0, 2, 3, -2], [-1, 0, -2]),), (([-1, 0, -2], [-1, 0, 2, 3, -2], [-1, 0, 1, -2], [-1, 0, -2]),), (([-1, 0, -2], [-1, 0, 2, 3, -2], [-1, 0, 2, 3, -2], [-1, 0, -2]),)]
+total_paths: [{'main': [([-1, 0, -2], [-1, 0, 1, -2], [-1, 0, 1, -2], [-1, 0, -2])]}, {'main': [([-1, 0, -2], [-1, 0, 1, -2], [-1, 0, 2, 3, -2], [-1, 0, -2])]}, {'main': [([-1, 0, -2], [-1, 0, 2, 3, -2], [-1, 0, 1, -2], [-1, 0, -2])]}, {'main': [([-1, 0, -2], [-1, 0, 2, 3, -2], [-1, 0, 2, 3, -2], [-1, 0, -2])]}]
+Initial state:
+{'main': {}}
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+Cycle 0 final state:
+{'main': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'main': {}}
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+Cycle 0 final state:
+{'main': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'main': {}}
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+Cycle 0 final state:
+{'main': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'main': {}}
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+visit: SyntaxNode SyntaxList
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+Cycle 0 final state:
+{'main': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Branch points explored: 12
+Paths explored: 4
+0
+0
+Elapsed time 0.014774881000000128
+================== Testing non-pipelined-microprocessor.v ==================
+
+========================================
+COMPILATION DIAGNOSTICS:
+========================================
+designs/test-designs/non-pipelined-microprocessor.v:39:7: warning: implicit net port disallowed because `default_nettype is set to 'none' [-Wimplicit-net-port]
+input clk;
+      ^
+designs/test-designs/non-pipelined-microprocessor.v:52:2: error: unknown module 'memory'
+        memory M( clk, opcode, readLoc1, readLoc2, writeLoc, aluOut, memOut1, memOut2 );
+        ^~~~~~
+designs/test-designs/non-pipelined-microprocessor.v:68:1: error: unexpected 'endmodule' delimiter
+endmodule
+^~~~~~~~~
+designs/test-designs/non-pipelined-microprocessor.v:64:13: note: last complete block started here
+    initial begin
+            ^
+designs/test-designs/non-pipelined-microprocessor.v:66:5: note: and ended here
+    end
+    ^
+designs/test-designs/non-pipelined-microprocessor.v:72:1: error: member not allowed in program declaration
+module 
+^~~~~~
+designs/test-designs/non-pipelined-microprocessor.v:164:1: error: member not allowed in program declaration
+module 
+^~~~~~
+designs/test-designs/non-pipelined-microprocessor.v:164:7: error: expected identifier
+module 
+      ^
+designs/test-designs/non-pipelined-microprocessor.v:165:8: error: expected identifier
+program( clk, progCntr, instruction );
+       ^
+designs/test-designs/non-pipelined-microprocessor.v:205:1: error: unexpected 'endmodule' delimiter
+endmodule
+^~~~~~~~~
+designs/test-designs/non-pipelined-microprocessor.v:203:10: note: last complete block started here
+                                                                 (progCntr == 6) ? instr6 : instr7;
+                                                                 ^
+designs/test-designs/non-pipelined-microprocessor.v:203:24: note: and ended here
+                                                                 (progCntr == 6) ? instr6 : instr7;
+                                                                               ^
+designs/test-designs/non-pipelined-microprocessor.v:208:1: error: member not allowed in program declaration
+module 
+^~~~~~
+designs/test-designs/non-pipelined-microprocessor.v:221:1: error: member not allowed in program declaration
+module 
+^~~~~~
+designs/test-designs/non-pipelined-microprocessor.v:233:1: error: member not allowed in program declaration
+module 
+^~~~~~
+designs/test-designs/non-pipelined-microprocessor.v:245:1: error: member not allowed in program declaration
+module 
+^~~~~~
+designs/test-designs/non-pipelined-microprocessor.v:257:1: error: member not allowed in program declaration
+module
+^~~~~~
+designs/test-designs/non-pipelined-microprocessor.v:272:1: error: member not allowed in program declaration
+module 
+^~~~~~
+designs/test-designs/non-pipelined-microprocessor.v:299:10: error: expected 'endprogram'
+endmodule
+         ^
+designs/test-designs/non-pipelined-microprocessor.v:165:1: note: to match this 'program'
+program( clk, progCntr, instruction );
+^
+designs/test-designs/non-pipelined-microprocessor.v:299:10: error: expected 'endprogram'
+endmodule
+         ^
+designs/test-designs/non-pipelined-microprocessor.v:53:2: note: to match this 'program'
+        program P( clk, progCntr, instruction );
+        ^
+
+========================================
+
+[Fatal] Compilation failed with errors. See above.
+================== Testing test_2.v ==================
+Executing for 1 clock cycles
+Module place_holder single instance
+Here
+Branch points explored: 0
+Module place_holder has 1 always blocks
+Module place_holder paths: [(([-1, 0, 1, -2],),), (([-1, 0, 2, -2],),)]
+total_paths: [{'place_holder': [([-1, 0, 1, -2],)]}, {'place_holder': [([-1, 0, 2, -2],)]}]
+Initial state:
+{'place_holder': {}}
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+Cycle 0 final state:
+{'place_holder': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'place_holder': {}}
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+Cycle 0 final state:
+{'place_holder': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Branch points explored: 2
+Paths explored: 2
+0
+0
+Elapsed time 0.012099544999999878
+================== Testing test_3.v ==================
+Executing for 1 clock cycles
+Module demo single instance
+Here
+Branch points explored: 0
+Module demo has 1 always blocks
+Module demo paths: [(([-1, 0, 1, -2],),), (([-1, 0, 2, -2],),)]
+total_paths: [{'demo': [([-1, 0, 1, -2],)]}, {'demo': [([-1, 0, 2, -2],)]}]
+Initial state:
+{'demo': {}}
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+Cycle 0 final state:
+{'demo': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'demo': {}}
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: BinaryExpressionSyntax NonblockingAssignmentExpression
+visit: Token Semicolon
+visit: SyntaxNode SyntaxList
+Cycle 0 final state:
+{'demo': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Branch points explored: 2
+Paths explored: 2
+0
+0
+Elapsed time 0.012393857000000175
+================== Testing test.v ==================
+
+========================================
+COMPILATION DIAGNOSTICS:
+========================================
+designs/test-designs/test.v:10:10: warning: implicit net port disallowed because `default_nettype is set to 'none' [-Wimplicit-net-port]
+   input CLK, 
+         ^
+designs/test-designs/test.v:11:10: warning: implicit net port disallowed because `default_nettype is set to 'none' [-Wimplicit-net-port]
+   input RST,
+         ^
+designs/test-designs/test.v:12:10: warning: implicit net port disallowed because `default_nettype is set to 'none' [-Wimplicit-net-port]
+   input enable,
+         ^
+designs/test-designs/test.v:13:17: warning: implicit net port disallowed because `default_nettype is set to 'none' [-Wimplicit-net-port]
+   input [31:0] value,
+                ^
+designs/test-designs/test.v:14:17: warning: implicit net port disallowed because `default_nettype is set to 'none' [-Wimplicit-net-port]
+   output [7:0] led,
+                ^
+designs/test-designs/test.v:15:11: warning: implicit net port disallowed because `default_nettype is set to 'none' [-Wimplicit-net-port]
+   output place_holder_out 
+          ^
+designs/test-designs/test.v:36:5: error: unknown module 'place_holder'
+    place_holder test_1(
+    ^~~~~~~~~~~~
+designs/test-designs/test.v:39:11: error: use of undeclared identifier 'test_1_out'
+    .out (test_1_out)
+          ^~~~~~~~~~
+designs/test-designs/test.v:42:3: error: unknown module 'place_holder'
+  place_holder test_2(
+  ^~~~~~~~~~~~
+designs/test-designs/test.v:45:11: error: use of undeclared identifier 'test_2_out'
+    .out (test_2_out)
+          ^~~~~~~~~~
+designs/test-designs/test.v:48:3: error: unknown module 'place_holder'
+  place_holder test_3(
+  ^~~~~~~~~~~~
+designs/test-designs/test.v:51:11: error: use of undeclared identifier 'test_3_out'
+    .out (test_3_out)
+          ^~~~~~~~~~
+designs/test-designs/test.v:54:3: error: unknown module 'place_holder'
+  place_holder test_4(
+  ^~~~~~~~~~~~
+designs/test-designs/test.v:57:11: error: use of undeclared identifier 'test_4_out'
+    .out (test_4_out)
+          ^~~~~~~~~~
+
+========================================
+
+[Fatal] Compilation failed with errors. See above.
+================== Testing updowncounter.v ==================
+Executing for 1 clock cycles
+Module updowncounter single instance
+Here
+Branch points explored: 0
+Module updowncounter has 1 always blocks
+Module updowncounter paths: [(([-1, 0, 1, -2],),), (([-1, 0, 2, 3, -2],),), (([-1, 0, 2, 4, -2],),)]
+total_paths: [{'updowncounter': [([-1, 0, 1, -2],)]}, {'updowncounter': [([-1, 0, 2, 3, -2],)]}, {'updowncounter': [([-1, 0, 2, 4, -2],)]}]
+Initial state:
+{'updowncounter': {}}
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+Cycle 0 final state:
+{'updowncounter': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'updowncounter': {}}
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: SyntaxNode SyntaxList
+Cycle 0 final state:
+{'updowncounter': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Initial state:
+{'updowncounter': {}}
+visit: SyntaxNode SyntaxList
+visit: EventControlWithExpressionSyntax EventControlWithExpression
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: ConditionalStatementSyntax ConditionalStatement
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: SyntaxNode SyntaxList
+Cycle 0 final state:
+{'updowncounter': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Branch points explored: 5
+Paths explored: 3
+0
+0
+Elapsed time 0.012772326999999972
+================== Testing xmas.v ==================
+Executing for 1 clock cycles
+Module top single instance
+Here
+Branch points explored: 0
+Module top has 0 always blocks
+Module top paths: [((),)]
+total_paths: [{'top': [()]}]
+Initial state:
+{'top': {}}
+Cycle 0 final state:
+{'top': {}}
+Cycle 0 final path condition:
+[]
+------------------------
+Branch points explored: 0
+Paths explored: 1
+0
+0
+Elapsed time 0.0122685520000001

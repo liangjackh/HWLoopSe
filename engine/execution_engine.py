@@ -32,7 +32,7 @@ CONDITIONALS = (
 class ExecutionEngine:
     # Drives the entire symbolic execution process
     module_depth: int = 0 # Tracks current module nesting depth during execution
-    debug: bool = False # Boolean flag to enable debug output
+    debug: bool = True # Boolean flag to enable debug output
     done: bool = False # Boolean flag indicating if execution is complete
     cache = None # Optional Redis cache for Z3 solver results TODO
 
@@ -209,9 +209,8 @@ class ExecutionEngine:
                 manager.seen_mod[sv_module_name] = {}
                 cfgs_by_module[sv_module_name] = []
                 sub_manager = ExecutionManager()
-                # If module is DefinitionSymbol, get the syntax tree
-                module_syntax = module.syntax if isinstance(module, ps.DefinitionSymbol) else module
-                sub_manager.init_run(sub_manager, module_syntax)
+                # Pass the module directly - init_run now handles both Symbol Objects and Syntax Nodes
+                sub_manager.init_run(sub_manager, module)
                 self.module_count_sv(manager, module) 
                 if sv_module_name in manager.instance_count:
                     print(f"Module {sv_module_name} has {manager.instance_count[sv_module_name]} instances")
@@ -426,7 +425,7 @@ class ExecutionEngine:
 
         # for each combinatoin of multicycle paths
 
-        print(total_paths)
+        print(f"total_paths: {total_paths}")
 
         for i in range(len(total_paths)):
             manager.prev_store = state.store

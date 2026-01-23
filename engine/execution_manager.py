@@ -96,10 +96,26 @@ class ExecutionManager:
                         else:
                             state.store[key][key2] = store[key][key2]
 
-    def init_run(self, m: ExecutionManager, module: ps.ModuleDeclarationSyntax) -> None:
-        """Initalize run for a module"""
+    def init_run(self, m: ExecutionManager, module) -> None:
+        """Initalize run for a module - accepts both Symbol Objects and Syntax Nodes"""
         m.init_run_flag = True
-        self.count_conditionals(m, module.members)
+
+        # Handle different module types:
+        # - InstanceSymbol: use .body (Symbol Object approach)
+        # - DefinitionSymbol: use .syntax.members (Syntax Node approach)
+        # - ModuleDeclarationSyntax: use .members directly (Syntax Node approach)
+        if isinstance(module, ps.InstanceSymbol):
+            # Symbol Object approach: use .body
+            module_body = module.body
+        elif hasattr(module, 'members'):
+            # Syntax Node approach: use .members
+            module_body = module.members
+        else:
+            # Fallback: try to get members or body
+            module_body = getattr(module, 'body', getattr(module, 'members', None))
+
+        if module_body is not None:
+            self.count_conditionals(m, module_body)
         # these are for the COI opt
         #self.lhs_signals(m, module.members)
         #self.get_assertions(m, module.members)
