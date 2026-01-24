@@ -76,7 +76,7 @@ def conjunction_with_pointers(rvalue, s: SymbolicState, m: ExecutionManager) -> 
         else:
             return f"(Cond {conjunction_with_pointers(rvalue.predicate, s, m)} {conjunction_with_pointers(rvalue.ifTrue, s, m)} {conjunction_with_pointers(rvalue.ifFalse, s, m)})"
     elif isinstance(rvalue, ps.BinaryExpressionSyntax):
-        operator = str(rvalue.operator)
+        operator = str(rvalue.operatorToken)
         if isinstance(rvalue.left, ps.ElementSelectExpressionSyntax) and isinstance(rvalue.right, ps.ElementSelectExpressionSyntax):
             new_left = f"{rvalue.left.value}[{rvalue.left.selector}]"
             new_right = f"{rvalue.right.value}[{rvalue.right.selector}]"
@@ -108,24 +108,25 @@ def conjunction_with_pointers(rvalue, s: SymbolicState, m: ExecutionManager) -> 
                 new_right = f"{rvalue.right.value}[ {expr_in_brackets} ]"
             s.store[m.curr_module][new_right] = s.store[m.curr_module][rvalue.right.value.name]
             return f"({operator} {conjunction_with_pointers(rvalue.left, s, m)} {new_right})"
-        elif isinstance(rvalue.right, ps.RangeSelectExpressionSyntax) and isinstance(rvalue.left, ps.RangeSelectExpressionSyntax):
+        elif isinstance(rvalue.right, ps.RangeSelectSyntax) and isinstance(rvalue.left, ps.RangeSelectSyntax):
             new_right = f"{rvalue.right.value.name}[{rvalue.right.left}:{rvalue.right.right}]"
             new_left = f"{rvalue.left.value.name}[{rvalue.left.left}:{rvalue.left.right}]"
             return f"({operator} {new_left} {new_right})"
-        elif isinstance(rvalue.right, ps.RangeSelectExpressionSyntax):
+        elif isinstance(rvalue.right, ps.RangeSelectSyntax):
             new_right = f"{rvalue.right.value.name}[{rvalue.right.left}:{rvalue.right.right}]"
             return f"({operator} {conjunction_with_pointers(rvalue.left, s, m)} {new_right})"
-        elif isinstance(rvalue.left, ps.RangeSelectExpressionSyntax):
+        elif isinstance(rvalue.left, ps.RangeSelectSyntax):
             new_left = f"{rvalue.left.value.name}[{rvalue.left.left}:{rvalue.left.right}]"
             return f"({operator} {new_left} {conjunction_with_pointers(rvalue.right, s, m)} )"
         elif isinstance(rvalue.left, ps.IdentifierNameSyntax):
             module_name = ""
             if hasattr(rvalue.left, "scope") and rvalue.left.scope is not None:
                 module_name = rvalue.left.scope.labellist[0].name
-            new_left = f"{rvalue.left.name}"
+            # IdentifierNameSyntax has 'identifier' attribute, not 'name'
+            new_left = f"{rvalue.left.identifier.valueText if hasattr(rvalue.left.identifier, 'valueText') else rvalue.left.identifier.value}"
             if module_name != "":
                 return f"({operator} {module_name}.{new_left} {conjunction_with_pointers(rvalue.right, s, m)})"
-            else: 
+            else:
                 return f"({operator} {new_left} {conjunction_with_pointers(rvalue.right, s, m)})"
         else: 
             return f"({operator} {conjunction_with_pointers(rvalue.left, s, m)} {conjunction_with_pointers(rvalue.right, s, m)})" 

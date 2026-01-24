@@ -278,9 +278,8 @@ class CFG:
                     self.curr_idx += 1
 
                     self._process_conditional_sv(m, s, parent_idx, item)
-                
+
                 elif isinstance(item, ps.CaseStatementSyntax):
-                    #self.all_nodes.append(ast)
                     self.all_nodes.append(item)
                     self.partition_points.add(self.curr_idx)
                     self.curr_idx += 1
@@ -302,7 +301,15 @@ class CFG:
                 elif isinstance(item, ps.ProceduralBlockSyntax):
                     self.all_nodes.append(item)
                     self.curr_idx += 1
-                    self.basic_blocks_sv(m, s, item.statement)             
+                    self.basic_blocks_sv(m, s, item.statement)
+                elif item.__class__.__name__ == "TimingControlStatementSyntax":
+                    # Handle @(posedge clk) etc. - drill down to the actual statement
+                    if hasattr(item, 'statement') and item.statement is not None:
+                        self.basic_blocks_sv(m, s, item.statement)
+                    else:
+                        # No statement body, just add as a node
+                        self.all_nodes.append(item)
+                        self.curr_idx += 1
                 # elif isinstance(item, ps.InitialConstructSyntax):
                 #     self.all_nodes.append(item)
                 #     self.curr_idx += 1
@@ -344,6 +351,14 @@ class CFG:
                 self.all_nodes.append(ast)
                 self.curr_idx += 1
                 self.basic_blocks_sv(m, s, ast.statement)
+            elif ast.__class__.__name__ == "TimingControlStatementSyntax":
+                # Handle @(posedge clk) etc. - drill down to the actual statement
+                if hasattr(ast, 'statement') and ast.statement is not None:
+                    self.basic_blocks_sv(m, s, ast.statement)
+                else:
+                    # No statement body, just add as a node
+                    self.all_nodes.append(ast)
+                    self.curr_idx += 1
             else:
                 self.all_nodes.append(ast)
                 self.curr_idx += 1
@@ -355,9 +370,9 @@ class CFG:
     def partition(self):
         """Partitions all_nodes into basic blocks based on partition_points"""
         self.partition_points.add(len(self.all_nodes)-1)
-        partition_list = list(self.partition_points)
+        partition_list = sorted(list(self.partition_points))  # IMPORTANT: Sort the partition points!
         for i in range(len(partition_list)-1):
-            if i > 0: 
+            if i > 0:
                 basic_block = self.all_nodes[partition_list[i]+1:partition_list[i+1]+1]
                 self.basic_block_list.append(basic_block)
             else:
@@ -398,7 +413,12 @@ class CFG:
 
     def build_cfg(self, m: ExecutionManager, s: SymbolicState):
         """Build networkx digraph."""
+        print(f"[DEBUG build_cfg] all_nodes count: {len(self.all_nodes)}, edgelist count: {len(self.edgelist)}")
+        print(f"[DEBUG build_cfg] partition_points: {sorted(self.partition_points)}")
+        print(f"[DEBUG build_cfg] edgelist: {self.edgelist}")
         self.make_paths()
+        print(f"[DEBUG build_cfg] cfg_edges: {self.cfg_edges}")
+        print(f"[DEBUG build_cfg] basic_block_list count: {len(self.basic_block_list)}")
         # print(self.basic_block_list)
         # print(self.cfg_edges)
 
@@ -406,7 +426,7 @@ class CFG:
         for block in self.basic_block_list:
             # converts the list into a tuple. Needs to be hashable type
             G.add_node(indexOf(self.basic_block_list, block), data=tuple(block))
-        
+
         G.add_node(-1, data="Dummy Start")
         G.add_node(-2, data="Dummy End")
 
@@ -414,7 +434,7 @@ class CFG:
             start = edge[0]
             end = edge[1]
             G.add_edge(start, end)
-        
+
         # edgecase lol
         if self.edgelist == []:
             G.add_edge(0, -2)
@@ -422,7 +442,7 @@ class CFG:
         # link up dummy start
         G.add_edge(-1, 0)
         self.find_leaves()
-        
+
         # link of dummy exit
         for leaf in self.leaves:
             G.add_edge(leaf, -2)
@@ -433,5 +453,8 @@ class CFG:
 
         #traversed = nx.edge_dfs(G, source=-1)
         self.paths = list(nx.all_simple_paths(G, source=-1, target=-2))
+        print(f"[DEBUG build_cfg] paths computed: {len(self.paths)} paths")
+        if len(self.paths) <= 5:
+            print(f"[DEBUG build_cfg] paths: {self.paths}")
         #print(list(traversed))
         #print(list(self.paths))

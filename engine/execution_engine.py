@@ -385,6 +385,7 @@ class ExecutionEngine:
         for module_name, cfg_list in cfgs_by_module.items():
             for i, cfg in enumerate(cfg_list):
                 mapped_paths[module_name][i] = cfg.paths
+                print(f"[DEBUG] mapped_paths[{module_name}][{i}] = {len(cfg.paths)} paths")
 
 
         #stride_length = cfg_count
@@ -410,7 +411,7 @@ class ExecutionEngine:
                 if not module_paths:
                     module_paths = [tuple(() for _ in range(int(num_cycles)))]
                 values.append(module_paths)
-            print(f"Module {key} paths: {module_paths}")
+            #print(f"Module {key} paths: {module_paths}")
             # build total_paths as a list of dicts where each dict picks one path (possibly multi-cycle)
             # from each module. This takes the Cartesian product across modules, selecting a single
             # path entry for every module in each combination.
@@ -425,7 +426,7 @@ class ExecutionEngine:
 
         # for each combinatoin of multicycle paths
 
-        print(f"total_paths: {total_paths}")
+        #print(f"total_paths: {total_paths}")
 
         for i in range(len(total_paths)):
             manager.prev_store = state.store

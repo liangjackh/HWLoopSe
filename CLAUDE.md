@@ -118,3 +118,12 @@ Optional Redis caching (`--use_cache`):
 - **Dummy nodes**: CFG uses -1 (start) and -2 (end) as dummy entry/exit nodes
 - **Cycle tracking**: `manager.cycle` tracks current clock cycle during multi-cycle execution
 - **Branch tracking**: `manager.branch_count` counts explored branch points
+
+# Claude Code Guidelines
+
+1. **Project Context**: This is a hardware verification project.
+2. **Logging Protocol**: 
+   - Whenever I type "Log it" or "记录", you must:
+   - Summarize the current task/bug fix.
+   - Append it to `CHANGELOG.md` with a timestamp.
+   - Use the format: `[Date] [Category] Summary`.

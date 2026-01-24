@@ -390,6 +390,6 @@ def evaluate_expr_to_smt(lhs, rhs, op, s: SymbolicState, m: ExecutionManager) ->
  
 def eval_expr(expr, s: SymbolicState, m: ExecutionManager) -> str:
     """Takes in an AST and should return the new symbolic expression for the symbolic state."""
-    if not expr is None and expr[0] in BINARY_OPS:
+    if expr is not None and len(expr) > 0 and expr[0] in BINARY_OPS:
         return evaluate_expr_to_smt(expr[1], expr[2], op_map[expr[0]], s, m)
 

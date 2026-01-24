@@ -598,6 +598,17 @@ class SymbolicDFS:
             self.visit_expr(m, s, expr.left)
             self.visit_expr(m, s, expr.right)
 
+        # Handle SyntaxKind binary expressions (from syntax tree)
+        elif kind in [ps.SyntaxKind.LogicalAndExpression, ps.SyntaxKind.LogicalOrExpression,
+                      ps.SyntaxKind.BinaryAndExpression, ps.SyntaxKind.BinaryOrExpression,
+                      ps.SyntaxKind.BinaryXorExpression, ps.SyntaxKind.BinaryXnorExpression,
+                      ps.SyntaxKind.LogicalShiftLeftExpression, ps.SyntaxKind.LogicalShiftRightExpression,
+                      ps.SyntaxKind.LogicalEquivalenceExpression, ps.SyntaxKind.LogicalImplicationExpression]:
+            if hasattr(expr, 'left'):
+                self.visit_expr(m, s, expr.left)
+            if hasattr(expr, 'right'):
+                self.visit_expr(m, s, expr.right)
+
         elif kind == ps.ExpressionKind.UnaryOp:
             self.visit_expr(m, s, expr.operand)
 
@@ -616,10 +627,14 @@ class SymbolicDFS:
                 print(expr.right.kind)
                 if expr.right.kind == ps.SyntaxKind.ConcatenationExpression:
                     # Handle concatenation on RHS
-                    parts = [str(operand.value) for operand in expr.right.expressions if hasattr(operand, "value")]
+                    parts = [str(operand.literal.value) for operand in expr.right.expressions if hasattr(operand, "literal")]
                     s.store[m.curr_module][expr.left.identifier.value] = "".join(parts)
+                elif hasattr(expr.right, "literal"):
+                    # Handle literal expressions (IntegerLiteralExpression, etc.)
+                    s.store[m.curr_module][expr.left.identifier.value] = str(expr.right.literal.value)
                 else:
-                    s.store[m.curr_module][expr.left.identifier.value] = str(expr.right.value.value)
+                    # Fallback - skip unknown RHS types
+                    pass
             else:
                 # LHS or RHS doesn't have an identifier attribute — skip for now
                 ...
@@ -721,23 +736,26 @@ class SymbolicDFS:
                 if direction:
                     key = str(cond_z3)
                     self.branch = True
-                    if m.cache.exists(key):
+                    if m.cache is not None and m.cache.exists(key):
                         result = m.cache.get(key).decode()
                     else:
                         result = str(solve_pc(s.pc))
-                        m.cache.set(str(cond_z3), str(solve_pc(s.pc)))
+                        if m.cache is not None:
+                            m.cache.set(str(cond_z3), str(solve_pc(s.pc)))
                     s.pc.assert_and_track(cond_z3, f"p{s.assertion_counter}")
                 else:
                     self.branch = False
                     key = f"~{cond_z3}"
-                    if m.cache.exists(key):
+                    if m.cache is not None and m.cache.exists(key):
                         result = m.cache.get(key).decode()
                     else:
                         result = str(solve_pc(s.pc))
-                        m.cache.set(f"~{cond_z3}", str(solve_pc(s.pc)))
+                        if m.cache is not None:
+                            m.cache.set(f"~{cond_z3}", str(solve_pc(s.pc)))
                     s.pc.assert_and_track(cond_z3, f"p{s.assertion_counter}")
                 if not solve_pc(s.pc):
-                    m.cache.set(f"~{str(cond_z3)}", False)
+                    if m.cache is not None:
+                        m.cache.set(f"~{str(cond_z3)}", False)
                     s.pc.pop()
                     m.abandon = True
                     m.ignore = True
@@ -779,24 +797,27 @@ class SymbolicDFS:
                 if direction:
                     key = str(cond_z3)
                     self.branch = True
-                    if m.cache.exists(key):
+                    if m.cache is not None and m.cache.exists(key):
                         result = m.cache.get(key).decode()
                     else:
                         result = str(solve_pc(s.pc))
-                        m.cache.set(str(cond_z3), str(solve_pc(s.pc)))
+                        if m.cache is not None:
+                            m.cache.set(str(cond_z3), str(solve_pc(s.pc)))
                     s.pc.assert_and_track(cond_z3, f"p{s.assertion_counter}")
                 else:
                     key = str(f"~{cond_z3}")
                     self.branch = False
-                    if m.cache.exists(key):
+                    if m.cache is not None and m.cache.exists(key):
                         result = m.cache.get(key).decode()
                     else:
                         result = str(solve_pc(s.pc))
-                        m.cache.set(f"~{str(cond_z3)}", str(solve_pc(s.pc)))
+                        if m.cache is not None:
+                            m.cache.set(f"~{str(cond_z3)}", str(solve_pc(s.pc)))
                     s.pc.assert_and_track(~cond_z3, f"p{s.assertion_counter}")
                 if not solve_pc(s.pc):
                     s.pc.pop()
-                    m.cache.set(str(cond_z3), False)
+                    if m.cache is not None:
+                        m.cache.set(str(cond_z3), False)
                     m.abandon = True
                     m.ignore = True
                     return
@@ -858,11 +879,12 @@ class SymbolicDFS:
 
                     key = str(guard)
                     self.branch = bool(direction)
-                    if m.cache.exists(key):
+                    if m.cache is not None and m.cache.exists(key):
                         result = m.cache.get(key).decode()
                     else:
                         result = str(solve_pc(s.pc))
-                        m.cache.set(key, result)
+                        if m.cache is not None:
+                            m.cache.set(key, result)
                     s.pc.assert_and_track(guard, f"p{s.assertion_counter}")
                     if not solve_pc(s.pc):
                         s.pc.pop()
