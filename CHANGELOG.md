@@ -1,5 +1,36 @@
 # Changelog
 
+## [2026-01-26] [Bug Fix] Fixed empty symbolic state store issue
+
+### Problem
+The `state.store` was not being populated during symbolic execution, showing empty dictionaries like `{'place_holder': {}}` instead of containing the discovered variables.
+
+### Root Causes & Fixes
+
+1. **Disconnected stores** (`engine/execution_engine.py`)
+   - `SymbolicDFS.symbolic_store` and `SymbolicState.store` were two separate, unconnected objects
+   - The DFS traversal populated `visitor.symbolic_store` but never transferred to `state.store`
+   - **Fix**: Added code to clear visitor state before each module's DFS and transfer discovered variables to `state.store[module_name]` with fresh symbols (lines 438-445)
+   - Added `init_symbol` import from `helpers.utils`
+
+2. **PySlang 9.x compatibility** (`helpers/slang_helpers.py`)
+   - The `dfs()` method checked for `hasattr(symbol, "members")` which doesn't exist in PySlang 9.x
+   - In PySlang 9.x, symbols are directly iterable instead of having a `members` attribute
+   - **Fix**: Added fallback to try direct iteration when `members` attribute is not available (lines 555-567)
+
+3. **Missing Net type** (`helpers/slang_helpers.py`)
+   - `SymbolKind.Net` was not included in the list of symbol kinds to capture
+   - **Fix**: Added `ps.SymbolKind.Net` to the symbol kinds list (line 546)
+
+### PySlang Library Usage
+- **PySlang 9.x**: Symbols (like `InstanceBody`) are directly iterable using `for child in symbol`
+- **PySlang 7.x**: Symbols have a `members` attribute accessed via `symbol.members`
+- The fix handles both versions by trying `members` first, then falling back to direct iteration
+
+### Result
+- `state.store` now correctly populated: `{'place_holder': {'CLK': '...', 'RST': '...', 'out': '...', 'out_wire': '...'}}`
+- Variables, Parameters, Ports, and Nets are all captured with fresh symbolic identifiers
+
 ## [2026-01-26] [Feature] Added SVA assertion handling infrastructure
 
 ### Summary

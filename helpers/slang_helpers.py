@@ -538,11 +538,12 @@ class SymbolicDFS:
             return
         self.visited.add(symbol)
 
-        # Update symbolic store for variables, parameters, etc.
+        # Update symbolic store for variables, parameters, nets, etc.
         if hasattr(symbol, "name") and symbol.kind in (
             ps.SymbolKind.Variable,
             ps.SymbolKind.Parameter,
             ps.SymbolKind.Port,
+            ps.SymbolKind.Net,
         ):
             self.symbolic_store[symbol.name] = symbol
 
@@ -553,9 +554,19 @@ class SymbolicDFS:
             self.dfs_expr(symbol.assignment)
 
         # Recursively visit children if available
+        # PySlang 9.x: symbols are directly iterable (no 'members' attribute)
+        # PySlang 7.x: symbols have 'members' attribute
         if hasattr(symbol, "members"):
             for member in symbol.members:
                 self.dfs(member)
+        else:
+            # Try direct iteration for PySlang 9.x
+            try:
+                for child in symbol:
+                    self.dfs(child)
+            except TypeError:
+                pass  # Symbol is not iterable
+
         if hasattr(symbol, "body") and symbol.kind != ps.SymbolKind.ProceduralBlock:
             self.dfs(symbol.body)
 

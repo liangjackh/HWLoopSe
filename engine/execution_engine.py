@@ -14,7 +14,7 @@ import time
 import gc
 from itertools import product
 import logging
-from helpers.utils import to_binary
+from helpers.utils import to_binary, init_symbol
 import sys
 from copy import deepcopy
 import pyslang as ps
@@ -385,7 +385,6 @@ class ExecutionEngine:
         for module_name, cfg_list in cfgs_by_module.items():
             for i, cfg in enumerate(cfg_list):
                 mapped_paths[module_name][i] = cfg.paths
-                print(f"[DEBUG] mapped_paths[{module_name}][{i}] = {len(cfg.paths)} paths")
 
 
         #stride_length = cfg_count
@@ -436,7 +435,14 @@ class ExecutionEngine:
                 manager.curr_module = module_name
                 # actually want to terminate this part after the decl and comb part
                 #compilation.getRoot().visit(my_visitor_for_symbol.visit)
+                # Clear visitor state before processing each module to avoid mixing variables
+                visitor.symbolic_store.clear()
+                visitor.visited.clear()
                 visitor.dfs(modules_dict[module_name])
+                # Transfer discovered variables to state.store with fresh symbols
+                for var_name in visitor.symbolic_store:
+                    if var_name not in state.store[module_name]:
+                        state.store[module_name][var_name] = init_symbol()
                 #self.search_strategy.visit_module(manager, state, ast, modules_dict)
                 
             """for cfg_idx in range(cfg_count):
@@ -457,7 +463,8 @@ class ExecutionEngine:
             # makes assumption top level module is first in line
             # ! no longer path code as in bit string, but indices
 
-            
+             
+            print(f"461 checking states Executing path {i+1} / {len(total_paths)}")
             self.check_state(manager, state)
 
             curr_path = total_paths[i]
@@ -492,6 +499,7 @@ class ExecutionEngine:
                 modules_seen += 1
             manager.cycle = 0
             self.done = True
+            print(f"494 checking path {i+1} / {len(total_paths)}")
             self.check_state(manager, state)
             self.done = False
 
