@@ -51,7 +51,7 @@ class SlangSymbolVisitor:
     
     def visit_stmt(self, stmt):
         """Visits statements, counts branches (conditionals, cases, loops)"""
-        print("visiting stmt!")
+        # print("visiting stmt!")  # DEBUG
         if stmt is None:
             self.paths += 1
             return
@@ -585,7 +585,7 @@ class SymbolicDFS:
 
     def visit_expr(self, m: ExecutionManager, s: SymbolicState, expr):
         """Visits expressions"""
-        print(expr.__class__.__name__, dir(expr))
+        # print(expr.__class__.__name__, dir(expr))  # DEBUG
         if expr is None:
             return
 
@@ -624,7 +624,7 @@ class SymbolicDFS:
             elif hasattr(expr.left, "identifier"):
                 # Only LHS has an identifier attribute
                 #  RHS is likely a literal
-                print(expr.right.kind)
+                # print(expr.right.kind)  # DEBUG
                 if expr.right.kind == ps.SyntaxKind.ConcatenationExpression:
                     # Handle concatenation on RHS
                     parts = [str(operand.literal.value) for operand in expr.right.expressions if hasattr(operand, "literal")]
@@ -698,23 +698,39 @@ class SymbolicDFS:
                     ps.UnboundedLiteral]:
             pass
 
-        # Ignore misc. nodes in syntax tree 
-        elif kind in [ps.TokenKind.IntegerLiteral, ps.SyntaxKind.IntegerVectorExpression, 
+        # Ignore misc. nodes in syntax tree
+        elif kind in [ps.TokenKind.IntegerLiteral, ps.SyntaxKind.IntegerVectorExpression,
                       ps.SyntaxKind.ConcatenationExpression, ps.SyntaxKind.IdentifierName,
-                      ps.SyntaxKind.IdentifierSelectName, ps.TokenKind.Comma, ps.SyntaxKind.IntegerLiteralExpression]:
+                      ps.SyntaxKind.IdentifierSelectName, ps.TokenKind.Comma, ps.SyntaxKind.IntegerLiteralExpression,
+                      ps.SyntaxKind.SimplePropertyExpr]:
             pass
 
         else:
-            print(f"Unsupported Expression: {expr} of kind {kind}")
+            # print(f"Unsupported Expression: {expr} of kind {kind}")  # DEBUG
+            pass
 
 
     def visit_stmt(self, m: ExecutionManager, s: SymbolicState, stmt, modules=None, direction=None):
         """Visits statements"""
-        print("visit:", stmt.__class__.__name__, getattr(getattr(stmt, "kind", None), "name", getattr(stmt, "kind", None)))
+        # class_name = stmt.__class__.__name__
+        # print("visit:", class_name, getattr(getattr(stmt, "kind", None), "name", getattr(stmt, "kind", None)))  # DEBUG
+        # if "Assert" in class_name or "Concurrent" in class_name:
+        #     print(f"  [ASSERTION NODE] {class_name}")
         if stmt is None or m.ignore:
             return
 
         kind = stmt.kind
+
+        # Handle SyntaxList by iterating through children
+        if kind == ps.SyntaxKind.SyntaxList:
+            for child in stmt:
+                self.visit_stmt(m, s, child, modules, direction)
+            return
+
+        # Handle PropertySpecSyntax - contains assertion condition
+        if kind == ps.SyntaxKind.PropertySpec:
+            self._handle_property_spec(m, s, stmt, modules, direction)
+            return
 
         if kind == ps.SyntaxKind.ExpressionStatement:
             self.visit_expr(m, s, stmt.expr)
@@ -787,7 +803,7 @@ class SymbolicDFS:
                 self.visit_stmt(m, s, stmt.incr, modules, direction)
 
         elif kind == ps.StatementKind.WhileLoop:
-            print("whileloop")
+            # print("whileloop")  # DEBUG
             m.branch_count += 1
             if hasattr(stmt, "cond"):
                 self.visit_expr(m, s, stmt.cond)
@@ -827,7 +843,7 @@ class SymbolicDFS:
                 s.pc.pop()
 
         elif kind == ps.StatementKind.DoWhileLoop:
-            print("dowhile")
+            # print("dowhile")  # DEBUG
             m.branch_count += 1
             if hasattr(stmt, "body"):
                 self.visit_stmt(m, s, stmt.body, modules, direction)
@@ -836,7 +852,7 @@ class SymbolicDFS:
 
         #elif kind == ps.StatementKind.Case:
         elif stmt.__class__.__name__ == "CaseStatementSyntax":
-            print("case")
+            # print("case")  # DEBUG
             m.branch_count += 1
             self.visit_expr(m, s, stmt.expr)
 
@@ -940,11 +956,367 @@ class SymbolicDFS:
         #     if hasattr(stmt, "elseBody"):
         #         self.visit_stmt(m, s, stmt.elseBody, modules, direction)
 
+        # Handle ImmediateAssertionStatement (semantic node)
+        elif kind == ps.StatementKind.ImmediateAssertion:
+            self._handle_immediate_assertion(m, s, stmt, modules, direction)
+
+        # Handle ConcurrentAssertionStatement (SVA property assertions)
+        elif kind == ps.StatementKind.ConcurrentAssertion:
+            self._handle_concurrent_assertion(m, s, stmt, modules, direction)
+
+        # Handle AssertPropertyStatement syntax (SVA assert property)
+        elif kind == ps.SyntaxKind.AssertPropertyStatement:
+            self._handle_assert_property_syntax(m, s, stmt, modules, direction)
+
+        # Handle ConcurrentAssertionStatementSyntax by class name
+        elif stmt.__class__.__name__ == "ConcurrentAssertionStatementSyntax":
+            self._handle_assert_property_syntax(m, s, stmt, modules, direction)
+
+        # Handle ConcurrentAssertionMember syntax
+        elif kind == ps.SyntaxKind.ConcurrentAssertionMember:
+            if hasattr(stmt, 'statement'):
+                self.visit_stmt(m, s, stmt.statement, modules, direction)
+
+        # Handle ConcurrentAssertionMemberSyntax by class name
+        elif stmt.__class__.__name__ == "ConcurrentAssertionMemberSyntax":
+            if hasattr(stmt, 'statement'):
+                self.visit_stmt(m, s, stmt.statement, modules, direction)
+
+        # Handle ImmediateAssertionStatementSyntax (syntax node)
+        elif stmt.__class__.__name__ == "ImmediateAssertionStatementSyntax":
+            self._handle_immediate_assertion_syntax(m, s, stmt, modules, direction)
+
         elif kind == ps.StatementKind.Return and hasattr(stmt, "expr"):
             self.visit_expr(m, s, stmt.expr)
         
         elif kind == ps.StatementKind.ExpressionStatement:
             self.visit_expr(m, s, stmt.expr)
+
+    def _handle_immediate_assertion(self, m: ExecutionManager, s: SymbolicState, stmt, modules, direction):
+        """Handle ImmediateAssertionStatement (semantic node).
+
+        Task #1: Extract assertion condition
+        Task #2: Convert to Z3
+        Task #3: Check for violations
+        """
+        # Task #1: Extract the assertion condition
+        cond = getattr(stmt, 'cond', None)
+        if cond is None:
+            return
+
+        # Get assertion kind (assert, assume, cover)
+        assertion_kind = getattr(stmt, 'assertionKind', None)
+
+        # Visit the condition expression to update symbolic state
+        self.visit_expr(m, s, cond)
+
+        # Task #2: Convert condition to Z3
+        try:
+            cond_z3 = self.expr_to_z3(m, s, cond)
+        except Exception as e:
+            # If conversion fails, skip this assertion
+            return
+
+        if cond_z3 is None:
+            return
+
+        # Task #3: Check for assertion violation
+        # An assertion is violated if the condition can be false
+        # We check if NOT(condition) is satisfiable
+        from z3 import Not, is_bool
+
+        if not is_bool(cond_z3):
+            # Try to convert to boolean
+            from z3 import BitVecVal
+            cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size()) if hasattr(cond_z3, 'size') else cond_z3
+
+        # Push a new context for checking
+        s.pc.push()
+        s.pc.add(Not(cond_z3))
+
+        # Check if the negated condition is satisfiable
+        if solve_pc(s.pc):
+            # Assertion can be violated!
+            m.assertion_violation = True
+            # Store the assertion info for reporting
+            if not hasattr(m, 'violated_assertions'):
+                m.violated_assertions = []
+            m.violated_assertions.append({
+                'condition': str(cond),
+                'z3_condition': str(cond_z3),
+                'kind': str(assertion_kind) if assertion_kind else 'assert'
+            })
+
+        # Pop the context
+        s.pc.pop()
+
+        # Handle ifTrue/ifFalse actions if present
+        if hasattr(stmt, 'ifTrue') and stmt.ifTrue:
+            self.visit_stmt(m, s, stmt.ifTrue, modules, direction)
+        if hasattr(stmt, 'ifFalse') and stmt.ifFalse:
+            self.visit_stmt(m, s, stmt.ifFalse, modules, direction)
+
+    def _handle_immediate_assertion_syntax(self, m: ExecutionManager, s: SymbolicState, stmt, modules, direction):
+        """Handle ImmediateAssertionStatementSyntax (syntax node).
+
+        Task #1: Extract assertion condition from syntax node
+        Task #2: Convert to Z3
+        Task #3: Check for violations
+        """
+        # Task #1: Extract the assertion expression from syntax node
+        expr = getattr(stmt, 'expr', None)
+        if expr is None:
+            return
+
+        # Get assertion keyword (assert, assume, cover)
+        keyword = getattr(stmt, 'keyword', None)
+        assertion_kind = str(keyword) if keyword else 'assert'
+
+        # Visit the expression to update symbolic state
+        self.visit_expr(m, s, expr)
+
+        # Task #2: Convert expression to Z3
+        try:
+            cond_z3 = self.expr_to_z3(m, s, expr)
+        except Exception as e:
+            # If conversion fails, skip this assertion
+            return
+
+        if cond_z3 is None:
+            return
+
+        # Task #3: Check for assertion violation
+        from z3 import Not, is_bool
+
+        if not is_bool(cond_z3):
+            from z3 import BitVecVal
+            cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size()) if hasattr(cond_z3, 'size') else cond_z3
+
+        # Push a new context for checking
+        s.pc.push()
+        s.pc.add(Not(cond_z3))
+
+        # Check if the negated condition is satisfiable
+        if solve_pc(s.pc):
+            # Assertion can be violated!
+            m.assertion_violation = True
+            if not hasattr(m, 'violated_assertions'):
+                m.violated_assertions = []
+            m.violated_assertions.append({
+                'condition': str(expr),
+                'z3_condition': str(cond_z3),
+                'kind': assertion_kind
+            })
+
+        # Pop the context
+        s.pc.pop()
+
+        # Handle action block if present
+        action = getattr(stmt, 'action', None)
+        if action:
+            self.visit_stmt(m, s, action, modules, direction)
+
+    def _handle_concurrent_assertion(self, m: ExecutionManager, s: SymbolicState, stmt, modules, direction):
+        """Handle ConcurrentAssertionStatement (SVA property assertions).
+
+        SVA concurrent assertions like: assert property (p_name);
+        These reference named properties defined elsewhere.
+        """
+        # Get the property specification
+        propertySpec = getattr(stmt, 'propertySpec', None)
+        if propertySpec is None:
+            return
+
+        # Get assertion kind (assert, assume, cover)
+        assertion_kind = getattr(stmt, 'assertionKind', None)
+
+        # Try to extract the property expression
+        # For concurrent assertions, the property may be a reference to a named property
+        expr = None
+        if hasattr(propertySpec, 'expr'):
+            expr = propertySpec.expr
+        elif hasattr(propertySpec, 'property'):
+            expr = propertySpec.property
+
+        if expr is None:
+            return
+
+        # Visit the expression to update symbolic state
+        self.visit_expr(m, s, expr)
+
+        # Try to convert to Z3
+        try:
+            cond_z3 = self.expr_to_z3(m, s, expr)
+        except Exception as e:
+            return
+
+        if cond_z3 is None:
+            return
+
+        # Check for assertion violation
+        from z3 import Not, is_bool
+
+        if not is_bool(cond_z3):
+            from z3 import BitVecVal
+            cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size()) if hasattr(cond_z3, 'size') else cond_z3
+
+        # Push a new context for checking
+        s.pc.push()
+        s.pc.add(Not(cond_z3))
+
+        # Check if the negated condition is satisfiable
+        if solve_pc(s.pc):
+            m.assertion_violation = True
+            if not hasattr(m, 'violated_assertions'):
+                m.violated_assertions = []
+            m.violated_assertions.append({
+                'condition': str(expr),
+                'z3_condition': str(cond_z3),
+                'kind': str(assertion_kind) if assertion_kind else 'assert',
+                'type': 'concurrent'
+            })
+
+        s.pc.pop()
+
+    def _handle_assert_property_syntax(self, m: ExecutionManager, s: SymbolicState, stmt, modules, direction):
+        """Handle AssertPropertyStatement syntax node.
+
+        SVA syntax: assert property (property_spec);
+        """
+        # Get the property spec
+        propertySpec = getattr(stmt, 'propertySpec', None)
+        if propertySpec is None:
+            return
+
+        # Try to extract the property expression
+        expr = None
+        if hasattr(propertySpec, 'expr'):
+            expr = propertySpec.expr
+        elif hasattr(propertySpec, 'property'):
+            expr = propertySpec.property
+
+        if expr is None:
+            return
+
+        # Visit the expression
+        self.visit_expr(m, s, expr)
+
+        # Try to convert to Z3
+        try:
+            cond_z3 = self.expr_to_z3(m, s, expr)
+        except Exception as e:
+            return
+
+        if cond_z3 is None:
+            return
+
+        # Check for assertion violation
+        from z3 import Not, is_bool
+
+        if not is_bool(cond_z3):
+            from z3 import BitVecVal
+            cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size()) if hasattr(cond_z3, 'size') else cond_z3
+
+        s.pc.push()
+        s.pc.add(Not(cond_z3))
+
+        if solve_pc(s.pc):
+            m.assertion_violation = True
+            if not hasattr(m, 'violated_assertions'):
+                m.violated_assertions = []
+            m.violated_assertions.append({
+                'condition': str(expr),
+                'z3_condition': str(cond_z3),
+                'kind': 'assert property',
+                'type': 'concurrent'
+            })
+            print(f"[ASSERTION VIOLATION] assert property: {expr}")
+
+        s.pc.pop()
+
+    def _handle_property_spec(self, m: ExecutionManager, s: SymbolicState, stmt, modules, direction):
+        """Handle PropertySpecSyntax - contains assertion condition.
+
+        PropertySpec contains the actual property expression that needs to be checked.
+        """
+        # print(f"[PROPERTY SPEC] Processing PropertySpecSyntax")
+        # print(f"[PROPERTY SPEC] Children: {[type(c).__name__ for c in stmt]}")
+
+        # Try to extract the property expression
+        expr = None
+        if hasattr(stmt, 'expr'):
+            expr = stmt.expr
+        elif hasattr(stmt, 'property'):
+            expr = stmt.property
+
+        if expr is None:
+            # Try to iterate through children to find the expression
+            for child in stmt:
+                child_kind = getattr(child, 'kind', None)
+                # print(f"[PROPERTY SPEC] Child: {type(child).__name__}, kind: {child_kind}")
+                if child_kind and 'Expr' in str(child_kind):
+                    expr = child
+                    break
+                # Check for SimplePropertyExpr
+                if child_kind == ps.SyntaxKind.SimplePropertyExpr:
+                    expr = child
+                    break
+
+        if expr is None:
+            # print(f"[PROPERTY SPEC] No expression found in PropertySpec")
+            return
+
+        # print(f"[PROPERTY SPEC] Found expression: {expr}, type: {type(expr).__name__}")
+
+        # Visit the expression
+        self.visit_expr(m, s, expr)
+
+        # Try to convert to Z3
+        try:
+            cond_z3 = self.expr_to_z3(m, s, expr)
+        except Exception as e:
+            # print(f"[PROPERTY SPEC] Failed to convert to Z3: {e}")
+            return
+
+        if cond_z3 is None:
+            # print(f"[PROPERTY SPEC] Z3 conversion returned None")
+            return
+
+        # print(f"[PROPERTY SPEC] Z3 condition: {cond_z3}, type: {type(cond_z3)}")
+
+        # Check if Z3 conversion returned SymbolicState (indicates property name reference)
+        if isinstance(cond_z3, SymbolicState):
+            # print(f"[PROPERTY SPEC] Property name reference detected, skipping Z3 check")
+            return
+
+        # Check for assertion violation
+        from z3 import Not, is_bool, ExprRef
+
+        # Verify we have a valid Z3 expression
+        if not isinstance(cond_z3, ExprRef):
+            # print(f"[PROPERTY SPEC] Invalid Z3 expression type: {type(cond_z3)}")
+            return
+
+        if not is_bool(cond_z3):
+            from z3 import BitVecVal
+            cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size()) if hasattr(cond_z3, 'size') else cond_z3
+
+        s.pc.push()
+        s.pc.add(Not(cond_z3))
+
+        if solve_pc(s.pc):
+            m.assertion_violation = True
+            if not hasattr(m, 'violated_assertions'):
+                m.violated_assertions = []
+            m.violated_assertions.append({
+                'condition': str(expr),
+                'z3_condition': str(cond_z3),
+                'kind': 'property',
+                'type': 'concurrent'
+            })
+            print(f"[ASSERTION VIOLATION] property: {expr}")
+
+        s.pc.pop()
 
 class ExpressionSymbolCollector:
     """Visitor that traverses an expression and collects parameter and port symbols."""
@@ -1025,7 +1397,7 @@ if False:
         visitor_for_symbol = None
         
         def __init__(self, visitor_for_symbol):
-            print("building a node visitor")
+            # print("building a node visitor")  # DEBUG
             self.visitor_for_symbol = visitor_for_symbol
             self.node_id_to_node = dict()
             self.node_id_to_pid  = {0:None}
@@ -1121,1077 +1493,1613 @@ if False:
             self.node_id_to_cids[self.node_id] = list()
 
             if node.kind == ps.SyntaxKind.Unknown:
-                print("UNKNOWN NODE")
+                # print("UNKNOWN NODE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SyntaxList:
-                print("SYNTAX LIST")
+                # print("SYNTAX LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TokenList:
-                print("TOKEN LIST")
+                # print("TOKEN LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SeparatedList:
-                print("SEPARATED LIST")
+                # print("SEPARATED LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AcceptOnPropertyExpr:
-                print("ACCEPT ON PROPERTY EXPR")
+                # print("ACCEPT ON PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ActionBlock:
-                print("ACTION BLOCK")
+                # print("ACTION BLOCK")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AddAssignmentExpression:
-                print("ADD ASSIGNMENT EXPRESSION")
+                # print("ADD ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AddExpression:
-                print("ADD EXPRESSION")
+                # print("ADD EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ProceduralBlockSyntax:
-                print("ALWAYS BLOCK")
+                # print("ALWAYS BLOCK")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AlwaysCombBlock:
-                print("ALWAYS COMB BLOCK")
+                # print("ALWAYS COMB BLOCK")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AlwaysFFBlock:
-                print("ALWAYS FF BLOCK")
+                # print("ALWAYS FF BLOCK")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AlwaysLatchBlock:
-                print("ALWAYS LATCH BLOCK")
+                # print("ALWAYS LATCH BLOCK")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AndAssignmentExpression:
-                print("AND ASSIGNMENT EXPRESSION")
+                # print("AND ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AndPropertyExpr:
-                print("AND PROPERTY EXPR")
+                # print("AND PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AndSequenceExpr:
-                print("AND SEQUENCE EXPR")
+                # print("AND SEQUENCE EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AnonymousProgram:
-                print("ANONYMOUS PROGRAM")
+                # print("ANONYMOUS PROGRAM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AnsiPortList:
-                print("ANSI PORT LIST")
+                # print("ANSI PORT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AnsiUdpPortList:
-                print("ANSI UDP PORT LIST")
+                # print("ANSI UDP PORT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ArgumentList:
-                print("ARGUMENT LIST")
+                # print("ARGUMENT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ArithmeticLeftShiftAssignmentExpression:
-                print("ARITHMETIC LEFT SHIFT ASSIGNMENT EXPRESSION")
+                # print("ARITHMETIC LEFT SHIFT ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ArithmeticRightShiftAssignmentExpression:
-                print("ARITHMETIC RIGHT SHIFT ASSIGNMENT EXPRESSION")
+                # print("ARITHMETIC RIGHT SHIFT ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ArithmeticShiftLeftExpression:
-                print("ARITHMETIC SHIFT LEFT EXPRESSION")
+                # print("ARITHMETIC SHIFT LEFT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ArithmeticShiftRightExpression:
-                print("ARITHMETIC SHIFT RIGHT EXPRESSION")
+                # print("ARITHMETIC SHIFT RIGHT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ArrayAndMethod:
-                print("ARRAY AND METHOD")
+                # print("ARRAY AND METHOD")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ArrayOrMethod:
-                print("ARRAY OR METHOD")
+                # print("ARRAY OR METHOD")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ArrayOrRandomizeMethodExpression:
-                print("ARRAY OR RANDOMIZE METHOD EXPRESSION")
+                # print("ARRAY OR RANDOMIZE METHOD EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ArrayUniqueMethod:
-                print("ARRAY UNIQUE METHOD")
+                # print("ARRAY UNIQUE METHOD")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ArrayXorMethod:
-                print("ARRAY XOR METHOD")
+                # print("ARRAY XOR METHOD")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AscendingRangeSelect:
-                print("ASCENDING RANGE SELECT")
+                # print("ASCENDING RANGE SELECT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AssertPropertyStatement:
-                print("ASSERT PROPERTY STATEMENT")
+                # print("ASSERT PROPERTY STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AssertionItemPort:
-                print("ASSERTION ITEM PORT")
+                # print("ASSERTION ITEM PORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AssertionItemPortList:
-                print("ASSERTION ITEM PORT LIST")
+                # print("ASSERTION ITEM PORT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AssignmentExpression:
-                print("ASSIGNMENT EXPRESSION")
+                # print("ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AssignmentPatternExpression:
-                print("ASSIGNMENT PATTERN EXPRESSION")
+                # print("ASSIGNMENT PATTERN EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AssignmentPatternItem:
-                print("ASSIGNMENT PATTERN ITEM")
+                # print("ASSIGNMENT PATTERN ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AssumePropertyStatement:
-                print("ASSUME PROPERTY STATEMENT")
+                # print("ASSUME PROPERTY STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AttributeInstance:
-                print("ATTRIBUTE INSTANCE")
+                # print("ATTRIBUTE INSTANCE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.AttributeSpec:
-                print("ATTRIBUTE SPEC")
+                # print("ATTRIBUTE SPEC")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BadExpression:
-                print("BAD EXPRESSION")
+                # print("BAD EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BeginKeywordsDirective:
-                print("BEGIN KEYWORDS DIRECTIVE")
+                # print("BEGIN KEYWORDS DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BinSelectWithFilterExpr:
-                print("BIN SELECT WITH FILTER EXPR")
+                # print("BIN SELECT WITH FILTER EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BinaryAndExpression:
-                print("BINARY AND EXPRESSION")
+                # print("BINARY AND EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BinaryBinsSelectExpr:
-                print("BINARY BINS SELECT EXPR")
+                # print("BINARY BINS SELECT EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BinaryBlockEventExpression:
-                print("BINARY BLOCK EVENT EXPRESSION")
+                # print("BINARY BLOCK EVENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BinaryConditionalDirectiveExpression:
-                print("BINARY CONDITIONAL DIRECTIVE EXPRESSION")
+                # print("BINARY CONDITIONAL DIRECTIVE EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BinaryEventExpression:
-                print("BINARY EVENT EXPRESSION")
+                # print("BINARY EVENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BinaryOrExpression:
-                print("BINARY OR EXPRESSION")
+                # print("BINARY OR EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BinaryXnorExpression:
-                print("BINARY XNOR EXPRESSION")
+                # print("BINARY XNOR EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BinaryXorExpression:
-                print("BINARY XOR EXPRESSION")
+                # print("BINARY XOR EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BindDirective:
-                print("BIND DIRECTIVE")
+                # print("BIND DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BindTargetList:
-                print("BIND TARGET LIST")
+                # print("BIND TARGET LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BinsSelectConditionExpr:
-                print("BINS SELECT CONDITION EXPR")
+                # print("BINS SELECT CONDITION EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BinsSelection:
-                print("BINS SELECTION")
+                # print("BINS SELECTION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BitSelect:
-                print("BIT SELECT")
+                # print("BIT SELECT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BitType:
-                print("BIT TYPE")
+                # print("BIT TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BlockCoverageEvent:
-                print("BLOCK COVERAGE EVENT")
+                # print("BLOCK COVERAGE EVENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.BlockingEventTriggerStatement:
-                print("BLOCKING EVENT TRIGGER STATEMENT")
+                # print("BLOCKING EVENT TRIGGER STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ByteType:
-                print("BYTE TYPE")
+                # print("BYTE TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CHandleType:
-                print("CHANDLE TYPE")
+                # print("CHANDLE TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CaseEqualityExpression:
-                print("CASE EQUALITY EXPRESSION")
+                # print("CASE EQUALITY EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CaseGenerate:
-                print("CASE GENERATE")
+                # print("CASE GENERATE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CaseInequalityExpression:
-                print("CASE INEQUALITY EXPRESSION")
+                # print("CASE INEQUALITY EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CasePropertyExpr:
-                print("CASE PROPERTY EXPR")
+                # print("CASE PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CaseStatement:
-                print("CASE STATEMENT")
+                # print("CASE STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CastExpression:
-                print("CAST EXPRESSION")
+                # print("CAST EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CellConfigRule:
-                print("CELL CONFIG RULE")
+                # print("CELL CONFIG RULE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CellDefineDirective:
-                print("CELL DEFINE DIRECTIVE")
+                # print("CELL DEFINE DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ChargeStrength:
-                print("CHARGE STRENGTH")
+                # print("CHARGE STRENGTH")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CheckerDataDeclaration:
-                print("CHECKER DATA DECLARATION")
+                # print("CHECKER DATA DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CheckerDeclaration:
-                print("CHECKER DECLARATION")
+                # print("CHECKER DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CheckerInstanceStatement:
-                print("CHECKER INSTANCE STATEMENT")
+                # print("CHECKER INSTANCE STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CheckerInstantiation:
-                print("CHECKER INSTANTIATION")
+                # print("CHECKER INSTANTIATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ClassDeclaration:
-                print("CLASS DECLARATION")
+                # print("CLASS DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ClassMethodDeclaration:
-                print("CLASS METHOD DECLARATION")
+                # print("CLASS METHOD DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ClassMethodPrototype:
-                print("CLASS METHOD PROTOTYPE")
+                # print("CLASS METHOD PROTOTYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ClassName:
-                print("CLASS NAME")
+                # print("CLASS NAME")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ClassPropertyDeclaration:
-                print("CLASS PROPERTY DECLARATION")
+                # print("CLASS PROPERTY DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ClassSpecifier:
-                print("CLASS SPECIFIER")
+                # print("CLASS SPECIFIER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ClockingDeclaration:
-                print("CLOCKING DECLARATION")
+                # print("CLOCKING DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ClockingDirection:
-                print("CLOCKING DIRECTION")
+                # print("CLOCKING DIRECTION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ClockingItem:
-                print("CLOCKING ITEM")
+                # print("CLOCKING ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ClockingPropertyExpr:
-                print("CLOCKING PROPERTY EXPR")
+                # print("CLOCKING PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ClockingSequenceExpr:
-                print("CLOCKING SEQUENCE EXPR")
+                # print("CLOCKING SEQUENCE EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ClockingSkew:
-                print("CLOCKING SKEW")
+                # print("CLOCKING SKEW")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ColonExpressionClause:
-                print("COLON EXPRESSION CLAUSE")
+                # print("COLON EXPRESSION CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CompilationUnit:
-                print("COMPILATION UNIT")
+                # print("COMPILATION UNIT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConcatenationExpression:
-                print("CONCATENATION EXPRESSION")
+                # print("CONCATENATION EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConcurrentAssertionMember:
-                print("CONCURRENT ASSERTION MEMBER")
+                # print("CONCURRENT ASSERTION MEMBER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConditionalConstraint:
-                print("CONDITIONAL CONSTRAINT")
+                # print("CONDITIONAL CONSTRAINT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConditionalExpression:
-                print("CONDITIONAL EXPRESSION")
+                # print("CONDITIONAL EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConditionalPathDeclaration:
-                print("CONDITIONAL PATH DECLARATION")
+                # print("CONDITIONAL PATH DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConditionalPattern:
-                print("CONDITIONAL PATTERN")
+                # print("CONDITIONAL PATTERN")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConditionalPredicate:
-                print("CONDITIONAL PREDICATE")
+                # print("CONDITIONAL PREDICATE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConditionalPropertyExpr:
-                print("CONDITIONAL PROPERTY EXPR")
+                # print("CONDITIONAL PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConditionalStatement:
-                print("CONDITIONAL STATEMENT")
+                # print("CONDITIONAL STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConfigCellIdentifier:
-                print("CONFIG CELL IDENTIFIER")
+                # print("CONFIG CELL IDENTIFIER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConfigDeclaration:
-                print("CONFIG DECLARATION")
+                # print("CONFIG DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConfigInstanceIdentifier:
-                print("CONFIG INSTANCE IDENTIFIER")
+                # print("CONFIG INSTANCE IDENTIFIER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConfigLiblist:
-                print("CONFIG LIBLIST")
+                # print("CONFIG LIBLIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConfigUseClause:
-                print("CONFIG USE CLAUSE")
+                # print("CONFIG USE CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConstraintBlock:
-                print("CONSTRAINT BLOCK")
+                # print("CONSTRAINT BLOCK")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConstraintDeclaration:
-                print("CONSTRAINT DECLARATION")
+                # print("CONSTRAINT DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConstraintPrototype:
-                print("CONSTRAINT PROTOTYPE")
+                # print("CONSTRAINT PROTOTYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ConstructorName:
-                print("CONSTRUCTOR NAME")
+                # print("CONSTRUCTOR NAME")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ContinuousAssign:
-                print("ASSIGNMENT STATEMENT")
+                # print("ASSIGNMENT STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CopyClassExpression:
-                print("COPY CLASS EXPRESSION")
+                # print("COPY CLASS EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CoverCross:
-                print("COVER CROSS")
+                # print("COVER CROSS")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CoverPropertyStatement:
-                print("COVER PROPERTY STATEMENT")
+                # print("COVER PROPERTY STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CoverSequenceStatement:
-                print("COVER SEQUENCE STATEMENT")
+                # print("COVER SEQUENCE STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CoverageBins:
-                print("COVERAGE BINS")
+                # print("COVERAGE BINS")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CoverageBinsArraySize:
-                print("COVERAGE BINS ARRAY SIZE")
+                # print("COVERAGE BINS ARRAY SIZE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CoverageIffClause:
-                print("COVERAGE IFF CLAUSE")
+                # print("COVERAGE IFF CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CoverageOption:
-                print("COVERAGE OPTION")
+                # print("COVERAGE OPTION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CovergroupDeclaration:
-                print("COVERGROUP DECLARATION")
+                # print("COVERGROUP DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.Coverpoint:
-                print("COVERPOINT")
+                # print("COVERPOINT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.CycleDelay:
-                print("CYCLE DELAY")
+                # print("CYCLE DELAY")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DPIExport:
-                print("DPI EXPORT")
+                # print("DPI EXPORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DPIImport:
-                print("DPI IMPORT")
+                # print("DPI IMPORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DataDeclaration:
-                print("DATA DECLARATION")
+                # print("DATA DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.Declarator:
-                print("DECLARATOR")
+                # print("DECLARATOR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefParam:
-                print("DEF PARAM")
+                # print("DEF PARAM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefParamAssignment:
-                print("DEF PARAM ASSIGNMENT")
+                # print("DEF PARAM ASSIGNMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultCaseItem:
-                print("DEFAULT CASE ITEM")
+                # print("DEFAULT CASE ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultClockingReference:
-                print("DEFAULT CLOCKING REFERENCE")
+                # print("DEFAULT CLOCKING REFERENCE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultConfigRule:
-                print("DEFAULT CONFIG RULE")
+                # print("DEFAULT CONFIG RULE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultCoverageBinInitializer:
-                print("DEFAULT COVERAGE BIN INITIALIZER")
+                # print("DEFAULT COVERAGE BIN INITIALIZER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultDecayTimeDirective:
-                print("DEFAULT DECAY TIME DIRECTIVE")
+                # print("DEFAULT DECAY TIME DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultDisableDeclaration:
-                print("DEFAULT DISABLE DECLARATION")
+                # print("DEFAULT DISABLE DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultDistItem:
-                print("DEFAULT DIST ITEM")
+                # print("DEFAULT DIST ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultExtendsClauseArg:
-                print("DEFAULT EXTENDS CLAUSE ARG")
+                # print("DEFAULT EXTENDS CLAUSE ARG")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultFunctionPort:
-                print("DEFAULT FUNCTION PORT")
+                # print("DEFAULT FUNCTION PORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultNetTypeDirective:
-                print("DEFAULT NET TYPE DIRECTIVE")
+                # print("DEFAULT NET TYPE DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultPatternKeyExpression:
-                print("DEFAULT PATTERN KEY EXPRESSION")
+                # print("DEFAULT PATTERN KEY EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultPropertyCaseItem:
-                print("DEFAULT PROPERTY CASE ITEM")
+                # print("DEFAULT PROPERTY CASE ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultRsCaseItem:
-                print("DEFAULT RS CASE ITEM")
+                # print("DEFAULT RS CASE ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultSkewItem:
-                print("DEFAULT SKEW ITEM")
+                # print("DEFAULT SKEW ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefaultTriregStrengthDirective:
-                print("DEFAULT TRIREG STRENGTH DIRECTIVE")
+                # print("DEFAULT TRIREG STRENGTH DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DeferredAssertion:
-                print("DEFERRED ASSERTION")
+                # print("DEFERRED ASSERTION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DefineDirective:
-                print("DEFINE DIRECTIVE")
+                # print("DEFINE DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.Delay3:
-                print("DELAY 3")
+                # print("DELAY 3")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DelayControl:
-                print("DELAY CONTROL")
+                # print("DELAY CONTROL")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DelayModeDistributedDirective:
-                print("DELAY MODE DISTRIBUTED DIRECTIVE")
+                # print("DELAY MODE DISTRIBUTED DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DelayModePathDirective:
-                print("DELAY MODE PATH DIRECTIVE")
+                # print("DELAY MODE PATH DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DelayModeUnitDirective:
-                print("DELAY MODE UNIT DIRECTIVE")
+                # print("DELAY MODE UNIT DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DelayModeZeroDirective:
-                print("DELAY MODE ZERO DIRECTIVE")
+                # print("DELAY MODE ZERO DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DelayedSequenceElement:
-                print("DELAYED SEQUENCE ELEMENT")
+                # print("DELAYED SEQUENCE ELEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DelayedSequenceExpr:
-                print("DELAYED SEQUENCE EXPR")
+                # print("DELAYED SEQUENCE EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DescendingRangeSelect:
-                print("DESCENDING RANGE SELECT")
+                # print("DESCENDING RANGE SELECT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DisableConstraint:
-                print("DISABLE CONSTRAINT")
+                # print("DISABLE CONSTRAINT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DisableForkStatement:
-                print("DISABLE FORK STATEMENT")
+                # print("DISABLE FORK STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DisableIff:
-                print("DISABLE IFF")
+                # print("DISABLE IFF")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DisableStatement:
-                print("DISABLE STATEMENT")
+                # print("DISABLE STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DistConstraintList:
-                print("DIST CONSTRAINT LIST")
+                # print("DIST CONSTRAINT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DistItem:
-                print("DIST ITEM")
+                # print("DIST ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DistWeight:
-                print("DIST WEIGHT")
+                # print("DIST WEIGHT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DivideAssignmentExpression:
-                print("DIVIDE ASSIGNMENT EXPRESSION")
+                # print("DIVIDE ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DivideExpression:
-                print("DIVIDE EXPRESSION")
+                # print("DIVIDE EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DividerClause:
-                print("DIVIDER CLAUSE")
+                # print("DIVIDER CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DoWhileStatement:
-                print("DO WHILE STATEMENT")
+                # print("DO WHILE STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DotMemberClause:
-                print("DOT MEMBER CLAUSE")
+                # print("DOT MEMBER CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.DriveStrength:
-                print("DRIVE STRENGTH")
+                # print("DRIVE STRENGTH")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EdgeControlSpecifier:
-                print("EDGE CONTROL SPECIFIER")
+                # print("EDGE CONTROL SPECIFIER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EdgeDescriptor:
-                print("EDGE DESCRIPTOR")
+                # print("EDGE DESCRIPTOR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EdgeSensitivePathSuffix:
-                print("EDGE SENSITIVE PATH SUFFIX")
+                # print("EDGE SENSITIVE PATH SUFFIX")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ElabSystemTask:
-                print("ELAB SYSTEM TASK")
+                # print("ELAB SYSTEM TASK")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ElementSelect:
-                print("ELEMENT SELECT")
+                # print("ELEMENT SELECT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ElementSelectExpression:
-                print("ELEMENT SELECT EXPRESSION")
+                # print("ELEMENT SELECT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ElsIfDirective:
-                print("ELSIF DIRECTIVE")
+                # print("ELSIF DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ElseClause:
-                print("ELSE CLAUSE")
+                # print("ELSE CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ElseConstraintClause:
-                print("ELSE CONSTRAINT CLAUSE")
+                # print("ELSE CONSTRAINT CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ElseDirective:
-                print("ELSE DIRECTIVE")
+                # print("ELSE DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ElsePropertyClause:
-                print("ELSE PROPERTY CLAUSE")
+                # print("ELSE PROPERTY CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EmptyArgument:
-                print("EMPTY ARGUMENT")
+                # print("EMPTY ARGUMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EmptyIdentifierName:
-                print("EMPTY IDENTIFIER NAME")
+                # print("EMPTY IDENTIFIER NAME")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EmptyMember:
-                print("EMPTY MEMBER")
+                # print("EMPTY MEMBER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EmptyNonAnsiPort:
-                print("EMPTY NON ANSI PORT")
+                # print("EMPTY NON ANSI PORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EmptyPortConnection:
-                print("EMPTY PORT CONNECTION")
+                # print("EMPTY PORT CONNECTION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EmptyQueueExpression:
-                print("EMPTY QUEUE EXPRESSION")
+                # print("EMPTY QUEUE EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EmptyStatement:
-                print("EMPTY STATEMENT")
+                # print("EMPTY STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EmptyTimingCheckArg:
-                print("EMPTY TIMING CHECK ARG")
+                # print("EMPTY TIMING CHECK ARG")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EndCellDefineDirective:
-                print("END CELL DEFINE DIRECTIVE")
+                # print("END CELL DEFINE DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EndIfDirective:
-                print("END IF DIRECTIVE")
+                # print("END IF DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EndKeywordsDirective:
-                print("END KEYWORDS DIRECTIVE")
+                # print("END KEYWORDS DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EndProtectDirective:
-                print("END PROTECT DIRECTIVE")
+                # print("END PROTECT DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EndProtectedDirective:
-                print("END PROTECTED DIRECTIVE")
+                # print("END PROTECTED DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EnumType:
-                print("ENUM TYPE")
+                # print("ENUM TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EqualityExpression:
-                print("EQUALITY EXPRESSION")
+                # print("EQUALITY EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EqualsAssertionArgClause:
-                print("EQUALS ASSERTION ARG CLAUSE")
+                # print("EQUALS ASSERTION ARG CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EqualsTypeClause:
-                print("EQUALS TYPE CLAUSE")
+                # print("EQUALS TYPE CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EqualsValueClause:
-                print("EQUALS VALUE CLAUSE")
+                # print("EQUALS VALUE CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EventControl:
-                print("EVENT CONTROL")
+                # print("EVENT CONTROL")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EventControlWithExpression:
-                print("EVENT CONTROL WITH EXPRESSION")
+                # print("EVENT CONTROL WITH EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.EventType:
-                print("EVENT TYPE")
+                # print("EVENT TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ExpectPropertyStatement:
-                print("EXPECT PROPERTY STATEMENT")
+                # print("EXPECT PROPERTY STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ExplicitAnsiPort:
-                print("EXPLICIT ANSI PORT")
+                # print("EXPLICIT ANSI PORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ExplicitNonAnsiPort:
-                print("EXPLICIT NON ANSI PORT")
+                # print("EXPLICIT NON ANSI PORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ExpressionConstraint:
-                print("EXPRESSION CONSTRAINT")
+                # print("EXPRESSION CONSTRAINT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ExpressionCoverageBinInitializer:
-                print("EXPRESSION COVERAGE BIN INITIALIZER")
+                # print("EXPRESSION COVERAGE BIN INITIALIZER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ExpressionOrDist:
-                print("EXPRESSION OR DIST")
+                # print("EXPRESSION OR DIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ExpressionPattern:
-                print("EXPRESSION PATTERN")
+                # print("EXPRESSION PATTERN")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ExpressionStatement:
-                print("EXPRESSION STATEMENT")
+                # print("EXPRESSION STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ExpressionTimingCheckArg:
-                print("EXPRESSION TIMING CHECK ARG")
+                # print("EXPRESSION TIMING CHECK ARG")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ExtendsClause:
-                print("EXTENDS CLAUSE")
+                # print("EXTENDS CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ExternInterfaceMethod:
-                print("EXTERN INTERFACE METHOD")
+                # print("EXTERN INTERFACE METHOD")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ExternModuleDecl:
-                print("EXTERN MODULE DECL")
+                # print("EXTERN MODULE DECL")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ExternUdpDecl:
-                print("EXTERN UDP DECL")
+                # print("EXTERN UDP DECL")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.FilePathSpec:
-                print("FILE PATH SPEC")
+                # print("FILE PATH SPEC")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.FinalBlock:
-                print("FINAL BLOCK")
+                # print("FINAL BLOCK")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.FirstMatchSequenceExpr:
-                print("FIRST MATCH SEQUENCE EXPR")
+                # print("FIRST MATCH SEQUENCE EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.FollowedByPropertyExpr:
-                print("FOLLOWED BY PROPERTY EXPR")
+                # print("FOLLOWED BY PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ForLoopStatement:
-                print("FOR LOOP STATEMENT")
+                # print("FOR LOOP STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ForVariableDeclaration:
-                print("FOR VARIABLE DECLARATION")
+                # print("FOR VARIABLE DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ForeachLoopList:
-                print("FOREACH LOOP LIST")
+                # print("FOREACH LOOP LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ForeachLoopStatement:
-                print("FOREACH LOOP STATEMENT")
+                # print("FOREACH LOOP STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ForeverStatement:
-                print("FOREVER STATEMENT")
+                # print("FOREVER STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ForwardTypeRestriction:
-                print("FORWARD TYPE RESTRICTION")
+                # print("FORWARD TYPE RESTRICTION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ForwardTypedefDeclaration:
-                print("FORWARD TYPEDEF DECLARATION")
+                # print("FORWARD TYPEDEF DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.FunctionDeclaration:
-                print("FUNCTION DECLARATION")
+                # print("FUNCTION DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.FunctionPort:
-                print("FUNCTION PORT")
+                # print("FUNCTION PORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.FunctionPortList:
-                print("FUNCTION PORT LIST")
+                # print("FUNCTION PORT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.FunctionPrototype:
-                print("FUNCTION PROTOTYPE")
+                # print("FUNCTION PROTOTYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.GenerateBlock:
-                print("GENERATE BLOCK")
+                # print("GENERATE BLOCK")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.GenerateRegion:
-                print("GENERATE REGION")
+                # print("GENERATE REGION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.GenvarDeclaration:
-                print("GENVAR DECLARATION")
+                # print("GENVAR DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.GreaterThanEqualExpression:
-                print("GREATER THAN EQUAL EXPRESSION")
+                # print("GREATER THAN EQUAL EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.GreaterThanExpression:
-                print("GREATER THAN EXPRESSION")
+                # print("GREATER THAN EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.HierarchicalInstance:
-                print("HIERARCHICAL INSTANCE")
+                # print("HIERARCHICAL INSTANCE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.HierarchyInstantiation:
-                print("HIERARCHY INSTANTIATION")
+                # print("HIERARCHY INSTANTIATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IdWithExprCoverageBinInitializer:
-                print("ID WITH EXPR COVERAGE BIN INITIALIZER")
+                # print("ID WITH EXPR COVERAGE BIN INITIALIZER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IdentifierName:
-                print("IDENTIFIER NAME")
+                # print("IDENTIFIER NAME")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IdentifierSelectName:
-                print("IDENTIFIER SELECT NAME")
+                # print("IDENTIFIER SELECT NAME")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IfDefDirective:
-                print("IFDEF DIRECTIVE")
+                # print("IFDEF DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IfGenerate:
-                print("IF GENERATE")
+                # print("IF GENERATE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IfNDefDirective:
-                print("IFNDEF DIRECTIVE")
+                # print("IFNDEF DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IfNonePathDeclaration:
-                print("IF NONE PATH DECLARATION")
+                # print("IF NONE PATH DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IffEventClause:
-                print("IFF EVENT CLAUSE")
+                # print("IFF EVENT CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IffPropertyExpr:
-                print("IFF PROPERTY EXPR")
+                # print("IFF PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ImmediateAssertStatement:
-                print("IMMEDIATE ASSERT STATEMENT")
+                # print("IMMEDIATE ASSERT STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ImmediateAssertionMember:
-                print("IMMEDIATE ASSERTION MEMBER")
+                # print("IMMEDIATE ASSERTION MEMBER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ImmediateAssumeStatement:
-                print("IMMEDIATE ASSUME STATEMENT")
+                # print("IMMEDIATE ASSUME STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ImmediateCoverStatement:
-                print("IMMEDIATE COVER STATEMENT")
+                # print("IMMEDIATE COVER STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ImplementsClause:
-                print("IMPLEMENTS CLAUSE")
+                # print("IMPLEMENTS CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ImplicationConstraint:
-                print("IMPLICATION CONSTRAINT")
+                # print("IMPLICATION CONSTRAINT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ImplicationPropertyExpr:
-                print("IMPLICATION PROPERTY EXPR")
+                # print("IMPLICATION PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ImplicitAnsiPort:
-                print("IMPLICIT ANSI PORT")
+                # print("IMPLICIT ANSI PORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ImplicitEventControl:
-                print("IMPLICIT EVENT CONTROL")
+                # print("IMPLICIT EVENT CONTROL")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ImplicitNonAnsiPort:
-                print("IMPLICIT NON ANSI PORT")
+                # print("IMPLICIT NON ANSI PORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ImplicitType:
-                print("IMPLICIT TYPE")
+                # print("IMPLICIT TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ImpliesPropertyExpr:
-                print("IMPLIES PROPERTY EXPR")
+                # print("IMPLIES PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IncludeDirective:
-                print("INCLUDE DIRECTIVE")
+                # print("INCLUDE DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.InequalityExpression:
-                print("INEQUALITY EXPRESSION")
+                # print("INEQUALITY EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.InitialBlock:
-                print("INITIAL BLOCK")
+                # print("INITIAL BLOCK")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.InsideExpression:
-                print("INSIDE EXPRESSION")
+                # print("INSIDE EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.InstanceConfigRule:
-                print("INSTANCE CONFIG RULE")
+                # print("INSTANCE CONFIG RULE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.InstanceName:
-                print("INSTANCE NAME")
+                # print("INSTANCE NAME")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IntType:
-                print("INT TYPE")
+                # print("INT TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IntegerLiteralExpression:
-                print("INTEGER LITERAL EXPRESSION")
+                # print("INTEGER LITERAL EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IntegerType:
-                print("INTEGER TYPE")
+                # print("INTEGER TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IntegerVectorExpression:
-                print("INTEGER VECTOR EXPRESSION")
+                # print("INTEGER VECTOR EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.InterfaceDeclaration:
-                print("INTERFACE DECLARATION")
+                # print("INTERFACE DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.InterfaceHeader:
-                print("INTERFACE HEADER")
+                # print("INTERFACE HEADER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.InterfacePortHeader:
-                print("INTERFACE PORT HEADER")
+                # print("INTERFACE PORT HEADER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IntersectClause:
-                print("INTERSECT CLAUSE")
+                # print("INTERSECT CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.IntersectSequenceExpr:
-                print("INTERSECT SEQUENCE EXPR")
+                # print("INTERSECT SEQUENCE EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.InvocationExpression:
-                print("INVOCATION EXPRESSION")
+                # print("INVOCATION EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.JumpStatement:
-                print("JUMP STATEMENT")
+                # print("JUMP STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LessThanEqualExpression:
-                print("LESS THAN EQUAL EXPRESSION")
+                # print("LESS THAN EQUAL EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LessThanExpression:
-                print("LESS THAN EXPRESSION")
+                # print("LESS THAN EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LetDeclaration:
-                print("LET DECLARATION")
+                # print("LET DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LibraryDeclaration:
-                print("LIBRARY DECLARATION")
+                # print("LIBRARY DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LibraryIncDirClause:
-                print("LIBRARY INC DIR CLAUSE")
+                # print("LIBRARY INC DIR CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LibraryIncludeStatement:
-                print("LIBRARY INCLUDE STATEMENT")
+                # print("LIBRARY INCLUDE STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LibraryMap:
-                print("LIBRARY MAP")
+                # print("LIBRARY MAP")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LineDirective:
-                print("LINE DIRECTIVE")
+                # print("LINE DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LocalScope:
-                print("LOCAL SCOPE")
+                # print("LOCAL SCOPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LocalVariableDeclaration:
-                print("LOCAL VARIABLE DECLARATION")
+                # print("LOCAL VARIABLE DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LogicType:
-                print("LOGIC TYPE")
+                # print("LOGIC TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LogicalAndExpression:
-                print("LOGICAL AND EXPRESSION")
+                # print("LOGICAL AND EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LogicalEquivalenceExpression:
-                print("LOGICAL EQUIVALENCE EXPRESSION")
+                # print("LOGICAL EQUIVALENCE EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LogicalImplicationExpression:
-                print("LOGICAL IMPLICATION EXPRESSION")
+                # print("LOGICAL IMPLICATION EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LogicalLeftShiftAssignmentExpression:
-                print("LOGICAL LEFT SHIFT ASSIGNMENT EXPRESSION")
+                # print("LOGICAL LEFT SHIFT ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LogicalOrExpression:
-                print("LOGICAL OR EXPRESSION")
+                # print("LOGICAL OR EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LogicalRightShiftAssignmentExpression:
-                print("LOGICAL RIGHT SHIFT ASSIGNMENT EXPRESSION")
+                # print("LOGICAL RIGHT SHIFT ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LogicalShiftLeftExpression:
-                print("LOGICAL SHIFT LEFT EXPRESSION")
+                # print("LOGICAL SHIFT LEFT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LogicalShiftRightExpression:
-                print("LOGICAL SHIFT RIGHT EXPRESSION")
+                # print("LOGICAL SHIFT RIGHT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LongIntType:
-                print("LONG INT TYPE")
+                # print("LONG INT TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LoopConstraint:
-                print("LOOP CONSTRAINT")
+                # print("LOOP CONSTRAINT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LoopGenerate:
-                print("LOOP GENERATE")
+                # print("LOOP GENERATE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.LoopStatement:
-                print("LOOP STATEMENT")
+                # print("LOOP STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.MacroActualArgument:
-                print("MACRO ACTUAL ARGUMENT")
+                # print("MACRO ACTUAL ARGUMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.MacroActualArgumentList:
-                print("MACRO ACTUAL ARGUMENT LIST")
+                # print("MACRO ACTUAL ARGUMENT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.MacroArgumentDefault:
-                print("MACRO ARGUMENT DEFAULT")
+                # print("MACRO ARGUMENT DEFAULT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.MacroFormalArgument:
-                print("MACRO FORMAL ARGUMENT")
+                # print("MACRO FORMAL ARGUMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.MacroFormalArgumentList:
-                print("MACRO FORMAL ARGUMENT LIST")
+                # print("MACRO FORMAL ARGUMENT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.MacroUsage:
-                print("MACRO USAGE")
+                # print("MACRO USAGE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.MatchesClause:
-                print("MATCHES CLAUSE")
+                # print("MATCHES CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.MemberAccessExpression:
-                print("MEMBER ACCESS EXPRESSION")
+                # print("MEMBER ACCESS EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.MinTypMaxExpression:
-                print("MIN TYP MAX EXPRESSION")
+                # print("MIN TYP MAX EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ModAssignmentExpression:
-                print("MOD ASSIGNMENT EXPRESSION")
+                # print("MOD ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ModExpression:
-                print("MOD EXPRESSION")
+                # print("MOD EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ModportClockingPort:
-                print("MODPORT CLOCKING PORT")
+                # print("MODPORT CLOCKING PORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ModportDeclaration:
-                print("MODPORT DECLARATION")
+                # print("MODPORT DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ModportExplicitPort:
-                print("MODPORT EXPLICIT PORT")
+                # print("MODPORT EXPLICIT PORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ModportItem:
-                print("MODPORT ITEM")
+                # print("MODPORT ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ModportNamedPort:
-                print("MODPORT NAMED PORT")
+                # print("MODPORT NAMED PORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ModportSimplePortList:
-                print("MODPORT SIMPLE PORT LIST")
+                # print("MODPORT SIMPLE PORT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ModportSubroutinePort:
-                print("MODPORT SUBROUTINE PORT")
+                # print("MODPORT SUBROUTINE PORT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ModportSubroutinePortList:
-                print("MODPORT SUBROUTINE PORT LIST")
+                # print("MODPORT SUBROUTINE PORT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ModuleDeclaration:
-                print("MODULE DECLARATION")
+                # print("MODULE DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ModuleHeader:
-                print("MODULE HEADER")
+                # print("MODULE HEADER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.MultipleConcatenationExpression:
-                print("MULTIPLE CONCATENATION EXPRESSION")
+                # print("MULTIPLE CONCATENATION EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.MultiplyAssignmentExpression:
-                print("MULTIPLY ASSIGNMENT EXPRESSION")
+                # print("MULTIPLY ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.MultiplyExpression:
-                print("MULTIPLY EXPRESSION")
+                # print("MULTIPLY EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NameValuePragmaExpression:
-                print("NAME VALUE PRAGMA EXPRESSION")
+                # print("NAME VALUE PRAGMA EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NamedArgument:
-                print("NAMED ARGUMENT")
+                # print("NAMED ARGUMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NamedBlockClause:
-                print("NAMED BLOCK CLAUSE")
+                # print("NAMED BLOCK CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NamedConditionalDirectiveExpression:
-                print("NAMED CONDITIONAL DIRECTIVE EXPRESSION")
+                # print("NAMED CONDITIONAL DIRECTIVE EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NamedLabel:
-                print("NAMED LABEL")
+                # print("NAMED LABEL")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NamedParamAssignment:
-                print("NAMED PARAM ASSIGNMENT")
+                # print("NAMED PARAM ASSIGNMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NamedPortConnection:
-                print("NAMED PORT CONNECTION")
+                # print("NAMED PORT CONNECTION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NamedStructurePatternMember:
-                print("NAMED STRUCTURE PATTERN MEMBER")
+                # print("NAMED STRUCTURE PATTERN MEMBER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NamedType:
-                print("NAMED TYPE")
+                # print("NAMED TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NetAlias:
-                print("NET ALIAS")
+                # print("NET ALIAS")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NetDeclaration:
-                print("NET DECLARATION")
+                # print("NET DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NetPortHeader:
-                print("NET PORT HEADER")
+                # print("NET PORT HEADER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NetTypeDeclaration:
-                print("NET TYPE DECLARATION")
+                # print("NET TYPE DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NewArrayExpression:
-                print("NEW ARRAY EXPRESSION")
+                # print("NEW ARRAY EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NewClassExpression:
-                print("NEW CLASS EXPRESSION")
+                # print("NEW CLASS EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NoUnconnectedDriveDirective:
-                print("NO UNCONNECTED DRIVE DIRECTIVE")
+                # print("NO UNCONNECTED DRIVE DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NonAnsiPortList:
-                print("NON ANSI PORT LIST")
+                # print("NON ANSI PORT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NonAnsiUdpPortList:
-                print("NON ANSI UDP PORT LIST")
+                # print("NON ANSI UDP PORT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NonblockingAssignmentExpression:
-                print("NONBLOCKING ASSIGNMENT EXPRESSION")
+                # print("NONBLOCKING ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NonblockingEventTriggerStatement:
-                print("NONBLOCKING EVENT TRIGGER STATEMENT")
+                # print("NONBLOCKING EVENT TRIGGER STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NullLiteralExpression:
-                print("NULL LITERAL EXPRESSION")
+                # print("NULL LITERAL EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.NumberPragmaExpression:
-                print("NUMBER PRAGMA EXPRESSION")
+                # print("NUMBER PRAGMA EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.OneStepDelay:
-                print("ONE STEP DELAY")
+                # print("ONE STEP DELAY")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.OrAssignmentExpression:
-                print("OR ASSIGNMENT EXPRESSION")
+                # print("OR ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.OrPropertyExpr:
-                print("OR PROPERTY EXPR")
+                # print("OR PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.OrSequenceExpr:
-                print("OR SEQUENCE EXPR")
+                # print("OR SEQUENCE EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.OrderedArgument:
-                print("ORDERED ARGUMENT")
+                # print("ORDERED ARGUMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.OrderedParamAssignment:
-                print("ORDERED PARAM ASSIGNMENT")
+                # print("ORDERED PARAM ASSIGNMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.OrderedPortConnection:
-                print("ORDERED PORT CONNECTION")
+                # print("ORDERED PORT CONNECTION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.OrderedStructurePatternMember:
-                print("ORDERED STRUCTURE PATTERN MEMBER")
+                # print("ORDERED STRUCTURE PATTERN MEMBER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PackageDeclaration:
-                print("PACKAGE DECLARATION")
+                # print("PACKAGE DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PackageExportAllDeclaration:
-                print("PACKAGE EXPORT ALL DECLARATION")
+                # print("PACKAGE EXPORT ALL DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PackageExportDeclaration:
-                print("PACKAGE EXPORT DECLARATION")
+                # print("PACKAGE EXPORT DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PackageHeader:
-                print("PACKAGE HEADER")
+                # print("PACKAGE HEADER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PackageImportDeclaration:
-                print("PACKAGE IMPORT DECLARATION")
+                # print("PACKAGE IMPORT DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PackageImportItem:
-                print("PACKAGE IMPORT ITEM")
+                # print("PACKAGE IMPORT ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParallelBlockStatement:
-                print("PARALLEL BLOCK STATEMENT")
+                # print("PARALLEL BLOCK STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParameterDeclaration:
-                print("PARAMETER DECLARATION")
+                # print("PARAMETER DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParameterDeclarationStatement:
-                print("PARAMETER DECLARATION STATEMENT")
+                # print("PARAMETER DECLARATION STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParameterPortList:
-                print("PARAMETER PORT LIST")
+                # print("PARAMETER PORT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParameterValueAssignment:
-                print("PARAMETER VALUE ASSIGNMENT")
+                # print("PARAMETER VALUE ASSIGNMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParenExpressionList:
-                print("PAREN EXPRESSION LIST")
+                # print("PAREN EXPRESSION LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParenPragmaExpression:
-                print("PAREN PRAGMA EXPRESSION")
+                # print("PAREN PRAGMA EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParenthesizedBinsSelectExpr:
-                print("PARENTHESIZED BINS SELECT EXPR")
+                # print("PARENTHESIZED BINS SELECT EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParenthesizedConditionalDirectiveExpression:
-                print("PARENTHESIZED CONDITIONAL DIRECTIVE EXPRESSION")
+                # print("PARENTHESIZED CONDITIONAL DIRECTIVE EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParenthesizedEventExpression:
-                print("PARENTHESIZED EVENT EXPRESSION")
+                # print("PARENTHESIZED EVENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParenthesizedExpression:
-                print("PARENTHESIZED EXPRESSION")
+                # print("PARENTHESIZED EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParenthesizedPattern:
-                print("PARENTHESIZED PATTERN")
+                # print("PARENTHESIZED PATTERN")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParenthesizedPropertyExpr:
-                print("PARENTHESIZED PROPERTY EXPR")
+                # print("PARENTHESIZED PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ParenthesizedSequenceExpr:
-                print("PARENTHESIZED SEQUENCE EXPR")
+                # print("PARENTHESIZED SEQUENCE EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PathDeclaration:
-                print("PATH DECLARATION")
+                # print("PATH DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PathDescription:
-                print("PATH DESCRIPTION")
+                # print("PATH DESCRIPTION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PatternCaseItem:
-                print("PATTERN CASE ITEM")
+                # print("PATTERN CASE ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PortConcatenation:
-                print("PORT CONCATENATION")
+                # print("PORT CONCATENATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PortDeclaration:
-                print("PORT DECLARATION")
+                # print("PORT DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PortReference:
-                print("PORT REFERENCE")
+                # print("PORT REFERENCE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PostdecrementExpression:
-                print("POSTDECREMENT EXPRESSION")
+                # print("POSTDECREMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PostincrementExpression:
-                print("POSTINCREMENT EXPRESSION")
+                # print("POSTINCREMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PowerExpression:
-                print("POWER EXPRESSION")
+                # print("POWER EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PragmaDirective:
-                print("PRAGMA DIRECTIVE")
+                # print("PRAGMA DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PrimaryBlockEventExpression:
-                print("PRIMARY BLOCK EVENT EXPRESSION")
+                # print("PRIMARY BLOCK EVENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PrimitiveInstantiation:
-                print("PRIMITIVE INSTANTIATION")
+                # print("PRIMITIVE INSTANTIATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ProceduralAssignStatement:
-                print("PROCEDURAL ASSIGN STATEMENT")
+                # print("PROCEDURAL ASSIGN STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ProceduralDeassignStatement:
-                print("PROCEDURAL DEASSIGN STATEMENT")
+                # print("PROCEDURAL DEASSIGN STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ProceduralForceStatement:
-                print("PROCEDURAL FORCE STATEMENT")
+                # print("PROCEDURAL FORCE STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ProceduralReleaseStatement:
-                print("PROCEDURAL RELEASE STATEMENT")
+                # print("PROCEDURAL RELEASE STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.Production:
-                print("PRODUCTION")
+                # print("PRODUCTION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ProgramDeclaration:
-                print("PROGRAM DECLARATION")
+                # print("PROGRAM DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ProgramHeader:
-                print("PROGRAM HEADER")
+                # print("PROGRAM HEADER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PropertyDeclaration:
-                print("PROPERTY DECLARATION")
+                # print("PROPERTY DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PropertySpec:
-                print("PROPERTY SPEC")
+                # print("PROPERTY SPEC")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PropertyType:
-                print("PROPERTY TYPE")
+                # print("PROPERTY TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ProtectDirective:
-                print("PROTECT DIRECTIVE")
+                # print("PROTECT DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ProtectedDirective:
-                print("PROTECTED DIRECTIVE")
+                # print("PROTECTED DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PullStrength:
-                print("PULL STRENGTH")
+                # print("PULL STRENGTH")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.PulseStyleDeclaration:
-                print("PULSE STYLE DECLARATION")
+                # print("PULSE STYLE DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.QueueDimensionSpecifier:
-                print("QUEUE DIMENSION SPECIFIER")
+                # print("QUEUE DIMENSION SPECIFIER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RandCaseItem:
-                print("RAND CASE ITEM")
+                # print("RAND CASE ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RandCaseStatement:
-                print("RAND CASE STATEMENT")
+                # print("RAND CASE STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RandJoinClause:
-                print("RAND JOIN CLAUSE")
+                # print("RAND JOIN CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RandSequenceStatement:
-                print("RAND SEQUENCE STATEMENT")
+                # print("RAND SEQUENCE STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RangeCoverageBinInitializer:
-                print("RANGE COVERAGE BIN INITIALIZER")
+                # print("RANGE COVERAGE BIN INITIALIZER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RangeDimensionSpecifier:
-                print("RANGE DIMENSION SPECIFIER")
+                # print("RANGE DIMENSION SPECIFIER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RangeList:
-                print("RANGE LIST")
+                # print("RANGE LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RealLiteralExpression:
-                print("REAL LITERAL EXPRESSION")
+                # print("REAL LITERAL EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RealTimeType:
-                print("REAL TIME TYPE")
+                # print("REAL TIME TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RealType:
-                print("REAL TYPE")
+                # print("REAL TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RegType:
-                print("REG TYPE")
+                # print("REG TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RepeatedEventControl:
-                print("REPEATED EVENT CONTROL")
+                # print("REPEATED EVENT CONTROL")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ReplicatedAssignmentPattern:
-                print("REPLICATED ASSIGNMENT PATTERN")
+                # print("REPLICATED ASSIGNMENT PATTERN")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ResetAllDirective:
-                print("RESET ALL DIRECTIVE")
+                # print("RESET ALL DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RestrictPropertyStatement:
-                print("RESTRICT PROPERTY STATEMENT")
+                # print("RESTRICT PROPERTY STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ReturnStatement:
-                print("RETURN STATEMENT")
+                # print("RETURN STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RootScope:
-                print("ROOT SCOPE")
+                # print("ROOT SCOPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RsCase:
-                print("RS CASE")
+                # print("RS CASE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RsCodeBlock:
-                print("RS CODE BLOCK")
+                # print("RS CODE BLOCK")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RsElseClause:
-                print("RS ELSE CLAUSE")
+                # print("RS ELSE CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RsIfElse:
-                print("RS IF ELSE")
+                # print("RS IF ELSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RsProdItem:
-                print("RS PROD ITEM")
+                # print("RS PROD ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RsRepeat:
-                print("RS REPEAT")
+                # print("RS REPEAT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RsRule:
-                print("RS RULE")
+                # print("RS RULE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.RsWeightClause:
-                print("RS WEIGHT CLAUSE")
+                # print("RS WEIGHT CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SUntilPropertyExpr:
-                print("S UNTIL PROPERTY EXPR")
+                # print("S UNTIL PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SUntilWithPropertyExpr:
-                print("S UNTIL WITH PROPERTY EXPR")
+                # print("S UNTIL WITH PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ScopedName:
-                print("SCOPED NAME")
+                # print("SCOPED NAME")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SequenceDeclaration:
-                print("SEQUENCE DECLARATION")
+                # print("SEQUENCE DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SequenceMatchList:
-                print("SEQUENCE MATCH LIST")
+                # print("SEQUENCE MATCH LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SequenceRepetition:
-                print("SEQUENCE REPETITION")
+                # print("SEQUENCE REPETITION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SequenceType:
-                print("SEQUENCE TYPE")
+                # print("SEQUENCE TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SequentialBlockStatement:
-                print("SEQUENTIAL BLOCK STATEMENT")
+                # print("SEQUENTIAL BLOCK STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ShortIntType:
-                print("SHORT INT TYPE")
+                # print("SHORT INT TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ShortRealType:
-                print("SHORT REAL TYPE")
+                # print("SHORT REAL TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SignalEventExpression:
-                print("SIGNAL EVENT EXPRESSION")
+                # print("SIGNAL EVENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SignedCastExpression:
-                print("SIGNED CAST EXPRESSION")
+                # print("SIGNED CAST EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SimpleAssignmentPattern:
-                print("SIMPLE ASSIGNMENT PATTERN")
+                # print("SIMPLE ASSIGNMENT PATTERN")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SimpleBinsSelectExpr:
-                print("SIMPLE BINS SELECT EXPR")
+                # print("SIMPLE BINS SELECT EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SimplePathSuffix:
-                print("SIMPLE PATH SUFFIX")
+                # print("SIMPLE PATH SUFFIX")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SimplePragmaExpression:
-                print("SIMPLE PRAGMA EXPRESSION")
+                # print("SIMPLE PRAGMA EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SimplePropertyExpr:
-                print("SIMPLE PROPERTY EXPR")
+                # print("SIMPLE PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SimpleRangeSelect:
-                print("SIMPLE RANGE SELECT")
+                # print("SIMPLE RANGE SELECT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SimpleSequenceExpr:
-                print("SIMPLE SEQUENCE EXPR")
+                # print("SIMPLE SEQUENCE EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SolveBeforeConstraint:
-                print("SOLVE BEFORE CONSTRAINT")
+                # print("SOLVE BEFORE CONSTRAINT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SpecifyBlock:
-                print("SPECIFY BLOCK")
+                # print("SPECIFY BLOCK")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SpecparamDeclaration:
-                print("SPECPARAM DECLARATION")
+                # print("SPECPARAM DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SpecparamDeclarator:
-                print("SPECPARAM DECLARATOR")
+                # print("SPECPARAM DECLARATOR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.StandardCaseItem:
-                print("STANDARD CASE ITEM")
+                # print("STANDARD CASE ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.StandardPropertyCaseItem:
-                print("STANDARD PROPERTY CASE ITEM")
+                # print("STANDARD PROPERTY CASE ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.StandardRsCaseItem:
-                print("STANDARD RS CASE ITEM")
+                # print("STANDARD RS CASE ITEM")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.StreamExpression:
-                print("STREAM EXPRESSION")
+                # print("STREAM EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.StreamExpressionWithRange:
-                print("STREAM EXPRESSION WITH RANGE")
+                # print("STREAM EXPRESSION WITH RANGE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.StreamingConcatenationExpression:
-                print("STREAMING CONCATENATION EXPRESSION")
+                # print("STREAMING CONCATENATION EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.StringLiteralExpression:
-                print("STRING LITERAL EXPRESSION")
+                # print("STRING LITERAL EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.StringType:
-                print("STRING TYPE")
+                # print("STRING TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.StrongWeakPropertyExpr:
-                print("STRONG WEAK PROPERTY EXPR")
+                # print("STRONG WEAK PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.StructType:
-                print("STRUCT TYPE")
+                # print("STRUCT TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.StructUnionMember:
-                print("STRUCT UNION MEMBER")
+                # print("STRUCT UNION MEMBER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.StructurePattern:
-                print("STRUCTURE PATTERN")
+                # print("STRUCTURE PATTERN")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.StructuredAssignmentPattern:
-                print("STRUCTURED ASSIGNMENT PATTERN")
+                # print("STRUCTURED ASSIGNMENT PATTERN")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SubtractAssignmentExpression:
-                print("SUBTRACT ASSIGNMENT EXPRESSION")
+                # print("SUBTRACT ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SubtractExpression:
-                print("SUBTRACT EXPRESSION")
+                # print("SUBTRACT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SuperHandle:
-                print("SUPER HANDLE")
+                # print("SUPER HANDLE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SuperNewDefaultedArgsExpression:
-                print("SUPER NEW DEFAULTED ARGS EXPRESSION")
+                # print("SUPER NEW DEFAULTED ARGS EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SystemName:
-                print("SYSTEM NAME")
+                # print("SYSTEM NAME")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.SystemTimingCheck:
-                print("SYSTEM TIMING CHECK")
+                # print("SYSTEM TIMING CHECK")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TaggedPattern:
-                print("TAGGED PATTERN")
+                # print("TAGGED PATTERN")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TaggedUnionExpression:
-                print("TAGGED UNION EXPRESSION")
+                # print("TAGGED UNION EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TaskDeclaration:
-                print("TASK DECLARATION")
+                # print("TASK DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ThisHandle:
-                print("THIS HANDLE")
+                # print("THIS HANDLE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ThroughoutSequenceExpr:
-                print("THROUGHOUT SEQUENCE EXPR")
+                # print("THROUGHOUT SEQUENCE EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TimeLiteralExpression:
-                print("TIME LITERAL EXPRESSION")
+                # print("TIME LITERAL EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TimeScaleDirective:
-                print("TIME SCALE DIRECTIVE")
+                # print("TIME SCALE DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TimeType:
-                print("TIME TYPE")
+                # print("TIME TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TimeUnitsDeclaration:
-                print("TIME UNITS DECLARATION")
+                # print("TIME UNITS DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TimingCheckEventArg:
-                print("TIMING CHECK EVENT ARG")
+                # print("TIMING CHECK EVENT ARG")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TimingCheckEventCondition:
-                print("TIMING CHECK EVENT CONDITION")
+                # print("TIMING CHECK EVENT CONDITION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TimingControlExpression:
-                print("TIMING CONTROL EXPRESSION")
+                # print("TIMING CONTROL EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TimingControlStatement:
-                print("TIMING CONTROL STATEMENT")
+                # print("TIMING CONTROL STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TransListCoverageBinInitializer:
-                print("TRANS LIST COVERAGE BIN INITIALIZER")
+                # print("TRANS LIST COVERAGE BIN INITIALIZER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TransRange:
-                print("TRANS RANGE")
+                # print("TRANS RANGE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TransRepeatRange:
-                print("TRANS REPEAT RANGE")
+                # print("TRANS REPEAT RANGE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TransSet:
-                print("TRANS SET")
+                # print("TRANS SET")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TypeAssignment:
-                print("TYPE ASSIGNMENT")
+                # print("TYPE ASSIGNMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TypeParameterDeclaration:
-                print("TYPE PARAMETER DECLARATION")
+                # print("TYPE PARAMETER DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TypeReference:
-                print("TYPE REFERENCE")
+                # print("TYPE REFERENCE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.TypedefDeclaration:
-                print("TYPEDEF DECLARATION")
+                # print("TYPEDEF DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UdpBody:
-                print("UDP BODY")
+                # print("UDP BODY")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UdpDeclaration:
-                print("UDP DECLARATION")
+                # print("UDP DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UdpEdgeField:
-                print("UDP EDGE FIELD")
+                # print("UDP EDGE FIELD")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UdpEntry:
-                print("UDP ENTRY")
+                # print("UDP ENTRY")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UdpInitialStmt:
-                print("UDP INITIAL STMT")
+                # print("UDP INITIAL STMT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UdpInputPortDecl:
-                print("UDP INPUT PORT DECL")
+                # print("UDP INPUT PORT DECL")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UdpOutputPortDecl:
-                print("UDP OUTPUT PORT DECL")
+                # print("UDP OUTPUT PORT DECL")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UdpSimpleField:
-                print("UDP SIMPLE FIELD")
+                # print("UDP SIMPLE FIELD")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryBinsSelectExpr:
-                print("UNARY BINS SELECT EXPR")
+                # print("UNARY BINS SELECT EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryBitwiseAndExpression:
-                print("UNARY BITWISE AND EXPRESSION")
+                # print("UNARY BITWISE AND EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryBitwiseNandExpression:
-                print("UNARY BITWISE NAND EXPRESSION")
+                # print("UNARY BITWISE NAND EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryBitwiseNorExpression:
-                print("UNARY BITWISE NOR EXPRESSION")
+                # print("UNARY BITWISE NOR EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryBitwiseNotExpression:
-                print("UNARY BITWISE NOT EXPRESSION")
+                # print("UNARY BITWISE NOT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryBitwiseOrExpression:
-                print("UNARY BITWISE OR EXPRESSION")
+                # print("UNARY BITWISE OR EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryBitwiseXnorExpression:
-                print("UNARY BITWISE XNOR EXPRESSION")
+                # print("UNARY BITWISE XNOR EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryBitwiseXorExpression:
-                print("UNARY BITWISE XOR EXPRESSION")
+                # print("UNARY BITWISE XOR EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryConditionalDirectiveExpression:
-                print("UNARY CONDITIONAL DIRECTIVE EXPRESSION")
+                # print("UNARY CONDITIONAL DIRECTIVE EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryLogicalNotExpression:
-                print("UNARY LOGICAL NOT EXPRESSION")
+                # print("UNARY LOGICAL NOT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryMinusExpression:
-                print("UNARY MINUS EXPRESSION")
+                # print("UNARY MINUS EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryPlusExpression:
-                print("UNARY PLUS EXPRESSION")
+                # print("UNARY PLUS EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryPredecrementExpression:
-                print("UNARY PREDECREMENT EXPRESSION")
+                # print("UNARY PREDECREMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryPreincrementExpression:
-                print("UNARY PREINCREMENT EXPRESSION")
+                # print("UNARY PREINCREMENT EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnaryPropertyExpr:
-                print("UNARY PROPERTY EXPR")
+                # print("UNARY PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnarySelectPropertyExpr:
-                print("UNARY SELECT PROPERTY EXPR")
+                # print("UNARY SELECT PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnbasedUnsizedLiteralExpression:
-                print("UNBASED UNSIZED LITERAL EXPRESSION")
+                # print("UNBASED UNSIZED LITERAL EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnconnectedDriveDirective:
-                print("UNCONNECTED DRIVE DIRECTIVE")
+                # print("UNCONNECTED DRIVE DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UndefDirective:
-                print("UNDEF DIRECTIVE")
+                # print("UNDEF DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UndefineAllDirective:
-                print("UNDEFINE ALL DIRECTIVE")
+                # print("UNDEFINE ALL DIRECTIVE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnionType:
-                print("UNION TYPE")
+                # print("UNION TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UniquenessConstraint:
-                print("UNIQUENESS CONSTRAINT")
+                # print("UNIQUENESS CONSTRAINT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UnitScope:
-                print("UNIT SCOPE")
+                # print("UNIT SCOPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UntilPropertyExpr:
-                print("UNTIL PROPERTY EXPR")
+                # print("UNTIL PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UntilWithPropertyExpr:
-                print("UNTIL WITH PROPERTY EXPR")
+                # print("UNTIL WITH PROPERTY EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.Untyped:
-                print("UNTYPED")
+                # print("UNTYPED")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.UserDefinedNetDeclaration:
-                print("USER DEFINED NET DECLARATION")
+                # print("USER DEFINED NET DECLARATION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.ValueRangeExpression:
-                print("VALUE RANGE EXPRESSION")
+                # print("VALUE RANGE EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.VariableDimension:
-                print("VARIABLE DIMENSION")
+                # print("VARIABLE DIMENSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.VariablePattern:
-                print("VARIABLE PATTERN")
+                # print("VARIABLE PATTERN")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.VariablePortHeader:
-                print("VARIABLE PORT HEADER")
+                # print("VARIABLE PORT HEADER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.VirtualInterfaceType:
-                print("VIRTUAL INTERFACE TYPE")
+                # print("VIRTUAL INTERFACE TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.VoidCastedCallStatement:
-                print("VOID CASTED CALL STATEMENT")
+                # print("VOID CASTED CALL STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.VoidType:
-                print("VOID TYPE")
+                # print("VOID TYPE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WaitForkStatement:
-                print("WAIT FORK STATEMENT")
+                # print("WAIT FORK STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WaitOrderStatement:
-                print("WAIT ORDER STATEMENT")
+                # print("WAIT ORDER STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WaitStatement:
-                print("WAIT STATEMENT")
+                # print("WAIT STATEMENT")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WildcardDimensionSpecifier:
-                print("WILDCARD DIMENSION SPECIFIER")
+                # print("WILDCARD DIMENSION SPECIFIER")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WildcardEqualityExpression:
-                print("WILDCARD EQUALITY EXPRESSION")
+                # print("WILDCARD EQUALITY EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WildcardInequalityExpression:
-                print("WILDCARD INEQUALITY EXPRESSION")
+                # print("WILDCARD INEQUALITY EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WildcardLiteralExpression:
-                print("WILDCARD LITERAL EXPRESSION")
+                # print("WILDCARD LITERAL EXPRESSION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WildcardPattern:
-                print("WILDCARD PATTERN")
+                # print("WILDCARD PATTERN")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WildcardPortConnection:
-                print("WILDCARD PORT CONNECTION")
+                # print("WILDCARD PORT CONNECTION")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WildcardPortList:
-                print("WILDCARD PORT LIST")
+                # print("WILDCARD PORT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WildcardUdpPortList:
-                print("WILDCARD UDP PORT LIST")
+                # print("WILDCARD UDP PORT LIST")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WithClause:
-                print("WITH CLAUSE")
+                # print("WITH CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WithFunctionClause:
-                print("WITH FUNCTION CLAUSE")
+                # print("WITH FUNCTION CLAUSE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WithFunctionSample:
-                print("WITH FUNCTION SAMPLE")
+                # print("WITH FUNCTION SAMPLE")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.WithinSequenceExpr:
-                print("WITHIN SEQUENCE EXPR")
+                # print("WITHIN SEQUENCE EXPR")  # DEBUG
+                pass
             elif node.kind == ps.SyntaxKind.XorAssignmentExpression:
-                print("XOR ASSIGNMENT EXPRESSION")
+                # print("XOR ASSIGNMENT EXPRESSION")  # DEBUG
+                pass
 
 
 
