@@ -2,7 +2,8 @@
 
 #git pull
 rm -f out.txt
-#python3 -m main 1 designs/test-designs/test_2.v --sv
+#python3 -m main 2 designs/test-designs/test_2.v --sv -t place_holder_2
+python3 -m main 2 designs/test-designs/test_2.v --sv 
 #python3 -m main 1 filelist.F --sv
 #for file in $(ls designs/test-designs/)
 #do
@@ -16,4 +17,5 @@ rm -f out.txt
 #python3 -m main 1 designs/test-designs/daio.v --sv
 #python3 -m main 1 designs/test-designs/mini_daio.v --sv
 #python3 -m main 1 designs/test-designs/picorv/picorv32.v --sv
-python3 -m main 1 designs/benchmarks/or1200/or1200.F --sv -t or1200_top
+#python3 -m main 1 designs/picorv32.v --sv
+#python3 -m main 1 designs/benchmarks/or1200/or1200.F --sv -t or1200_top

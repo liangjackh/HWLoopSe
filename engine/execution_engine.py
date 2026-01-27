@@ -476,6 +476,11 @@ class ExecutionEngine:
                     #for cfg_path in complete_single_cycle_path:
                     for cfg_idx, cfg_path in enumerate(complete_single_cycle_path):
                         directions = cfgs_by_module[module_name][cfg_idx].compute_direction(cfg_path)
+                        if self.debug:
+                            print(f"DEBUG: cfg_path={cfg_path}, directions={directions}")
+                            print(f"DEBUG: basic_block_list has {len(cfgs_by_module[module_name][cfg_idx].basic_block_list)} blocks")
+                            for bb_idx, bb in enumerate(cfgs_by_module[module_name][cfg_idx].basic_block_list):
+                                print(f"DEBUG: basic_block[{bb_idx}] = {[str(s)[:50] if s else 'None' for s in bb]}")
                         #directions = cfgs_by_module[module_name][complete_single_cycle_path.index(cfg_path)].compute_direction(cfg_path)
                         k: int = 0
                         for basic_block_idx in cfg_path:

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+<testsuite timestamp="2026-01-26T15:17:59" hostname="ljh" package="test_2" id="0" name="bmc" tests="1" errors="1" failures="0" time="0" skipped="0">
+<properties>
+<property name="os" value="Linux"/>
+<property name="expect" value="PASS"/>
+<property name="status" value="ERROR"/>
+</properties>
+<testcase classname="bmc" name="bmc" time="0">
+<error type="ERROR"/>
+</testcase>
+<system-out>SBY 15:17:59 [test_2_bmc] Removing directory '/home/ljh/haveFun/sybolicExecution/sylvia-related/siu/HWLoopSe/designs/test-designs/test_2_bmc'.
+SBY 15:17:59 [test_2_bmc] Copy '/home/ljh/haveFun/sybolicExecution/sylvia-related/siu/HWLoopSe/designs/test-designs/test_2.v' to '/home/ljh/haveFun/sybolicExecution/sylvia-related/siu/HWLoopSe/designs/test-designs/test_2_bmc/src/test_2.v'.
+SBY 15:17:59 [test_2_bmc] engine_0: smtbmc z3
+SBY 15:17:59 [test_2_bmc] base: starting process &quot;cd test_2_bmc/src; yosys -ql ../model/design.log ../model/design.ys&quot;
+SBY 15:17:59 [test_2_bmc] base: test_2.v:45: ERROR: syntax error, unexpected TOK_ELSE, expecting ';'
+SBY 15:17:59 [test_2_bmc] base: finished (returncode=1)
+SBY 15:17:59 [test_2_bmc] base: task failed. ERROR.
+SBY 15:17:59 [test_2_bmc] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 15:17:59 [test_2_bmc] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 15:17:59 [test_2_bmc] summary: engine_0 (smtbmc z3) did not return a status
+SBY 15:17:59 [test_2_bmc] summary: engine_0 did not produce any traces
+SBY 15:17:59 [test_2_bmc] DONE (ERROR, rc=16)
+</system-out>
+<system-err>
+</system-err>
+</testsuite>
+</testsuites>

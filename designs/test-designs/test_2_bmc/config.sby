@@ -1,0 +1,13 @@
+[options]
+mode bmc
+depth 20
+
+[engines]
+smtbmc z3
+
+[script]
+read -formal test_2.v
+prep -top place_holder_2
+
+[files]
+test_2.v

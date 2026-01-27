@@ -1,0 +1,8 @@
+# running in test_2_bmc/src/
+read -formal test_2.v
+prep -top place_holder_2
+
+hierarchy -smtcheck
+rename -witness
+write_jny -no-connections ../model/design.json
+write_rtlil ../model/design.il

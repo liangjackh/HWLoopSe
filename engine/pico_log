@@ -1,0 +1,13 @@
+visit: Token BeginKeyword
+visit: SyntaxNode SyntaxList
+visit: Token EndKeyword
+visit: NoneType None
+Cycle 0 final state:
+{'picorv32': {'pcpi_int_wr': "1'b0", 'new_ascii_instr': '', 'dbg_ascii_state': '', 'cpuregs_write': "1'b0", 'set_mem_do_rinst': "1'b0", 'set_mem_do_rdata': "1'b0", 'set_mem_do_wdata': "1'b0"}}
+Cycle 0 final path condition:
+[]
+------------------------
+Branch points explored: 204800
+Paths explored: 12288
+0
+0

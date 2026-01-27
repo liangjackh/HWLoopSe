@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+<testsuite timestamp="2026-01-26T15:22:18" hostname="ljh" package="test_2_formal" id="0" name="bmc" tests="1" errors="0" failures="2" time="0" skipped="0">
+<properties>
+<property name="os" value="Linux"/>
+<property name="expect" value="PASS"/>
+<property name="status" value="FAIL"/>
+</properties>
+<testcase classname="bmc" name="build execution" time="0">
+<failure type="FAIL" message="Task returned status FAIL." />
+</testcase>
+<testcase classname="bmc" name="Property ASSERT in place_holder_2 at test_2_formal.v:44.7-44.28" time="0" type="ASSERT" location="test_2_formal.v:44.7-44.28" id="_witness_.check_assert_test_2_formal_v_44_5" tracefile="engine_0/trace.vcd">
+<failure type="ASSERT" message="Property ASSERT in place_holder_2 at test_2_formal.v:44.7-44.28 failed. Trace file: engine_0/trace.vcd" />
+</testcase>
+<system-out>SBY 15:22:18 [test_2_formal_bmc] Removing directory '/home/ljh/haveFun/sybolicExecution/sylvia-related/siu/HWLoopSe/designs/test-designs/test_2_formal_bmc'.
+SBY 15:22:18 [test_2_formal_bmc] Copy '/home/ljh/haveFun/sybolicExecution/sylvia-related/siu/HWLoopSe/designs/test-designs/test_2_formal.v' to '/home/ljh/haveFun/sybolicExecution/sylvia-related/siu/HWLoopSe/designs/test-designs/test_2_formal_bmc/src/test_2_formal.v'.
+SBY 15:22:18 [test_2_formal_bmc] engine_0: smtbmc z3
+SBY 15:22:18 [test_2_formal_bmc] base: starting process &quot;cd test_2_formal_bmc/src; yosys -ql ../model/design.log ../model/design.ys&quot;
+SBY 15:22:18 [test_2_formal_bmc] base: finished (returncode=0)
+SBY 15:22:18 [test_2_formal_bmc] prep: starting process &quot;cd test_2_formal_bmc/model; yosys -ql design_prep.log design_prep.ys&quot;
+SBY 15:22:18 [test_2_formal_bmc] prep: finished (returncode=0)
+SBY 15:22:18 [test_2_formal_bmc] smt2: starting process &quot;cd test_2_formal_bmc/model; yosys -ql design_smt2.log design_smt2.ys&quot;
+SBY 15:22:18 [test_2_formal_bmc] smt2: finished (returncode=0)
+SBY 15:22:18 [test_2_formal_bmc] engine_0: starting process &quot;cd test_2_formal_bmc; yosys-smtbmc -s z3 --presat --noprogress -t 20  --append 0 --dump-vcd engine_0/trace.vcd --dump-yw engine_0/trace.yw --dump-vlogtb engine_0/trace_tb.v --dump-smtc engine_0/trace.smtc model/design_smt2.smt2&quot;
+SBY 15:22:18 [test_2_formal_bmc] engine_0: ##   0:00:00  Solver: z3
+SBY 15:22:18 [test_2_formal_bmc] engine_0: ##   0:00:00  Checking assumptions in step 0..
+SBY 15:22:18 [test_2_formal_bmc] engine_0: ##   0:00:00  Checking assertions in step 0..
+SBY 15:22:18 [test_2_formal_bmc] engine_0: ##   0:00:00  Checking assumptions in step 1..
+SBY 15:22:18 [test_2_formal_bmc] engine_0: ##   0:00:00  Checking assertions in step 1..
+SBY 15:22:18 [test_2_formal_bmc] engine_0: ##   0:00:00  BMC failed!
+SBY 15:22:18 [test_2_formal_bmc] engine_0: ##   0:00:00  Assert failed in place_holder_2: test_2_formal.v:44.7-44.28 (_witness_.check_assert_test_2_formal_v_44_5)
+SBY 15:22:18 [test_2_formal_bmc] engine_0: ##   0:00:00  Writing trace to VCD file: engine_0/trace.vcd
+SBY 15:22:18 [test_2_formal_bmc] engine_0: ##   0:00:00  Writing trace to Verilog testbench: engine_0/trace_tb.v
+SBY 15:22:18 [test_2_formal_bmc] engine_0: ##   0:00:00  Writing trace to constraints file: engine_0/trace.smtc
+SBY 15:22:18 [test_2_formal_bmc] engine_0: ##   0:00:00  Writing trace to Yosys witness file: engine_0/trace.yw
+SBY 15:22:18 [test_2_formal_bmc] engine_0: ##   0:00:00  Status: failed
+SBY 15:22:18 [test_2_formal_bmc] engine_0: finished (returncode=1)
+SBY 15:22:18 [test_2_formal_bmc] engine_0: Status returned by engine: FAIL
+SBY 15:22:18 [test_2_formal_bmc] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 15:22:18 [test_2_formal_bmc] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 15:22:18 [test_2_formal_bmc] summary: engine_0 (smtbmc z3) returned FAIL
+SBY 15:22:18 [test_2_formal_bmc] summary: counterexample trace: test_2_formal_bmc/engine_0/trace.vcd
+SBY 15:22:18 [test_2_formal_bmc] summary:   failed assertion place_holder_2._witness_.check_assert_test_2_formal_v_44_5 at test_2_formal.v:44.7-44.28 step 1
+SBY 15:22:18 [test_2_formal_bmc] DONE (FAIL, rc=2)
+</system-out>
+<system-err>
+</system-err>
+</testsuite>
+</testsuites>

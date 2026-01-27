@@ -239,8 +239,21 @@ def parse_concat_to_Z3(concat, s: SymbolicState, m: ExecutionManager):
 
 
 def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManager):
-    """Takes in a complex Verilog Expression and converts it to 
-    a Z3 query."""
+    """Converts a Verilog Expression to a Z3 expression.
+
+    This function is a pure converter - it reads from the symbolic store
+    but does NOT modify it. It also does NOT update the path condition.
+    The caller (visit_stmt in slang_helpers.py) is responsible for
+    adding the returned Z3 expression to the path condition.
+
+    Args:
+        e: PySlang expression syntax node
+        s: SymbolicState (read-only access to store)
+        m: ExecutionManager (read-only access to module context)
+
+    Returns:
+        Z3 expression (BitVecRef, BoolRef, etc.)
+    """
     tokens_list = parse_tokens(tokenize(e, s, m))
     new_constraint = evaluate_expr(tokens_list, s, m)
     new_constants = []
@@ -249,7 +262,8 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
     if is_and(e):
         lhs = parse_expr_to_Z3(e.left, s, m)
         rhs = parse_expr_to_Z3(e.right, s, m)
-        return s.pc.add(lhs.assertions() and rhs.assertions())
+        # Return the AND of the two Z3 expressions without modifying path condition
+        return And(lhs, rhs)
     elif is_app_of(e, Z3_OP_EXTRACT):
         part_sel_expr = f"{e.var.name}[{e.msb}:{e.lsb}]"
         module_name = m.curr_module
@@ -260,11 +274,17 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
             int_val = IntVal(int(s.store[module_name][e.name]))
             return Int2BV(int_val, 32)
         else:
-            if not part_sel_expr in s.store[m.curr_module] and "[" in part_sel_expr:
+            # Look up the symbolic value without modifying the store
+            # If part_sel_expr doesn't exist, use the base variable's symbolic value
+            if part_sel_expr in s.store[module_name]:
+                sym_val = s.store[module_name][part_sel_expr]
+            elif "[" in part_sel_expr:
                 parts = part_sel_expr.partition("[")
                 first_part = parts[0]
-                s.store[m.curr_module][part_sel_expr] = s.store[m.curr_module][first_part]
-            return BitVec(s.store[module_name][part_sel_expr], 32)
+                sym_val = s.store[module_name].get(first_part, part_sel_expr)
+            else:
+                sym_val = part_sel_expr
+            return BitVec(sym_val, 32)
     elif e.__class__.__name__ == "IdentifierNameSyntax":
         module_name = m.curr_module  # Default to current module
         # PySlang 7.0 IdentifierNameSyntax uses .identifier.valueText for the name
@@ -299,53 +319,20 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
     elif is_eq(e):
         lhs = parse_expr_to_Z3(e.left, s, m)
         rhs = parse_expr_to_Z3(e.right, s, m)
-        if m.branch:
-            s.pc.add(lhs == rhs)
-        else:
-            s.pc.add(lhs != rhs)
+        # Return the equality expression without modifying path condition
         return (lhs == rhs)
     elif is_distinct(e):
         lhs = parse_expr_to_Z3(e.left, s, m)
         rhs = parse_expr_to_Z3(e.right, s, m)
-        if m.branch:          
-            # only RHS is BitVec (Lhs is a more complex expr)
-            if isinstance(rhs, z3.z3.BitVecRef) and not isinstance(lhs, z3.z3.BitVecRef):
-                c = If(lhs, BitVecVal(1, 32), BitVecVal(0, 32))
-                s.pc.add(c != rhs)
-            else:
-                s.pc.add(lhs != rhs)
+        # Return the inequality expression without modifying path condition
+        # Handle type conversion if needed
+        if isinstance(rhs, z3.z3.BitVecRef) and not isinstance(lhs, z3.z3.BitVecRef):
+            c = If(lhs, BitVecVal(1, 32), BitVecVal(0, 32))
+            return (c != rhs)
         else:
-            # only RHS is bitVEC 
-            if isinstance(rhs, z3.z3.BitVecRef) and not isinstance(lhs, z3.z3.BitVecRef):
-                c = If(lhs, BitVecVal(1, 32), BitVecVal(0, 32))
-                #print("a")
-                s.pc.add(c == rhs)
-            else:
-                s.pc.push()
-                s.pc.add(lhs == rhs)
-                if not solve_pc(s.pc):
-                    s.pc.pop()
-                    m.abandon = True
-                    m.ignore = True
-    elif is_and(e):
-        lhs = parse_expr_to_Z3(e.left, s, m)
-        rhs = parse_expr_to_Z3(e.right, s, m)
-
-        if isinstance(rhs, BitVecRef) and isinstance(lhs, BitVecRef):
-            return s
-        elif isinstance(rhs, BitVecRef):
-            return s
-        elif isinstance(lhs, BitVecRef):
-            return s
-        else:
-            if lhs is None:
-                return s.pc.add(rhs.pc.assertions())
-            
-            if rhs is None:
-                return s.pc.add(rhs.pc.assertions())
-
-            return s
-    return s
+            return (lhs != rhs)
+    # Default: return a BitVecVal of 0 if expression type is not recognized
+    return BitVecVal(0, 32)
 
 def solve_pc(s: Solver) -> bool:
     """Solve path condition."""

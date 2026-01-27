@@ -1,0 +1,20 @@
+[tasks]
+bmc
+prove
+
+[options]
+bmc: mode bmc
+bmc: depth 20
+prove: mode prove
+prove: depth 20
+
+[engines]
+bmc: smtbmc z3
+prove: smtbmc z3
+
+[script]
+read -formal test_2.v
+prep -top place_holder_2
+
+[files]
+test_2.v

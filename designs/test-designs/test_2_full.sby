@@ -1,0 +1,27 @@
+[tasks]
+bmc_place_holder
+bmc_place_holder_2
+prove_place_holder_2
+
+[options]
+bmc_place_holder: mode bmc
+bmc_place_holder: depth 30
+bmc_place_holder_2: mode bmc
+bmc_place_holder_2: depth 30
+prove_place_holder_2: mode prove
+prove_place_holder_2: depth 30
+
+[engines]
+bmc_place_holder: smtbmc z3
+bmc_place_holder_2: smtbmc z3
+prove_place_holder_2: smtbmc z3
+
+[script]
+read -formal test_2.v
+
+bmc_place_holder: prep -top place_holder
+bmc_place_holder_2: prep -top place_holder_2
+prove_place_holder_2: prep -top place_holder_2
+
+[files]
+test_2.v

@@ -127,3 +127,4 @@ Optional Redis caching (`--use_cache`):
    - Summarize the current task/bug fix.
    - Append it to `CHANGELOG.md` with a timestamp.
    - Use the format: `[Date] [Category] Summary`.
+   - You should also summarize how you use the pyslang library.

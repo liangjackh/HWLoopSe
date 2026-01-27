@@ -1,10 +1,40 @@
 """A library of helper functions for working with the PySlang AST."""
 import pyslang as ps
+import re
 from helpers.utils import init_symbol
 from engine.execution_manager import ExecutionManager
 from engine.symbolic_state import SymbolicState
 from helpers.rvalue_to_z3 import solve_pc
+from helpers.rvalue_parser import conjunction_with_pointers
 from z3 import Not, is_bool, BoolVal, ExprRef, BitVecRef, BitVecVal
+
+
+def substitute_symbols(expr_str: str, store: dict) -> str:
+    """Substitute variable names in expression string with their symbolic values from store.
+
+    Args:
+        expr_str: Expression string like "(+ out 1)"
+        store: Dict mapping variable names to symbolic values
+
+    Returns:
+        Expression string with variables replaced by symbolic values, e.g. "(+ abc123 1)"
+    """
+    if not store:
+        return expr_str
+
+    # Sort variables by length (longest first) to avoid partial replacements
+    # e.g., replace "out_wire" before "out"
+    sorted_vars = sorted(store.keys(), key=len, reverse=True)
+
+    result = expr_str
+    for var_name in sorted_vars:
+        sym_val = store[var_name]
+        # Use word boundary regex to avoid partial matches
+        # Match variable name that is not part of a larger identifier
+        pattern = r'\b' + re.escape(var_name) + r'\b'
+        result = re.sub(pattern, str(sym_val), result)
+
+    return result
 
 def init_state(s: SymbolicState, prev_store, ast, symbol_visitor):
     """give fresh symbols and merge register values in."""
@@ -637,41 +667,53 @@ class SymbolicDFS:
             self.visit_expr(m, s, expr.right)
 
         elif kind == ps.SyntaxKind.AssignmentExpression:
-            if hasattr(expr.left, "identifier") and hasattr(expr.right, "identifier"):
-                if expr.right.identifier.value in s.store[m.curr_module]:
-                    s.store[m.curr_module][expr.left.identifier.value] = s.store[m.curr_module][expr.right.identifier.value]
-            elif hasattr(expr.left, "identifier"):
-                # Only LHS has an identifier attribute
-                #  RHS is likely a literal
-                # print(expr.right.kind)  # DEBUG
-                if expr.right.kind == ps.SyntaxKind.ConcatenationExpression:
+            if hasattr(expr.left, "identifier"):
+                lhs_var = expr.left.identifier.value
+                # Check for simple var-to-var assignment first
+                if hasattr(expr.right, "identifier") and expr.right.identifier.value in s.store[m.curr_module]:
+                    s.store[m.curr_module][lhs_var] = s.store[m.curr_module][expr.right.identifier.value]
+                elif expr.right.kind == ps.SyntaxKind.ConcatenationExpression:
                     # Handle concatenation on RHS
                     parts = [str(operand.literal.value) for operand in expr.right.expressions if hasattr(operand, "literal")]
-                    s.store[m.curr_module][expr.left.identifier.value] = "".join(parts)
+                    s.store[m.curr_module][lhs_var] = "".join(parts)
                 elif hasattr(expr.right, "literal"):
                     # Handle literal expressions (IntegerLiteralExpression, etc.)
-                    s.store[m.curr_module][expr.left.identifier.value] = str(expr.right.literal.value)
+                    s.store[m.curr_module][lhs_var] = str(expr.right.literal.value)
                 else:
-                    # Fallback - skip unknown RHS types
-                    pass
+                    # Handle complex RHS expressions (e.g., out + 1 + out_wire)
+                    # Convert RHS to string representation and substitute symbolic values
+                    rhs_str = conjunction_with_pointers(expr.right, s, m)
+                    rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
+                    s.store[m.curr_module][lhs_var] = rhs_with_symbols
             else:
-                # LHS or RHS doesn't have an identifier attribute — skip for now
+                # LHS doesn't have an identifier attribute — skip for now
                 ...
 
-        elif kind == ps.SyntaxKind.NonblockingAssignmentExpression: 
-            if expr.left.kind == ps.IdentifierNameSyntax:
-                if expr.left.identifier.value in s.store: 
-                    s.store[m.curr_module][expr.left.identifier.value] = s.store[m.curr_module][expr.right.identifier.value]
-            else:
-                if expr.right.kind == ps.SyntaxKind.ConcatenationExpression:
+        elif kind == ps.SyntaxKind.NonblockingAssignmentExpression:
+            if hasattr(expr.left, "identifier"):
+                lhs_var = expr.left.identifier.value
+                # Check for simple var-to-var assignment first
+                if hasattr(expr.right, "identifier") and expr.right.identifier.value in s.store[m.curr_module]:
+                    s.store[m.curr_module][lhs_var] = s.store[m.curr_module][expr.right.identifier.value]
+                elif expr.right.kind == ps.SyntaxKind.ConcatenationExpression:
                     # Handle concatenation on RHS
                     concat_value = ""
                     for operand in expr.right.expressions:
                         if hasattr(operand, "value"):
                             concat_value += str(operand.value)
-                    s.store[m.curr_module][expr.left.identifier.value] = concat_value
+                    s.store[m.curr_module][lhs_var] = concat_value
+                elif hasattr(expr.right, "literal"):
+                    # Handle literal expressions
+                    s.store[m.curr_module][lhs_var] = str(expr.right.literal.value)
                 else:
-                    ...
+                    # Handle complex RHS expressions (e.g., out + 1 + out_wire)
+                    # Convert RHS to string representation and substitute symbolic values
+                    rhs_str = conjunction_with_pointers(expr.right, s, m)
+                    rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
+                    s.store[m.curr_module][lhs_var] = rhs_with_symbols
+            else:
+                # LHS doesn't have an identifier attribute — skip for now
+                ...
 
         elif kind ==ps.ExpressionKind.Concatenation:
             for e in expr.operands:
@@ -797,11 +839,11 @@ class SymbolicDFS:
                     return
 
             # PySlang 7.0 uses ifTrue/ifFalse for ConditionalStatementSyntax
-            # Pattern matches usage in dfs_stmt() method (line 554-557)
-            if hasattr(stmt, 'ifTrue') and stmt.ifTrue:
-                self.visit_stmt(m, s, stmt.ifTrue, modules, direction)
-            if hasattr(stmt, 'ifFalse') and stmt.ifFalse:
-                self.visit_stmt(m, s, stmt.ifFalse, modules, direction)
+            # The branches are visited as separate basic blocks in the CFG path,
+            # so we should NOT visit them here. The direction parameter determines
+            # which path was taken, and the branch statements will be executed
+            # when we visit the corresponding basic block.
+            # We only need to evaluate the condition and update the path condition here.
 
             if cond_expr:
                 s.pc.pop()

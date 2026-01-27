@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+<testsuite timestamp="2026-01-26T15:22:18" hostname="ljh" package="test_2_formal" id="0" name="prove" tests="1" errors="0" failures="2" time="0" skipped="0">
+<properties>
+<property name="os" value="Linux"/>
+<property name="expect" value="PASS"/>
+<property name="status" value="FAIL"/>
+</properties>
+<testcase classname="prove" name="build execution" time="0">
+<failure type="FAIL" message="Task returned status FAIL." />
+</testcase>
+<testcase classname="prove" name="Property ASSERT in place_holder_2 at test_2_formal.v:44.7-44.28" time="0" type="ASSERT" location="test_2_formal.v:44.7-44.28" id="_witness_.check_assert_test_2_formal_v_44_5" tracefile="engine_0/trace.vcd">
+<failure type="ASSERT" message="Property ASSERT in place_holder_2 at test_2_formal.v:44.7-44.28 failed. Trace file: engine_0/trace.vcd" />
+</testcase>
+<system-out>SBY 15:22:18 [test_2_formal_bmc] Removing directory '/home/ljh/haveFun/sybolicExecution/sylvia-related/siu/HWLoopSe/designs/test-designs/test_2_formal_bmc'.
+SBY 15:22:18 [test_2_formal_prove] Removing directory '/home/ljh/haveFun/sybolicExecution/sylvia-related/siu/HWLoopSe/designs/test-designs/test_2_formal_prove'.
+SBY 15:22:18 [test_2_formal_prove] Copy '/home/ljh/haveFun/sybolicExecution/sylvia-related/siu/HWLoopSe/designs/test-designs/test_2_formal.v' to '/home/ljh/haveFun/sybolicExecution/sylvia-related/siu/HWLoopSe/designs/test-designs/test_2_formal_prove/src/test_2_formal.v'.
+SBY 15:22:18 [test_2_formal_prove] engine_0: smtbmc z3
+SBY 15:22:18 [test_2_formal_prove] base: starting process &quot;cd test_2_formal_prove/src; yosys -ql ../model/design.log ../model/design.ys&quot;
+SBY 15:22:18 [test_2_formal_prove] base: finished (returncode=0)
+SBY 15:22:18 [test_2_formal_prove] prep: starting process &quot;cd test_2_formal_prove/model; yosys -ql design_prep.log design_prep.ys&quot;
+SBY 15:22:18 [test_2_formal_prove] prep: finished (returncode=0)
+SBY 15:22:18 [test_2_formal_prove] smt2: starting process &quot;cd test_2_formal_prove/model; yosys -ql design_smt2.log design_smt2.ys&quot;
+SBY 15:22:18 [test_2_formal_prove] smt2: finished (returncode=0)
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: starting process &quot;cd test_2_formal_prove; yosys-smtbmc -s z3 --presat --noprogress -t 20  --append 0 --dump-vcd engine_0/trace.vcd --dump-yw engine_0/trace.yw --dump-vlogtb engine_0/trace_tb.v --dump-smtc engine_0/trace.smtc model/design_smt2.smt2&quot;
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: ##   0:00:00  Solver: z3
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: ##   0:00:00  Checking assumptions in step 0..
+SBY 15:22:18 [test_2_formal_prove] engine_0.induction: starting process &quot;cd test_2_formal_prove; yosys-smtbmc -s z3 --presat -i --noprogress -t 20  --append 0 --dump-vcd engine_0/trace_induct.vcd --dump-yw engine_0/trace_induct.yw --dump-vlogtb engine_0/trace_induct_tb.v --dump-smtc engine_0/trace_induct.smtc model/design_smt2.smt2&quot;
+SBY 15:22:18 [test_2_formal_prove] engine_0.induction: ##   0:00:00  Solver: z3
+SBY 15:22:18 [test_2_formal_prove] engine_0.induction: ##   0:00:00  Trying induction in step 20..
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: ##   0:00:00  Checking assertions in step 0..
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: ##   0:00:00  Checking assumptions in step 1..
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: ##   0:00:00  Checking assertions in step 1..
+SBY 15:22:18 [test_2_formal_prove] engine_0.induction: ##   0:00:00  Trying induction in step 19..
+SBY 15:22:18 [test_2_formal_prove] engine_0.induction: ##   0:00:00  Trying induction in step 18..
+SBY 15:22:18 [test_2_formal_prove] engine_0.induction: ##   0:00:00  Temporal induction successful.
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: ##   0:00:00  BMC failed!
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: ##   0:00:00  Assert failed in place_holder_2: test_2_formal.v:44.7-44.28 (_witness_.check_assert_test_2_formal_v_44_5)
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: ##   0:00:00  Writing trace to VCD file: engine_0/trace.vcd
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: ##   0:00:00  Writing trace to Verilog testbench: engine_0/trace_tb.v
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: ##   0:00:00  Writing trace to constraints file: engine_0/trace.smtc
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: ##   0:00:00  Writing trace to Yosys witness file: engine_0/trace.yw
+SBY 15:22:18 [test_2_formal_prove] engine_0.induction: ##   0:00:00  Status: passed
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: ##   0:00:00  Status: failed
+SBY 15:22:18 [test_2_formal_prove] engine_0.induction: finished (returncode=0)
+SBY 15:22:18 [test_2_formal_prove] engine_0.induction: Status returned by engine for induction: pass
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: finished (returncode=1)
+SBY 15:22:18 [test_2_formal_prove] engine_0.basecase: Status returned by engine for basecase: FAIL
+SBY 15:22:18 [test_2_formal_prove] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 15:22:18 [test_2_formal_prove] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 15:22:18 [test_2_formal_prove] summary: engine_0 (smtbmc z3) returned FAIL for basecase
+SBY 15:22:18 [test_2_formal_prove] summary: engine_0 (smtbmc z3) returned pass for induction
+SBY 15:22:18 [test_2_formal_prove] summary: counterexample trace [basecase]: test_2_formal_prove/engine_0/trace.vcd
+SBY 15:22:18 [test_2_formal_prove] summary:   failed assertion place_holder_2._witness_.check_assert_test_2_formal_v_44_5 at test_2_formal.v:44.7-44.28 step 1
+SBY 15:22:18 [test_2_formal_prove] DONE (FAIL, rc=2)
+</system-out>
+<system-err>
+</system-err>
+</testsuite>
+</testsuites>

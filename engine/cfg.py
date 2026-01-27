@@ -368,28 +368,79 @@ class CFG:
         return self.paths
 
     def partition(self):
-        """Partitions all_nodes into basic blocks based on partition_points"""
+        """Partitions all_nodes into basic blocks based on partition_points.
+
+        The partition_points mark branch points in the CFG:
+        - The first partition point (0) is the start of the first block
+        - Subsequent partition points mark the START of new blocks (branch targets)
+
+        For partition_points = [0, 2, 3, 7, 10]:
+        - Block 0: nodes [0, 1, 2] (from 0 up to and including the conditional at 2)
+        - Block 1: nodes [3, 4, 5, 6] (then-branch: from 3 up to but not including 7)
+        - Block 2: nodes [7, 8, 9, 10] (else-branch: from 7 to the end)
+
+        The key insight is that partition_points[1] (the conditional) is the END of block 0,
+        while partition_points[2] and beyond are the START of new blocks.
+        """
         self.partition_points.add(len(self.all_nodes)-1)
-        partition_list = sorted(list(self.partition_points))  # IMPORTANT: Sort the partition points!
-        for i in range(len(partition_list)-1):
-            if i > 0:
-                basic_block = self.all_nodes[partition_list[i]+1:partition_list[i+1]+1]
-                self.basic_block_list.append(basic_block)
-            else:
-                basic_block = self.all_nodes[partition_list[i]:partition_list[i+1]+1]
-                self.basic_block_list.append(basic_block)
+        partition_list = sorted(list(self.partition_points))
+
+        # First block: from start to the first branch point (inclusive)
+        # This includes the conditional statement itself
+        if len(partition_list) >= 2:
+            first_block = self.all_nodes[partition_list[0]:partition_list[1]+1]
+            self.basic_block_list.append(first_block)
+
+            # Subsequent blocks: each starts at a partition point and ends before the next
+            for i in range(2, len(partition_list)):
+                start = partition_list[i-1] + 1  # Start after the previous partition point
+                end = partition_list[i]  # End at this partition point (exclusive for intermediate, inclusive for last)
+
+                if i == len(partition_list) - 1:
+                    # Last block: include up to and including the last node
+                    basic_block = self.all_nodes[start:end+1]
+                else:
+                    # Intermediate block: exclude the next partition point
+                    basic_block = self.all_nodes[start:end]
+
+                if basic_block:  # Only add non-empty blocks
+                    self.basic_block_list.append(basic_block)
+        else:
+            # Only one partition point: single block with all nodes
+            self.basic_block_list.append(self.all_nodes[:])
 
     def find_basic_block(self, node_idx) -> int:
-        """Given a node index, find the index of the basic block that we're in."""
-        if node_idx < len(self.all_nodes):
-            node = self.all_nodes[node_idx]
-        else:
-            node = self.all_nodes[len(self.all_nodes)-1]
-        found_block = None
-        for block in self.basic_block_list:
-            if node in block:
-                found_block = indexOf(self.basic_block_list, block)
-                return found_block
+        """Given a node index, find the index of the basic block that contains it.
+
+        Uses partition points to determine block membership:
+        - Block 0: nodes from partition_list[0] to partition_list[1] (inclusive)
+        - Block i (i > 0): nodes from partition_list[i] to partition_list[i+1]-1 (for branch targets)
+        """
+        partition_list = sorted(list(self.partition_points))
+
+        if len(partition_list) < 2:
+            return 0
+
+        # Check if in first block (includes the conditional)
+        if node_idx <= partition_list[1]:
+            return 0
+
+        # Check subsequent blocks (branch targets)
+        # Block 1 starts at partition_list[2], Block 2 starts at partition_list[3], etc.
+        for i in range(2, len(partition_list)):
+            block_start = partition_list[i]
+
+            if i == len(partition_list) - 1:
+                # Last block: from this partition point to the end
+                if node_idx >= block_start:
+                    return i - 1  # Block index is i-1 (since block 0 covers indices 0 and 1)
+            else:
+                block_end = partition_list[i + 1] - 1
+                if block_start <= node_idx <= block_end:
+                    return i - 1
+
+        # Fallback: return last block
+        return len(self.basic_block_list) - 1
 
     def make_paths(self):
         """Map the edge between AST nodes to a path between basic blocks."""

@@ -1,5 +1,34 @@
 # Changelog
 
+## [2026-01-27] [Refactor] Changed expression format from prefix to infix notation
+
+### Problem
+The `conjunction_with_pointers` function in `helpers/rvalue_parser.py` was producing prefix notation (S-expressions) like `"(+ (+ symbol 1) out_wire)"` which is not a valid standard expression format. The user requested infix notation like `"((symbol + 1) + out_wire)"`.
+
+### Changes
+
+1. **Created infix version of `conjunction_with_pointers`** (`helpers/rvalue_parser.py`, lines 25-87)
+   - Renamed the original function to `conjunction_with_pointers_prefix`
+   - Created new `conjunction_with_pointers` function that produces infix notation
+   - For `BinaryExpressionSyntax`: returns `f"({left_str} {operator} {right_str})"` instead of `f"({operator} {left_str} {right_str})"`
+   - For `ConditionalExpressionSyntax`: returns `f"({cond} ? {true_val} : {false_val})"`
+
+2. **Preserved prefix version** (`helpers/rvalue_parser.py`, lines 90-229)
+   - Renamed to `conjunction_with_pointers_prefix`
+   - Still produces prefix notation `"(+ abc123 (+ 1 def456))"`
+   - Used by `tokenize()` function for the prefix-based parsing system
+
+### PySlang Library Usage
+- `ps.BinaryExpressionSyntax`: Access `left`, `right`, and `operatorToken` attributes
+- `ps.ConditionalExpressionSyntax`: Access `predicate`, `ifTrue`, `ifFalse` attributes
+- `ps.ElementSelectExpressionSyntax`: Access `value` and `selector` attributes
+- `ps.ConcatenationExpressionSyntax`: Iterate through `expressions` attribute
+
+### Result
+- Store now shows infix expressions: `'out': "((1'b0 + 1) + uWIMuuP9uDMksfXp)"`
+- Multi-cycle accumulated expressions: `'out': '((((symbol + 1) + out_wire) + 1) + out_wire)'`
+- Prefix version preserved for internal tokenizer/parser system
+
 ## [2026-01-27] [Feature] Implemented -t parameter support for top module selection
 
 ### Problem

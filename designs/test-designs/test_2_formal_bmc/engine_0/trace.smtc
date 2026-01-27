@@ -1,0 +1,12 @@
+initial
+assume (= [$auto$async2sync.cc:107:execute$14] false)
+assume (= [$auto$async2sync.cc:116:execute$18] true)
+assume (= [out] #x08000007)
+
+state 0
+assume (= [CLK] false)
+assume (= [RST] false)
+
+state 1
+assume (= [CLK] false)
+assume (= [RST] false)
