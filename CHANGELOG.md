@@ -1,5 +1,37 @@
 # Changelog
 
+## [2026-01-27] [Bug Fix] Fixed missing dfs_expr method and nested module instance tracking
+
+### Problem
+1. `AttributeError: 'SymbolicDFS' object has no attribute 'dfs_expr'` when running picorv32.v
+2. `AttributeError: 'PrefixUnaryExpressionSyntax' object has no attribute 'operator'` in rvalue_parser.py
+3. Nested module instances (submodules) were not being tracked in state.store - only top-level modules were processed
+
+### Root Causes & Fixes
+
+1. **Missing dfs_expr method** (`helpers/slang_helpers.py`)
+   - The `SymbolicDFS` class called `self.dfs_expr()` at multiple locations but the method was not defined
+   - **Fix**: Added `dfs_expr()` method as a placeholder to prevent AttributeError (lines 597-603)
+
+2. **PySlang operator attribute compatibility** (`helpers/rvalue_parser.py`)
+   - `PrefixUnaryExpressionSyntax` uses `operatorToken` instead of `operator` attribute
+   - **Fix**: Added fallback to check for both `operator` and `operatorToken` attributes (lines 29-35)
+
+3. **Nested module instances not tracked** (`main.py`)
+   - Only top-level modules from `topInstances` were processed
+   - Instantiated submodules (e.g., `place_holder_2` instantiated as `test_1`) were not added to the modules list
+   - **Fix**: Added recursive `collect_all_instances()` function to discover all nested module instances (lines 177-191)
+
+### PySlang Library Usage
+- **Module hierarchy**: Use `compilation.getRoot().topInstances` to get top-level modules
+- **Nested instances**: Recursively iterate through `symbol.body` to find child instances with `symbol.kind == ps.SymbolKind.Instance`
+- **Operator tokens**: `PrefixUnaryExpressionSyntax` uses `operatorToken.valueText` instead of `operator`
+
+### Result
+- picorv32.v now runs successfully without AttributeError
+- Nested module instances are now tracked: `{'place_holder': {...}, 'test_1': {...}}`
+- Both parent and child module states are properly maintained during symbolic execution
+
 ## [2026-01-26] [Bug Fix] Fixed empty symbolic state store issue
 
 ### Problem

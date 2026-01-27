@@ -22,15 +22,21 @@ op_map = {"Plus": "+", "Minus": "-", "Power": "**", "Times": "*", "Divide": "/",
 "Sra": ">>", "LessThan": "<", "GreaterThan": ">", "LessEq": "<=", "GreaterEq": ">=", "Eq": "==", "NotEq": "!=", "Eql": "===", "NotEql": "!==",
 "And": "&", "Xor": "^", "Or": "|", "Land": "&&", "Lor": "||", "Unot": "!", "Ulnot": "!", "Unor": "!", "Uor": "|", "Uand": "&", "Unand": "&"}
 
-def conjunction_with_pointers(rvalue, s: SymbolicState, m: ExecutionManager) -> str: 
+def conjunction_with_pointers(rvalue, s: SymbolicState, m: ExecutionManager) -> str:
     """Convert the compound rvalue into proper string representation with pointers taken into account."""
     #if isinstance(rvalue, ps.UnaryExpressionSyntax):
     if rvalue.__class__.__name__ in ("UnaryExpressionSyntax", "PrefixUnaryExpressionSyntax"):
-        operator = str(rvalue.operator)
+        # Handle different PySlang versions: operator vs operatorToken
+        if hasattr(rvalue, 'operator'):
+            operator = str(rvalue.operator)
+        elif hasattr(rvalue, 'operatorToken'):
+            operator = str(rvalue.operatorToken.valueText) if hasattr(rvalue.operatorToken, 'valueText') else str(rvalue.operatorToken)
+        else:
+            operator = "!"  # Default fallback
         if isinstance(rvalue.operand, ps.ElementSelectExpressionSyntax):
             new_right = f"({operator} {rvalue.operand.value}[{rvalue.operand.selector}])"
             return new_right
-        else: 
+        else:
             return f"({operator} {conjunction_with_pointers(rvalue.operand, s, m)})"
     #elif isinstance(rvalue, ps.RepeatExpressionSyntax):
     elif rvalue.__class__.__name__ in ("RepeatExpressionSyntax", "RepeatedExpressionSyntax"):

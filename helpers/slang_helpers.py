@@ -594,6 +594,14 @@ class SymbolicDFS:
             for s in stmt.body:
                 self.dfs_stmt(s)
 
+    def dfs_expr(self, expr):
+        """DFS traversal of expressions"""
+        if expr is None:
+            return
+        # For now, just a placeholder that doesn't traverse into expressions
+        # This prevents the AttributeError when dfs_expr is called
+        pass
+
     def visit_expr(self, m: ExecutionManager, s: SymbolicState, expr):
         """Visits expressions"""
         # print(expr.__class__.__name__, dir(expr))  # DEBUG

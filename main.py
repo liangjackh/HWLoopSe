@@ -172,8 +172,24 @@ def main():
                 exit(1)
 
         # 5. 获取模块 (适配 pyslang 9.0+)
-        modules = compilation.getRoot().topInstances
-        
+        modules = list(compilation.getRoot().topInstances)
+
+        # Also collect all nested module instances
+        def collect_all_instances(symbol, collected):
+            """Recursively collect all module instances including nested ones"""
+            if symbol.kind == ps.SymbolKind.Instance:
+                collected.append(symbol)
+                # Recursively check children
+                for child in symbol.body:
+                    collect_all_instances(child, collected)
+
+        all_instances = []
+        for top_module in modules:
+            collect_all_instances(top_module, all_instances)
+
+        # Use all instances instead of just top instances
+        modules = all_instances
+
         if not modules:
             print("No top instances found, searching syntax trees for definitions...")
             syntax_trees = compilation.getSyntaxTrees()
