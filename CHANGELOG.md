@@ -1,5 +1,29 @@
 # Changelog
 
+## [2026-01-27] [Feature] Implemented -t parameter support for top module selection
+
+### Problem
+The `-t` / `--top` parameter was defined but not implemented. When users specified `-t place_holder_2`, the tool would still process all top instances instead of only the specified module.
+
+### Root Cause & Fix
+
+**Missing -t parameter implementation** (`main.py`)
+- The `-t` parameter was defined in the option parser but never used in the code
+- The code always processed the first top instance, ignoring user's module selection
+- **Fix**: Implemented logic to find and process only the user-specified module (lines 186-214)
+  - Searches for module by both instance name and definition name
+  - Searches both top instances and nested instances
+  - Only processes the specified module and its children
+
+### PySlang Library Usage
+- **Finding modules by definition**: Check `module.body.definition.name` to match module definition name
+- **Nested instance search**: Iterate through `module.body` to find child instances
+
+### Result
+- Users can now specify `-t place_holder_2` to analyze only that module
+- Only the specified module and its children are processed
+- Uninstantiated module definitions are correctly excluded from analysis
+
 ## [2026-01-27] [Bug Fix] Fixed missing dfs_expr method and nested module instance tracking
 
 ### Problem

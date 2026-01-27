@@ -183,12 +183,43 @@ def main():
                 for child in symbol.body:
                     collect_all_instances(child, collected)
 
-        all_instances = []
-        for top_module in modules:
-            collect_all_instances(top_module, all_instances)
+        # If user specified a top module with -t, find and use only that module
+        # Otherwise, use the first top instance
+        top_module = None
+        if options.topmodule and options.topmodule != "top":
+            # Find the module with the specified name (by instance name or definition name)
+            # First check top instances
+            for module in modules:
+                if module.name == options.topmodule or (hasattr(module.body, 'definition') and module.body.definition.name == options.topmodule):
+                    top_module = module
+                    break
 
-        # Use all instances instead of just top instances
-        modules = all_instances
+            # If not found in top instances, search nested instances
+            if not top_module:
+                for module in modules:
+                    for child in module.body:
+                        if child.kind == ps.SymbolKind.Instance:
+                            if child.name == options.topmodule or (hasattr(child.body, 'definition') and child.body.definition.name == options.topmodule):
+                                top_module = child
+                                break
+                    if top_module:
+                        break
+
+            if not top_module:
+                print(f"[Error] Specified top module '{options.topmodule}' not found")
+                print(f"Available modules: {[m.name for m in modules]}")
+                exit(1)
+        else:
+            # Use the first top instance
+            top_module = modules[0] if modules else None
+
+        # Only process the selected top module and its children
+        all_instances = []
+        if top_module:
+            collect_all_instances(top_module, all_instances)
+            modules = all_instances
+        else:
+            modules = []
 
         if not modules:
             print("No top instances found, searching syntax trees for definitions...")
