@@ -485,12 +485,14 @@ class ExecutionEngine:
                         k: int = 0
                         for basic_block_idx in cfg_path:
                             if basic_block_idx < 0: 
+                                print("Skipping dummy node in path")
                                 # dummy node
                                 continue
                             else:
                                 direction = directions[k]
                                 k += 1
                                 basic_block = cfgs_by_module[module_name][cfg_idx].basic_block_list[basic_block_idx]
+                                print(f"visiting basic_block: {[str(s)[:50] if s else 'None' for s in basic_block]}")
                                 #basic_block = cfgs_by_module[module_name][complete_single_cycle_path.index(cfg_path)].basic_block_list[basic_block_idx]
                                 for stmt in basic_block:
                                     # print(f"updating curr mod {manager.curr_module}")
