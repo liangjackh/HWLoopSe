@@ -254,6 +254,7 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
     Returns:
         Z3 expression (BitVecRef, BoolRef, etc.)
     """
+    print(f"Parsing expression to Z3: {e}, type: {type(e)}")
     tokens_list = parse_tokens(tokenize(e, s, m))
     new_constraint = evaluate_expr(tokens_list, s, m)
     new_constants = []

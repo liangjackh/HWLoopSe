@@ -561,10 +561,13 @@ class SymbolicDFS:
 
     def dfs(self, symbol):
         """Main DFS traversal of symbols"""
+        print("DFS visiting symbol:", getattr(symbol, "name", str(symbol)))  # DEBUG
         if not isinstance(symbol, ps.Symbol):
+            print(f"- not a Symbol, skipping: {symbol}")  # DEBUG
             return
 
         if symbol is None or symbol in self.visited:
+            print("- already visited or None, skipping.")  # DEBUG
             return
         self.visited.add(symbol)
 
@@ -575,12 +578,15 @@ class SymbolicDFS:
             ps.SymbolKind.Port,
             ps.SymbolKind.Net,
         ):
+            print(f"- adding to symbolic store: {symbol.name}(variable, para, port, or net)")  # DEBUG
             self.symbolic_store[symbol.name] = symbol
 
         # Update path condition for conditional statements
         if symbol.kind == ps.SymbolKind.ProceduralBlock and hasattr(symbol, "body"):
+            print("- visiting procedural block body")  # DEBUG
             self.dfs_stmt(symbol.body)
         elif symbol.kind == ps.SymbolKind.ContinuousAssign and hasattr(symbol, "assignment"):
+            print("- visiting continuous assignment")  # DEBUG
             self.dfs_expr(symbol.assignment)
 
         # Recursively visit children if available
@@ -595,6 +601,7 @@ class SymbolicDFS:
                 for child in symbol:
                     self.dfs(child)
             except TypeError:
+                print(f"- symbol {symbol.name} not iterable, skipping children traversal.")  # DEBUG
                 pass  # Symbol is not iterable
 
         if hasattr(symbol, "body") and symbol.kind != ps.SymbolKind.ProceduralBlock:

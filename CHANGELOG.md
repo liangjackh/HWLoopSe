@@ -174,3 +174,54 @@ Running symbolic execution on `picorv32.v` reported "Branch points explored: 0" 
 - Successfully analyzed picorv32.v
 - Branch points explored: 204,800
 - Paths explored: 12,288
+
+## [2026-01-29] [Refactor] Migrated from manual Compilation to Driver-based file loading
+
+### Problem
+The original implementation manually parsed .F file lists line-by-line (lines 144-159 in `main.py`) and manually constructed `SourceManager`, `PreprocessorOptions`, `Bag`, and `Compilation` objects. This approach:
+- Required ~50 lines of boilerplate code
+- Didn't support standard SystemVerilog filelist features (+incdir+, +define+, -v, -y flags)
+- Had potential bugs in relative path resolution and environment variable handling
+- Fixed AttributeError: `PreprocessorOptions.includePaths` doesn't exist in pyslang 10.0 (correct attribute is `additionalIncludePaths`)
+
+### Changes
+
+1. **Replaced manual file loading with Driver approach** (`main.py`, lines 121-150)
+   - Created `ps.Driver()` instance and called `addStandardArgs()`
+   - Used `driver.sourceLoader.addSearchDirectories()` for include paths (replaces manual `PreprocessorOptions.additionalIncludePaths`)
+   - Used `driver.processCommandFiles(input_file, True, False)` for .F file lists (replaces manual line-by-line parsing)
+   - Used `driver.sourceLoader.addFiles(input_file)` for single files
+   - Called `driver.processOptions()` and `driver.parseAllSources()` to parse sources
+   - Obtained `Compilation` via `driver.createCompilation()`
+
+2. **Fixed diagnostics section** (`main.py`, line 214)
+   - Changed `ps.DiagnosticEngine(source_manager)` to `ps.DiagnosticEngine(driver.sourceManager)`
+   - Driver provides its own `sourceManager` accessible via `driver.sourceManager`
+
+### PySlang Library Usage (Driver API)
+
+**Driver workflow:**
+- `ps.Driver()`: Creates driver instance (manages file loading, preprocessing, compilation)
+- `driver.addStandardArgs()`: Initializes standard command-line argument handling
+- `driver.sourceLoader.addSearchDirectories(path)`: Adds include search directories
+- `driver.processCommandFiles(file, makeRelative, separateUnit)`: Processes .F filelist files natively
+  - `makeRelative=True`: Resolves paths relative to .F file location
+  - `separateUnit=False`: All files go into the same compilation unit
+- `driver.sourceLoader.addFiles(pattern)`: Adds source files (supports glob patterns)
+- `driver.processOptions()`: Processes all configured options
+- `driver.parseAllSources()`: Parses all loaded source files into syntax trees
+- `driver.createCompilation()`: Returns the `Compilation` object (same type as manual approach)
+- `driver.sourceManager`: Access to the Driver's SourceManager for diagnostics
+
+**Key insight from hint_driver_compilation:**
+- **Driver is the "manager"**, Compilation is the "brain"
+- Driver handles file I/O, command-line parsing, include paths, macros
+- Compilation handles AST, type checking, symbol resolution, hierarchy
+- Driver approach is recommended for filelist-based projects
+
+### Result
+- Reduced code from ~50 lines to ~25 lines
+- Native support for .F file lists with standard SystemVerilog filelist syntax
+- Fixed include path handling (-I flag now works correctly)
+- Cleaner separation: Driver handles I/O, Compilation handles semantics
+- Same `Compilation` object output, fully compatible with existing symbolic execution engine

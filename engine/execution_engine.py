@@ -102,6 +102,7 @@ class ExecutionEngine:
         # Normalize access: many pyslang nodes wrap a single statement under .statement
         # e.g., ProceduralBlockSyntax -> .statement; handle that first.
         cname = items.__class__.__name__ if hasattr(items, '__class__') else ''
+        print(f"Visiting node type: {cname}")
         if cname == "ProceduralBlockSyntax" and hasattr(items, 'statement'):
             self.module_count_sv(m, items.statement)
             return
@@ -436,7 +437,7 @@ class ExecutionEngine:
                 # actually want to terminate this part after the decl and comb part
                 #compilation.getRoot().visit(my_visitor_for_symbol.visit)
                 # Clear visitor state before processing each module to avoid mixing variables
-                visitor.symbolic_store.clear()
+                visitor.symbolic_store.clear() #TODO:clear is a waste
                 visitor.visited.clear()
                 visitor.dfs(modules_dict[module_name])
                 # Transfer discovered variables to state.store with fresh symbols

@@ -4,6 +4,8 @@
 rm -f out.txt
 #python3 -m main 2 designs/test-designs/test_2.v --sv -t place_holder_2
 python3 -m main 2 designs/test-designs/test_2.v --sv 
+#python3 -m main 2 designs/aes/aes.F --sv 
+#python3 -m main 2 designs/test-designs/updowncounter.v --sv 
 #python3 -m main 1 filelist.F --sv
 #for file in $(ls designs/test-designs/)
 #do
