@@ -1,0 +1,111 @@
+Executing for 2 clock cycles
+Module place_holder single instance
+[DEBUG build_cfg] all_nodes count: 11, edgelist count: 2
+[DEBUG build_cfg] partition_points: [0, 2, 3, 7, 10]
+[DEBUG build_cfg] edgelist: [(2, 3), (2, 7)]
+[DEBUG build_cfg] cfg_edges: [(0, 1), (0, 2)]
+[DEBUG build_cfg] basic_block_list count: 3
+[DEBUG build_cfg] paths computed: 2 paths
+[DEBUG build_cfg] paths: [[-1, 0, 1, -2], [-1, 0, 2, -2]]
+[DEBUG build_cfg] all_nodes count: 12, edgelist count: 2
+[DEBUG build_cfg] partition_points: [0, 2, 3, 7, 11]
+[DEBUG build_cfg] edgelist: [(2, 3), (2, 7)]
+[DEBUG build_cfg] cfg_edges: [(0, 1), (0, 2)]
+[DEBUG build_cfg] basic_block_list count: 3
+[DEBUG build_cfg] paths computed: 2 paths
+[DEBUG build_cfg] paths: [[-1, 0, 1, -2], [-1, 0, 2, -2]]
+Module test_1 single instance
+[DEBUG build_cfg] all_nodes count: 12, edgelist count: 2
+[DEBUG build_cfg] partition_points: [0, 2, 3, 7, 11]
+[DEBUG build_cfg] edgelist: [(2, 3), (2, 7)]
+[DEBUG build_cfg] cfg_edges: [(0, 1), (0, 2)]
+[DEBUG build_cfg] basic_block_list count: 3
+[DEBUG build_cfg] paths computed: 2 paths
+[DEBUG build_cfg] paths: [[-1, 0, 1, -2], [-1, 0, 2, -2]]
+Here
+Branch points explored: 0
+Module place_holder has 2 always blocks
+Module test_1 has 1 always blocks
+461 checking states Executing path 1 / 64
+Initial state:
+{'place_holder': {'CLK': 'uyCLX6LyUvslqpMS', 'RST': 'eE1yDfH07oq2ZHGB', 'out': 'eXHnnFnN2JJmu8rd', 'out_wire': 'ThpujGXUWOrScpnO'}, 'test_1': {'CLK': 'APxix4FNje5u0BEx', 'RST': 'UOarkML3Ig8ofZgj', 'out': 'uPlkxGpwWEzu3HQP'}}
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
+DEBUG: basic_block[2] = [' begin', '\n      // 现在 out 和 out_wire 都是 32 位，加法逻辑正常\n      o', '\n    end']
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
+DEBUG: basic_block[2] = [' begin', '\n      // +2 操作现在在 32 位下有意义\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
+DEBUG: basic_block[2] = [' begin', '\n      // 现在 out 和 out_wire 都是 32 位，加法逻辑正常\n      o', '\n    end']
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
+DEBUG: basic_block[2] = [' begin', '\n      // +2 操作现在在 32 位下有意义\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
+DEBUG: basic_block[2] = [' begin', '\n      // +2 操作现在在 32 位下有意义\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
+DEBUG: basic_block[2] = [' begin', '\n      // +2 操作现在在 32 位下有意义\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
+494 checking path 1 / 64
+Cycle 0 final state:
+{'place_holder': {'CLK': 'uyCLX6LyUvslqpMS', 'RST': 'eE1yDfH07oq2ZHGB', 'out': "1'b0", 'out_wire': 'ThpujGXUWOrScpnO'}, 'test_1': {'CLK': 'APxix4FNje5u0BEx', 'RST': 'UOarkML3Ig8ofZgj', 'out': "1'b0"}}
+Cycle 0 final path condition:
+[]
+------------------------
+461 checking states Executing path 2 / 64
+Initial state:
+{'place_holder': {'CLK': 'rrjVfrcDp08pTndd', 'RST': 'DD1HSt1Yo7DNaRKk', 'out': 'qqbfInSP6fm61su9', 'out_wire': 'SJ1m3lXWB42682i6'}, 'test_1': {'CLK': '0fNynuVXEQopOT1Z', 'RST': 'Qd9odO5KKLyZCJjt', 'out': 'hfqWIaSDsrBOW5AV'}}
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
+DEBUG: basic_block[2] = [' begin', '\n      // 现在 out 和 out_wire 都是 32 位，加法逻辑正常\n      o', '\n    end']
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
+DEBUG: basic_block[2] = [' begin', '\n      // +2 操作现在在 32 位下有意义\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
+DEBUG: basic_block[2] = [' begin', '\n      // 现在 out 和 out_wire 都是 32 位，加法逻辑正常\n      o', '\n    end']
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
+DEBUG: basic_block[2] = [' begin', '\n      // +2 操作现在在 32 位下有意义\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
+DEBUG: basic_block[2] = [' begin', '\n      // +2 操作现在在 32 位下有意义\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
+DEBUG: cfg_path=[-1, 0, 2, -2], directions=[0, 0]
+DEBUG: basic_block_list has 3 blocks
+DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
+DEBUG: basic_block[2] = [' begin', '\n      // +2 操作现在在 32 位下有意义\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
+494 checking path 2 / 64
+Cycle 0 final state:
+{'place_holder': {'CLK': 'rrjVfrcDp08pTndd', 'RST': 'DD1HSt1Yo7DNaRKk', 'out': "1'b0", 'out_wire': 'SJ1m3lXWB42682i6'}, 'test_1': {'CLK': '0fNynuVXEQopOT1Z', 'RST': 'Qd9odO5KKLyZCJjt', 'out': "(1'b0  +  2)"}}
+Cycle 0 final path condition:
+[]
+------------------------
+Assertion violation
+{}
+0
+0
+Elapsed time 0.01665981499999969

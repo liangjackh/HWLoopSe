@@ -1,5 +1,10 @@
 `timescale 1ns / 1ps
-`default_nettype none   
+`default_nettype none
+`define assert(expression) \
+        if (!(expression)) begin \
+            $display("ASSERTION FAILED"); \
+            $finish; \
+        end       
 
 module updowncounter(
     input wire clock,
@@ -11,6 +16,7 @@ module updowncounter(
     );
     
     reg [31:0] internalvalue;
+    reg [31:0] internalvalue2;
     
     always @(posedge clock) begin
         if (reset) begin
@@ -23,8 +29,17 @@ module updowncounter(
             internalvalue <= internalvalue + 1;
         end
     end 
-    
+
+        
+    always @(posedge clock) begin
+       internalvalue2 <= internalvalue2 + 1; 
+    end 
+
     assign value = internalvalue;
+
+    //always @(posedge clock) begin
+    //`assert (value == 1)
+    //end
     
     
 endmodule

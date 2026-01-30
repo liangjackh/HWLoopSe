@@ -254,9 +254,9 @@ def main():
 
             symbol_visitor = SlangSymbolVisitor() 
             engine.execute_sv(my_visitor_for_symbol, modules, None, num_cycles)
-            symbol_visitor.visit(modules)
-            print(symbol_visitor.branch_points)
-            print(symbol_visitor.paths)
+            #symbol_visitor.visit(modules)
+            #print(f"symbol_visitor.branch_points: {symbol_visitor.branch_points}")
+            #print(f"symbol_visitor.paths: {symbol_visitor.paths}")
             
         end = time.process_time()
         print(f"Elapsed time {end - start}")

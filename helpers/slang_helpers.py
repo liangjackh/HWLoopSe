@@ -1111,6 +1111,7 @@ class SymbolicDFS:
                 m.violated_assertions = []
             m.violated_assertions.append({
                 'condition': str(cond),
+                'path condition': str(s.pc),
                 'z3_condition': str(cond_z3),
                 'kind': str(assertion_kind) if assertion_kind else 'assert'
             })
@@ -1172,6 +1173,7 @@ class SymbolicDFS:
                 m.violated_assertions = []
             m.violated_assertions.append({
                 'condition': str(expr),
+                'path condition': str(s.pc),
                 'z3_condition': str(cond_z3),
                 'kind': assertion_kind
             })
@@ -1239,6 +1241,7 @@ class SymbolicDFS:
                 m.violated_assertions = []
             m.violated_assertions.append({
                 'condition': str(expr),
+                'path condition': str(s.pc),
                 'z3_condition': str(cond_z3),
                 'kind': str(assertion_kind) if assertion_kind else 'assert',
                 'type': 'concurrent'
@@ -1295,6 +1298,7 @@ class SymbolicDFS:
             m.violated_assertions.append({
                 'condition': str(expr),
                 'z3_condition': str(cond_z3),
+                'path condition': str(s.pc),
                 'kind': 'assert property',
                 'type': 'concurrent'
             })
@@ -1379,6 +1383,7 @@ class SymbolicDFS:
             m.violated_assertions.append({
                 'condition': str(expr),
                 'z3_condition': str(cond_z3),
+                'path condition': str(s.pc),
                 'kind': 'property',
                 'type': 'concurrent'
             })

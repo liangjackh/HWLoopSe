@@ -480,8 +480,8 @@ class ExecutionEngine:
                         if self.debug:
                             print(f"DEBUG: cfg_path={cfg_path}, directions={directions}")
                             print(f"DEBUG: basic_block_list has {len(cfgs_by_module[module_name][cfg_idx].basic_block_list)} blocks")
-                            for bb_idx, bb in enumerate(cfgs_by_module[module_name][cfg_idx].basic_block_list):
-                                print(f"DEBUG: basic_block[{bb_idx}] = {[str(s)[:50] if s else 'None' for s in bb]}")
+                            #for bb_idx, bb in enumerate(cfgs_by_module[module_name][cfg_idx].basic_block_list):
+                                #print(f"DEBUG: basic_block[{bb_idx}] = {[str(s)[:50] if s else 'None' for s in bb]}")
                         #directions = cfgs_by_module[module_name][complete_single_cycle_path.index(cfg_path)].compute_direction(cfg_path)
                         k: int = 0
                         for basic_block_idx in cfg_path:
@@ -519,6 +519,14 @@ class ExecutionEngine:
                 print("------------------------")
             if (manager.assertion_violation):
                 print("Assertion violation")
+                # Print violated assertions info (constraints stored here since solver uses push/pop)
+                if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+                    print("Violated assertion details:")
+                    for va in manager.violated_assertions:
+                        print(f"  - condition: {va.get('condition', 'N/A')}")
+                        print(f"    z3_condition: {va.get('z3_condition', 'N/A')}")
+                        print(f"    path condition: {va.get('path condition', 'N/A')}")
+                        print(f"    kind: {va.get('kind', 'N/A')}")
                 #manager.assertion_violation = False
                 counterexample = {}
                 symbols_to_values = {}
@@ -562,21 +570,30 @@ class ExecutionEngine:
     def check_state(self, manager, state):
         """Checks the status of the execution and displays the state."""
         if self.done and manager.debug and not manager.is_child and not manager.init_run_flag and not manager.ignore and not manager.abandon:
-            print(f"Cycle {manager.cycle} final state:")
+            print(f"[cond1]Cycle {manager.cycle} final state:")
             print(state.store)
     
-            print(f"Cycle {manager.cycle} final path condition:")
-            print(state.pc)
+            print(f"[cond1]Cycle {manager.cycle} final path condition:")
+            print(state.pc.assertions())
         elif self.done and not manager.is_child and manager.assertion_violation and not manager.ignore and not manager.abandon:
-            print(f"Cycle {manager.cycle} initial state:")
+            print(f"[cond2]Cycle {manager.cycle} initial state:")
             print(manager.initial_store)
 
-            print(f"Cycle {manager.cycle} final state:")
+            print(f"[cond2]Cycle {manager.cycle} final state:")
             print(state.store)
-    
-            print(f"Cycle {manager.cycle} final path condition:")
-            print(state.pc)
+
+            print(f"[cond2]Cycle {manager.cycle} final path condition:")
+            print(state.pc.assertions())
+
+            # Print violated assertions (constraints are stored here since solver uses push/pop)
+            if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+                print(f"[cond2]Violated assertions:")
+                for va in manager.violated_assertions:
+                    print(f"  - condition: {va.get('condition', 'N/A')}")
+                    print(f"    z3_condition: {va.get('z3_condition', 'N/A')}")
+                    print(f"    path condition: {va.get('path condition', 'N/A')}")
+                    print(f"    kind: {va.get('kind', 'N/A')}")
         elif manager.debug and not manager.is_child and not manager.init_run_flag and not manager.ignore:
-            print("Initial state:")
+            print("[cond3]Initial state:")
             print(state.store)
                 

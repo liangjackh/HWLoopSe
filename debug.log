@@ -1,0 +1,45 @@
+[DEBUG build_cfg] all_nodes count: 11, edgelist count: 2
+[DEBUG build_cfg] partition_points: [0, 2, 3, 7, 10]
+[DEBUG build_cfg] edgelist: [(2, 3), (2, 7)]
+[DEBUG build_cfg] cfg_edges: [(0, 1), (0, 2)]
+[DEBUG build_cfg] basic_block_list count: 3
+[DEBUG build_cfg] paths computed: 2 paths
+[DEBUG build_cfg] paths: [[-1, 0, 1, -2], [-1, 0, 2, -2]]
+[DEBUG build_cfg] all_nodes count: 12, edgelist count: 2
+[DEBUG build_cfg] partition_points: [0, 2, 3, 7, 11]
+[DEBUG build_cfg] edgelist: [(2, 3), (2, 7)]
+[DEBUG build_cfg] cfg_edges: [(0, 1), (0, 2)]
+[DEBUG build_cfg] basic_block_list count: 3
+[DEBUG build_cfg] paths computed: 2 paths
+[DEBUG build_cfg] paths: [[-1, 0, 1, -2], [-1, 0, 2, -2]]
+Visiting node type: InstanceSymbol
+Visiting node type: InstanceBodySymbol
+Module test_1 single instance
+[DEBUG build_cfg] all_nodes count: 12, edgelist count: 2
+[DEBUG build_cfg] partition_points: [0, 2, 3, 7, 11]
+[DEBUG build_cfg] edgelist: [(2, 3), (2, 7)]
+[DEBUG build_cfg] cfg_edges: [(0, 1), (0, 2)]
+[DEBUG build_cfg] basic_block_list count: 3
+[DEBUG build_cfg] paths computed: 2 paths
+[DEBUG build_cfg] paths: [[-1, 0, 1, -2], [-1, 0, 2, -2]]
+Here
+Branch points explored: 0
+Module place_holder has 2 always blocks
+Module test_1 has 1 always blocks
+DFS visiting symbol: test_1
+--
+[DEBUG parse_expr_to_Z3] expr:  (out <= 2), type: <class 'pyslang.pyslang.ParenthesizedExpressionSyntax'>, class: ParenthesizedExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.ParenthesizedExpression
+[DEBUG ParenthesizedExpressionSyntax] unwrapping to: out <= 2
+[DEBUG parse_expr_to_Z3] expr: out <= 2, type: <class 'pyslang.pyslang.BinaryExpressionSyntax'>, class: BinaryExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.LessThanEqualExpression
+[DEBUG parse_expr_to_Z3] expr: out, type: <class 'pyslang.pyslang.IdentifierNameSyntax'>, class: IdentifierNameSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IdentifierName
+[DEBUG parse_expr_to_Z3] expr:  2, type: <class 'pyslang.pyslang.LiteralExpressionSyntax'>, class: LiteralExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IntegerLiteralExpression
+[DEBUG BinaryExpressionSyntax] lhs=(1'b0  +  1), rhs=2, op_token= <=
+Skipping dummy node in path
+494 checking path 2 / 32768
+[cond1]Cycle 0 final state:
+{'place_holder': {'CLK': 'JdAjkVvTp5QByyPm', 'RST': 'yVjsUeTcnYFg5U0b', 'out': "1'b0", 'out_wire': 'MCNiEnMUoiv67Suv'}, 'test_1': {'CLK': 'D3WhttucOfLfVIri', 'RST': 'WKHo6xSNX9FuYwmV', 'out': "(1'b0  +  1)"}}
+[cond1]Cycle 0 final path condition:

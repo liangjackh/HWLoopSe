@@ -1,5 +1,57 @@
 # Changelog
 
+## [2026-01-30] [Bug Fix] Fixed assertion Z3 condition showing `0!=0` instead of actual constraint
+
+### Problem
+When running symbolic execution with assertions (e.g., `assert (out <= 2)`), the violated assertion details showed `z3_condition: 0!=0` instead of the actual constraint like `ULE(out, 2)`. This made it impossible to understand what assertion was violated.
+
+### Root Causes & Fixes
+
+1. **Path condition printing showed empty solver** (`engine/execution_engine.py`)
+   - `state.pc` is a Z3 Solver object, not a constraint expression
+   - Printing `state.pc` directly shows minimal info
+   - **Fix**: Changed to print `state.pc.assertions()` to show actual constraints (lines 569, 578)
+
+2. **Added violated assertions info printing** (`engine/execution_engine.py`)
+   - The constraint info was stored in `manager.violated_assertions` but never printed
+   - **Fix**: Added printing of `manager.violated_assertions` when assertion violation detected (lines 522-528, 580-586)
+
+3. **Missing PySlang syntax node handling** (`helpers/rvalue_to_z3.py`)
+   - `parse_expr_to_Z3` only handled Z3 predicates (`is_and`, `is_eq`, `is_distinct`) and some syntax nodes
+   - PySlang syntax nodes like `ParenthesizedExpressionSyntax` and `BinaryExpressionSyntax` fell through to default `return BitVecVal(0, 32)`
+   - This caused `0 != 0` when the boolean conversion was applied
+   - **Fix**: Added handlers for syntax nodes (lines 374-462):
+     - `ParenthesizedExpressionSyntax`: Unwraps parentheses and recurses into inner expression
+     - `BinaryExpressionSyntax`: Handles operators `<=`, `>=`, `<`, `>`, `==`, `!=`, `+`, `-`, `*`, `/`, `%`, `&&`, `||`, `&`, `|`, `^`, `<<`, `>>`
+     - `LiteralExpressionSyntax`: Parses integer literals including sized literals like `32'd5`, `8'hFF`
+
+4. **Added PySlang semantic expression handling** (`helpers/rvalue_to_z3.py`)
+   - Added handlers for `ExpressionKind` semantic nodes (lines 263-372):
+     - `BinaryOp`: Maps PySlang binary operators to Z3 (`ULE`, `ULT`, `UGE`, `UGT`, etc.)
+     - `NamedValue`: Looks up variable in symbolic store or creates fresh symbolic variable
+     - `IntegerLiteral`: Converts to `BitVecVal`
+     - `Conversion`: Unwraps type casts
+     - `UnaryOp`: Handles `!`, `~`, `-`, `+` operators
+
+### PySlang Library Usage
+
+**Syntax nodes vs Semantic expressions:**
+- **Syntax nodes** (from parsing): Have `SyntaxKind`, accessed via `e.__class__.__name__`
+  - `ParenthesizedExpressionSyntax`: Access inner via `e.expression`
+  - `BinaryExpressionSyntax`: Access `e.left`, `e.right`, `e.operatorToken`
+  - `LiteralExpressionSyntax`: Access `e.literal`
+- **Semantic expressions** (from compilation): Have `ExpressionKind`, accessed via `e.kind`
+  - `BinaryOp`: Access `e.left`, `e.right`, `e.op`
+  - `NamedValue`: Access `e.symbol.name`
+  - `IntegerLiteral`: Access `e.value`
+
+**Key insight:** Assertion conditions from `stmt.cond` are syntax nodes (`ParenthesizedExpressionSyntax`), not semantic expressions. The code must handle both types.
+
+### Result
+- Assertion violations now show proper Z3 constraints: `z3_condition: ULE(out, 2)`
+- Path conditions display actual constraints via `state.pc.assertions()`
+- Violated assertion details include condition, z3_condition, and kind
+
 ## [2026-01-27] [Refactor] Changed expression format from prefix to infix notation
 
 ### Problem

@@ -254,11 +254,218 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
     Returns:
         Z3 expression (BitVecRef, BoolRef, etc.)
     """
-    print(f"Parsing expression to Z3: {e}, type: {type(e)}")
+    print(f"[DEBUG parse_expr_to_Z3] expr: {e}, type: {type(e)}, class: {e.__class__.__name__}")
+    if hasattr(e, 'kind'):
+        print(f"[DEBUG parse_expr_to_Z3] kind: {e.kind}")
+    if hasattr(e, 'op'):
+        print(f"[DEBUG parse_expr_to_Z3] op: {e.op}")
+
+    # Handle PySlang semantic expressions FIRST (ExpressionKind)
+    if hasattr(e, 'kind'):
+        kind = e.kind
+
+        # Handle BinaryOp semantic expressions (e.g., out <= 2)
+        if kind == ps.ExpressionKind.BinaryOp:
+            lhs = parse_expr_to_Z3(e.left, s, m)
+            rhs = parse_expr_to_Z3(e.right, s, m)
+            op = str(e.op) if hasattr(e, 'op') else ""
+            print(f"[DEBUG BinaryOp] lhs={lhs}, rhs={rhs}, op={op}")
+
+            # Map PySlang binary operators to Z3
+            if "LessThanEqual" in op or "LessEq" in op:
+                return z3.ULE(lhs, rhs)
+            elif "LessThan" in op and "Equal" not in op:
+                return ULT(lhs, rhs)
+            elif "GreaterThanEqual" in op or "GreaterEq" in op:
+                return z3.UGE(lhs, rhs)
+            elif "GreaterThan" in op and "Equal" not in op:
+                return UGT(lhs, rhs)
+            elif "Equality" in op or op == "BinaryOperator.Eq":
+                return lhs == rhs
+            elif "Inequality" in op or "NotEq" in op:
+                return lhs != rhs
+            elif "Add" in op or "Plus" in op:
+                return lhs + rhs
+            elif "Subtract" in op or "Sub" in op or "Minus" in op:
+                return lhs - rhs
+            elif "Multiply" in op or "Mul" in op or "Times" in op:
+                return lhs * rhs
+            elif "Divide" in op or "Div" in op:
+                return z3.UDiv(lhs, rhs)
+            elif "Mod" in op:
+                return z3.URem(lhs, rhs)
+            elif "BinaryAnd" in op:
+                return lhs & rhs
+            elif "BinaryOr" in op:
+                return lhs | rhs
+            elif "BinaryXor" in op or "Xor" in op:
+                return lhs ^ rhs
+            elif "LogicalAnd" in op or "Land" in op:
+                lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
+                rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
+                return And(lhs_bool, rhs_bool)
+            elif "LogicalOr" in op or "Lor" in op:
+                lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
+                rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
+                return Or(lhs_bool, rhs_bool)
+            elif "LogicalShiftLeft" in op or "Sll" in op:
+                return lhs << rhs
+            elif "LogicalShiftRight" in op or "Srl" in op:
+                return z3.LShR(lhs, rhs)
+            elif "ArithmeticShiftRight" in op or "Sra" in op:
+                return lhs >> rhs
+            else:
+                print(f"[Warning] Unhandled binary operator: {op}")
+                return BitVecVal(0, 32)
+
+        # Handle NamedValue semantic expressions (variable references)
+        elif kind == ps.ExpressionKind.NamedValue:
+            symbol = getattr(e, 'symbol', None)
+            if symbol is not None:
+                var_name = symbol.name
+                module_name = m.curr_module
+                print(f"[DEBUG NamedValue] var_name={var_name}, module={module_name}, store keys={list(s.store.get(module_name, {}).keys())}")
+                if module_name in s.store and var_name in s.store[module_name]:
+                    sym_val = s.store[module_name][var_name]
+                    if isinstance(sym_val, str) and sym_val.isdigit():
+                        return BitVecVal(int(sym_val), 32)
+                    elif isinstance(sym_val, str):
+                        return BitVec(sym_val, 32)
+                    else:
+                        return sym_val
+                else:
+                    # Variable not in store, create a fresh symbolic variable
+                    return BitVec(var_name, 32)
+            return BitVecVal(0, 32)
+
+        # Handle IntegerLiteral semantic expressions
+        elif kind == ps.ExpressionKind.IntegerLiteral:
+            val = getattr(e, 'value', 0)
+            if hasattr(val, 'value'):
+                val = val.value
+            print(f"[DEBUG IntegerLiteral] val={val}")
+            return BitVecVal(int(val), 32)
+
+        # Handle Conversion expressions (type casts)
+        elif kind == ps.ExpressionKind.Conversion:
+            operand = getattr(e, 'operand', None)
+            if operand is not None:
+                return parse_expr_to_Z3(operand, s, m)
+            return BitVecVal(0, 32)
+
+        # Handle UnaryOp semantic expressions
+        elif kind == ps.ExpressionKind.UnaryOp:
+            operand = parse_expr_to_Z3(e.operand, s, m)
+            op = str(e.op) if hasattr(e, 'op') else ""
+            if "Not" in op or "LogicalNot" in op:
+                if hasattr(operand, 'size'):
+                    return operand == BitVecVal(0, 32)
+                return Not(operand)
+            elif "BitwiseNot" in op:
+                return ~operand
+            elif "Minus" in op:
+                return -operand
+            elif "Plus" in op:
+                return operand
+            else:
+                print(f"[Warning] Unhandled unary operator: {op}")
+                return BitVecVal(0, 32)
+
+    # Handle PySlang SYNTAX nodes (SyntaxKind) - these are different from semantic ExpressionKind
+    class_name = e.__class__.__name__
+
+    # Handle ParenthesizedExpressionSyntax - unwrap and recurse
+    if class_name == "ParenthesizedExpressionSyntax":
+        inner_expr = getattr(e, 'expression', None)
+        if inner_expr is not None:
+            print(f"[DEBUG ParenthesizedExpressionSyntax] unwrapping to: {inner_expr}")
+            return parse_expr_to_Z3(inner_expr, s, m)
+        return BitVecVal(0, 32)
+
+    # Handle BinaryExpressionSyntax
+    if class_name == "BinaryExpressionSyntax":
+        lhs = parse_expr_to_Z3(e.left, s, m)
+        rhs = parse_expr_to_Z3(e.right, s, m)
+        op_token = str(getattr(e, 'operatorToken', ''))
+        print(f"[DEBUG BinaryExpressionSyntax] lhs={lhs}, rhs={rhs}, op_token={op_token}")
+
+        if "<=" in op_token:
+            return z3.ULE(lhs, rhs)
+        elif ">=" in op_token:
+            return z3.UGE(lhs, rhs)
+        elif "<" in op_token and "=" not in op_token:
+            return ULT(lhs, rhs)
+        elif ">" in op_token and "=" not in op_token:
+            return UGT(lhs, rhs)
+        elif "==" in op_token:
+            return lhs == rhs
+        elif "!=" in op_token:
+            return lhs != rhs
+        elif "+" in op_token:
+            return lhs + rhs
+        elif "-" in op_token:
+            return lhs - rhs
+        elif "*" in op_token:
+            return lhs * rhs
+        elif "/" in op_token:
+            return z3.UDiv(lhs, rhs)
+        elif "%" in op_token:
+            return z3.URem(lhs, rhs)
+        elif "&&" in op_token:
+            lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
+            rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
+            return And(lhs_bool, rhs_bool)
+        elif "||" in op_token:
+            lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
+            rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
+            return Or(lhs_bool, rhs_bool)
+        elif "&" in op_token:
+            return lhs & rhs
+        elif "|" in op_token:
+            return lhs | rhs
+        elif "^" in op_token:
+            return lhs ^ rhs
+        elif "<<" in op_token:
+            return lhs << rhs
+        elif ">>" in op_token:
+            return z3.LShR(lhs, rhs)
+        else:
+            print(f"[Warning] Unhandled binary operator token: {op_token}")
+            return BitVecVal(0, 32)
+
+    # Handle LiteralExpressionSyntax (integer literals)
+    if class_name == "LiteralExpressionSyntax" or class_name == "IntegerVectorExpressionSyntax":
+        # Try to get the literal value
+        literal_token = getattr(e, 'literal', None)
+        if literal_token is not None:
+            val_str = str(literal_token)
+            # Parse Verilog integer literals (e.g., "2", "32'd5", "8'hFF")
+            try:
+                if "'" in val_str:
+                    # Handle sized literals like 32'd5
+                    parts = val_str.split("'")
+                    base_char = parts[1][0] if len(parts[1]) > 0 else 'd'
+                    num_str = parts[1][1:] if len(parts[1]) > 1 else '0'
+                    if base_char == 'd':
+                        return BitVecVal(int(num_str), 32)
+                    elif base_char == 'h':
+                        return BitVecVal(int(num_str, 16), 32)
+                    elif base_char == 'b':
+                        return BitVecVal(int(num_str, 2), 32)
+                    elif base_char == 'o':
+                        return BitVecVal(int(num_str, 8), 32)
+                else:
+                    return BitVecVal(int(val_str), 32)
+            except ValueError:
+                print(f"[Warning] Could not parse literal: {val_str}")
+                return BitVecVal(0, 32)
+        return BitVecVal(0, 32)
+
+    # Legacy handling for syntax nodes and Z3 expressions below
     tokens_list = parse_tokens(tokenize(e, s, m))
     new_constraint = evaluate_expr(tokens_list, s, m)
     new_constants = []
-    if not new_constraint is None: 
+    if not new_constraint is None:
         new_constants = get_constants_list(new_constraint, s, m)
     if is_and(e):
         lhs = parse_expr_to_Z3(e.left, s, m)
@@ -332,7 +539,118 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
             return (c != rhs)
         else:
             return (lhs != rhs)
+
+    # Handle PySlang semantic expressions (ExpressionKind)
+    if hasattr(e, 'kind'):
+        kind = e.kind
+
+        # Handle BinaryOp semantic expressions (e.g., out <= 2)
+        if kind == ps.ExpressionKind.BinaryOp:
+            lhs = parse_expr_to_Z3(e.left, s, m)
+            rhs = parse_expr_to_Z3(e.right, s, m)
+            op = str(e.op) if hasattr(e, 'op') else ""
+
+            # Map PySlang binary operators to Z3
+            if op == "BinaryOperator.LessThanEqual" or "LessEq" in op:
+                return z3.ULE(lhs, rhs)
+            elif op == "BinaryOperator.LessThan" or "LessThan" in op:
+                return ULT(lhs, rhs)
+            elif op == "BinaryOperator.GreaterThanEqual" or "GreaterEq" in op:
+                return z3.UGE(lhs, rhs)
+            elif op == "BinaryOperator.GreaterThan" or "GreaterThan" in op:
+                return UGT(lhs, rhs)
+            elif op == "BinaryOperator.Equality" or "Eq" in op:
+                return lhs == rhs
+            elif op == "BinaryOperator.Inequality" or "NotEq" in op:
+                return lhs != rhs
+            elif op == "BinaryOperator.Add" or "Add" in op or "Plus" in op:
+                return lhs + rhs
+            elif op == "BinaryOperator.Subtract" or "Sub" in op or "Minus" in op:
+                return lhs - rhs
+            elif op == "BinaryOperator.Multiply" or "Mul" in op or "Times" in op:
+                return lhs * rhs
+            elif op == "BinaryOperator.Divide" or "Div" in op:
+                return z3.UDiv(lhs, rhs)
+            elif op == "BinaryOperator.Mod" or "Mod" in op:
+                return z3.URem(lhs, rhs)
+            elif op == "BinaryOperator.BinaryAnd" or "And" in op:
+                return lhs & rhs
+            elif op == "BinaryOperator.BinaryOr" or "Or" in op:
+                return lhs | rhs
+            elif op == "BinaryOperator.BinaryXor" or "Xor" in op:
+                return lhs ^ rhs
+            elif op == "BinaryOperator.LogicalAnd" or "Land" in op:
+                # Convert to bool if needed
+                lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
+                rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
+                return And(lhs_bool, rhs_bool)
+            elif op == "BinaryOperator.LogicalOr" or "Lor" in op:
+                lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
+                rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
+                return Or(lhs_bool, rhs_bool)
+            elif op == "BinaryOperator.LogicalShiftLeft" or "Sll" in op:
+                return lhs << rhs
+            elif op == "BinaryOperator.LogicalShiftRight" or "Srl" in op:
+                return z3.LShR(lhs, rhs)
+            elif op == "BinaryOperator.ArithmeticShiftRight" or "Sra" in op:
+                return lhs >> rhs
+            else:
+                print(f"[Warning] Unhandled binary operator: {op}")
+                return BitVecVal(0, 32)
+
+        # Handle NamedValue semantic expressions (variable references)
+        elif kind == ps.ExpressionKind.NamedValue:
+            symbol = getattr(e, 'symbol', None)
+            if symbol is not None:
+                var_name = symbol.name
+                module_name = m.curr_module
+                if module_name in s.store and var_name in s.store[module_name]:
+                    sym_val = s.store[module_name][var_name]
+                    if isinstance(sym_val, str) and sym_val.isdigit():
+                        return BitVecVal(int(sym_val), 32)
+                    elif isinstance(sym_val, str):
+                        return BitVec(sym_val, 32)
+                    else:
+                        return sym_val
+                else:
+                    # Variable not in store, create a fresh symbolic variable
+                    return BitVec(var_name, 32)
+            return BitVecVal(0, 32)
+
+        # Handle IntegerLiteral semantic expressions
+        elif kind == ps.ExpressionKind.IntegerLiteral:
+            val = getattr(e, 'value', 0)
+            if hasattr(val, 'value'):
+                val = val.value
+            return BitVecVal(int(val), 32)
+
+        # Handle Conversion expressions (type casts)
+        elif kind == ps.ExpressionKind.Conversion:
+            operand = getattr(e, 'operand', None)
+            if operand is not None:
+                return parse_expr_to_Z3(operand, s, m)
+            return BitVecVal(0, 32)
+
+        # Handle UnaryOp semantic expressions
+        elif kind == ps.ExpressionKind.UnaryOp:
+            operand = parse_expr_to_Z3(e.operand, s, m)
+            op = str(e.op) if hasattr(e, 'op') else ""
+            if "Not" in op or "LogicalNot" in op:
+                if hasattr(operand, 'size'):
+                    return operand == BitVecVal(0, 32)
+                return Not(operand)
+            elif "BitwiseNot" in op:
+                return ~operand
+            elif "Minus" in op:
+                return -operand
+            elif "Plus" in op:
+                return operand
+            else:
+                print(f"[Warning] Unhandled unary operator: {op}")
+                return BitVecVal(0, 32)
+
     # Default: return a BitVecVal of 0 if expression type is not recognized
+    print(f"[Warning] Unrecognized expression type: {type(e)}, returning 0")
     return BitVecVal(0, 32)
 
 def solve_pc(s: Solver) -> bool:
