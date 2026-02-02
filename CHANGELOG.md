@@ -1,5 +1,68 @@
 # Changelog
 
+## [2026-02-02] [Bug Fix] Fixed Verilog literal parsing and non-blocking assignment semantics
+
+### Problem
+When running `python3 -m main 1 designs/test-designs/test_2.v --sv`, the assertion `assert (out <= 2)` was incorrectly reported as violated in cycle 0. The path condition showed `[Not(ULE((1'b0 + 1), 2))]` where:
+1. `1'b0` was treated as a symbolic variable name instead of the concrete value `0`
+2. The non-blocking assignment `out <= out + 1` was being applied immediately instead of being deferred to the next cycle
+
+### Root Causes & Fixes
+
+1. **Verilog literals not parsed correctly** (`helpers/rvalue_to_z3.py`)
+   - `"1'b0".isdigit()` returns `False` because it contains `'` and `b` characters
+   - The value was treated as a symbolic variable name `BitVec("1'b0", 32)` instead of `BitVecVal(0, 32)`
+   - **Fix**: Added `parse_verilog_literal()` function (lines 17-60) to parse Verilog-style literals:
+     - Handles formats: `1'b0`, `32'd5`, `8'hFF`, `4'o7`, `'b0`, `'d10`
+     - Supports binary (b), decimal (d), hex (h), octal (o) bases
+     - Handles underscore separators and x/z values
+   - **Fix**: Added `is_verilog_literal()` helper function (lines 63-66)
+   - **Fix**: Replaced all `isdigit()` checks with `parse_verilog_literal()` calls
+
+2. **Expression strings not converted to Z3** (`helpers/rvalue_to_z3.py`)
+   - Strings like `"(0 + 1)"` stored in the symbolic store were treated as symbolic variable names
+   - **Fix**: Added `parse_infix_expr_to_z3()` function (lines 69-158) to parse infix expression strings into Z3 expressions:
+     - Handles operators: `+`, `-`, `*`, `/`, `<=`, `>=`, `<`, `>`, `==`, `!=`, `&`, `|`, `^`, `<<`, `>>`
+     - Recursively parses nested parenthesized expressions
+     - Falls back to store lookup for variable names
+
+3. **Non-blocking assignments applied immediately** (`helpers/slang_helpers.py`)
+   - Non-blocking assignments (`<=`) were updating `s.store` directly in the current cycle
+   - In Verilog semantics, non-blocking assignments evaluate RHS with current values but defer the update to the next cycle
+   - **Fix**: Changed `NonblockingAssignmentExpression` handler (lines 712-739) to:
+     - Evaluate RHS with current store values
+     - Call `s.add_pending_nba()` instead of updating store directly
+
+4. **Added pending non-blocking assignment infrastructure** (`engine/symbolic_state.py`)
+   - **Fix**: Added `pending_nba` dictionary to store deferred assignments (line 18)
+   - **Fix**: Added `add_pending_nba(module_name, var_name, value)` method (lines 36-40)
+   - **Fix**: Added `apply_pending_nba()` method to apply pending assignments at cycle start (lines 25-34)
+
+5. **Apply pending assignments at cycle transitions** (`engine/execution_engine.py`)
+   - **Fix**: Added call to `state.apply_pending_nba()` at the beginning of each new cycle (lines 477-480)
+   - Only applies when `manager.cycle > 0` (not the first cycle)
+
+6. **Normalize Verilog literals when storing** (`helpers/slang_helpers.py`)
+   - **Fix**: Added `normalize_verilog_literal()` function (lines 12-21) to convert Verilog literals to decimal strings when storing
+   - **Fix**: Updated literal assignment handlers to normalize values (e.g., `1'b0` → `"0"`)
+
+### PySlang Library Usage
+
+**Non-blocking vs Blocking assignments:**
+- `ps.SyntaxKind.NonblockingAssignmentExpression`: The `<=` operator - deferred to next cycle
+- `ps.SyntaxKind.AssignmentExpression`: The `=` operator - applied immediately
+
+**Verilog literal formats:**
+- PySlang returns literals in their original format (e.g., `1'b0`, `32'hDEADBEEF`)
+- Must parse these to extract the actual integer value
+
+### Result
+- Assertion `out <= 2` now correctly passes in cycle 0
+- `lhs=0, rhs=2` instead of `lhs=(1'b0 + 1), rhs=2`
+- `unsat: [Not(ULE(0, 2))]` - correctly identifies that `0 <= 2` is always true
+- Final state shows `'out': '0'` (non-blocking assignment deferred)
+- No false assertion violations
+
 ## [2026-01-30] [Bug Fix] Fixed assertion Z3 condition showing `0!=0` instead of actual constraint
 
 ### Problem

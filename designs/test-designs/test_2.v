@@ -5,6 +5,9 @@ module place_holder (
 );
   
   wire [31:0] out_wire; 
+  initial begin
+    out = 0;
+  end
   
   always @(posedge CLK) begin
     if (RST) begin
@@ -28,6 +31,9 @@ module place_holder_2 (
   input  RST,
   output reg [31:0] out 
 );
+  initial begin
+    out = 0;
+  end
   
   always @(posedge CLK) begin
     if (RST) begin
@@ -36,7 +42,6 @@ module place_holder_2 (
     else begin
       out <= out + 1;
     end
-    //assert (out % 2 == 0) else begin
     assert (out <= 2) else begin
       $error("Assertion failed: out is not even!");
     end

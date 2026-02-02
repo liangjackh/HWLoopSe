@@ -1,7 +1,8 @@
-"""Helpers for working with Z3, specifically parsing the symbolic expressions into 
+"""Helpers for working with Z3, specifically parsing the symbolic expressions into
 Z3 expressions and solving for assertion violations."""
 
 import z3
+import re
 from z3 import Solver, Int, BitVec, Context, BitVecSort, ExprRef, BitVecRef, If, BitVecVal, And, IntVal, Int2BV, Or, Not, ULT, UGT, Z3Exception, BoolRef
 from z3 import is_and, is_app_of, Z3_OP_EXTRACT, is_eq, is_distinct
 from helpers.rvalue_parser import parse_tokens, tokenize
@@ -11,6 +12,150 @@ import pyslang as ps
 import networkx as nx
 import ast
 from copy import deepcopy
+
+
+def parse_verilog_literal(val_str: str):
+    """Parse Verilog-style literals like 1'b0, 32'd5, 8'hFF and return (value, bit_width).
+
+    Returns (int_value, bit_width) if it's a valid Verilog literal, or (None, None) if not.
+    Also handles plain decimal strings like "0", "123".
+    """
+    if val_str is None:
+        return None, None
+
+    val_str = str(val_str).strip()
+
+    # Handle plain decimal integers
+    if val_str.isdigit():
+        return int(val_str), 32
+
+    # Handle negative integers
+    if val_str.startswith('-') and val_str[1:].isdigit():
+        return int(val_str), 32
+
+    # Handle Verilog-style literals: [size]'[base][value]
+    # Examples: 1'b0, 32'd5, 8'hFF, 'b0, 'd10
+    match = re.match(r"(\d*)'([bBdDhHoO])([0-9a-fA-F_xXzZ]+)", val_str)
+    if match:
+        size_str, base_char, num_str = match.groups()
+        bit_width = int(size_str) if size_str else 32
+
+        # Remove underscores (Verilog allows them for readability)
+        num_str = num_str.replace('_', '')
+
+        # Handle x and z as 0 for now (unknown/high-impedance)
+        if 'x' in num_str.lower() or 'z' in num_str.lower():
+            return 0, bit_width
+
+        base_char = base_char.lower()
+        if base_char == 'b':
+            return int(num_str, 2), bit_width
+        elif base_char == 'd':
+            return int(num_str, 10), bit_width
+        elif base_char == 'h':
+            return int(num_str, 16), bit_width
+        elif base_char == 'o':
+            return int(num_str, 8), bit_width
+
+    return None, None
+
+
+def is_verilog_literal(val_str: str) -> bool:
+    """Check if a string is a Verilog literal (including plain decimals)."""
+    val, _ = parse_verilog_literal(val_str)
+    return val is not None
+
+
+def parse_infix_expr_to_z3(expr_str: str, s, m):
+    """Parse an infix expression string like '(0  +  1)' to a Z3 expression.
+
+    This handles expression strings stored in the symbolic store that represent
+    computed values like '(0  +  1)', '(x  +  y)', etc.
+
+    Returns a Z3 expression if parsing succeeds, or None if it fails.
+    """
+    if expr_str is None:
+        return None
+
+    expr_str = str(expr_str).strip()
+
+    # First, try to parse as a simple Verilog literal
+    lit_val, _ = parse_verilog_literal(expr_str)
+    if lit_val is not None:
+        return BitVecVal(lit_val, 32)
+
+    # Check if it's a parenthesized expression like '(0  +  1)'
+    if expr_str.startswith('(') and expr_str.endswith(')'):
+        inner = expr_str[1:-1].strip()
+
+        # Try to find binary operators: +, -, *, /, <=, >=, <, >, ==, !=, &, |, ^
+        # We need to handle operators carefully to avoid splitting on wrong positions
+        operators = [' + ', ' - ', ' * ', ' / ', ' <= ', ' >= ', ' < ', ' > ',
+                     ' == ', ' != ', ' & ', ' | ', ' ^ ', ' << ', ' >> ']
+
+        for op in operators:
+            # Find the operator (handle nested parentheses)
+            depth = 0
+            for i in range(len(inner)):
+                if inner[i] == '(':
+                    depth += 1
+                elif inner[i] == ')':
+                    depth -= 1
+                elif depth == 0 and inner[i:].startswith(op):
+                    lhs_str = inner[:i].strip()
+                    rhs_str = inner[i + len(op):].strip()
+
+                    # Recursively parse left and right operands
+                    lhs = parse_infix_expr_to_z3(lhs_str, s, m)
+                    rhs = parse_infix_expr_to_z3(rhs_str, s, m)
+
+                    if lhs is None or rhs is None:
+                        continue
+
+                    # Apply the operator
+                    op_stripped = op.strip()
+                    if op_stripped == '+':
+                        return lhs + rhs
+                    elif op_stripped == '-':
+                        return lhs - rhs
+                    elif op_stripped == '*':
+                        return lhs * rhs
+                    elif op_stripped == '/':
+                        return z3.UDiv(lhs, rhs)
+                    elif op_stripped == '<=':
+                        return z3.ULE(lhs, rhs)
+                    elif op_stripped == '>=':
+                        return z3.UGE(lhs, rhs)
+                    elif op_stripped == '<':
+                        return ULT(lhs, rhs)
+                    elif op_stripped == '>':
+                        return UGT(lhs, rhs)
+                    elif op_stripped == '==':
+                        return lhs == rhs
+                    elif op_stripped == '!=':
+                        return lhs != rhs
+                    elif op_stripped == '&':
+                        return lhs & rhs
+                    elif op_stripped == '|':
+                        return lhs | rhs
+                    elif op_stripped == '^':
+                        return lhs ^ rhs
+                    elif op_stripped == '<<':
+                        return lhs << rhs
+                    elif op_stripped == '>>':
+                        return z3.LShR(lhs, rhs)
+
+    # If it's a variable name, look it up in the store or create a symbolic variable
+    if m is not None and s is not None:
+        module_name = m.curr_module
+        if module_name in s.store and expr_str in s.store[module_name]:
+            sym_val = s.store[module_name][expr_str]
+            # Avoid infinite recursion - if the stored value is the same, return a BitVec
+            if sym_val != expr_str:
+                return parse_infix_expr_to_z3(sym_val, s, m)
+
+    # Return None to indicate we couldn't parse it (caller will create a BitVec)
+    return None
 
 
 BINARY_OPS = ("Plus", "Minus", "Power", "Times", "Divide", "Mod", "Sll", "Srl", "Sla", "Sra", "LessThan",
@@ -327,10 +472,13 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
                 print(f"[DEBUG NamedValue] var_name={var_name}, module={module_name}, store keys={list(s.store.get(module_name, {}).keys())}")
                 if module_name in s.store and var_name in s.store[module_name]:
                     sym_val = s.store[module_name][var_name]
-                    if isinstance(sym_val, str) and sym_val.isdigit():
-                        return BitVecVal(int(sym_val), 32)
-                    elif isinstance(sym_val, str):
-                        return BitVec(sym_val, 32)
+                    if isinstance(sym_val, str):
+                        # Try to parse as Verilog literal or infix expression
+                        parsed_z3 = parse_infix_expr_to_z3(sym_val, s, m)
+                        if parsed_z3 is not None:
+                            return parsed_z3
+                        else:
+                            return BitVec(sym_val, 32)
                     else:
                         return sym_val
                 else:
@@ -478,8 +626,11 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
         is_reg = e.var.name in m.reg_decls
         if not e.var.scope is None:
             module_name = e.scope.labellist[0].name
-        if s.store[module_name][e.var.name].isdigit():
-            int_val = IntVal(int(s.store[module_name][e.name]))
+        sym_val = s.store[module_name][e.var.name]
+        # Try to parse as Verilog literal (e.g., 1'b0, 32'd5, 8'hFF)
+        lit_val, lit_width = parse_verilog_literal(sym_val)
+        if lit_val is not None:
+            int_val = IntVal(lit_val)
             return Int2BV(int_val, 32)
         else:
             # Look up the symbolic value without modifying the store
@@ -506,21 +657,23 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
             var_name = e.identifier.valueText if hasattr(e.identifier, "valueText") else None
             if var_name is None:
                 var_name = getattr(e.identifier, "name", None)
-        
+
         if var_name is None:
             return BitVecVal(0, 32)  # Return zero if we can't get the name
-            
+
         is_reg = var_name in m.reg_decls if hasattr(m, "reg_decls") else False
-        
+
         # Check if variable exists in store, if not return zero
         if module_name not in s.store or var_name not in s.store[module_name]:
             return BitVecVal(0, 32)
-            
-        if s.store[module_name][var_name].isdigit():
-            int_val = IntVal(int(s.store[module_name][var_name]))
-            return Int2BV(int_val, 32)
+
+        sym_val = s.store[module_name][var_name]
+        # Try to parse as Verilog literal or infix expression
+        parsed_z3 = parse_infix_expr_to_z3(sym_val, s, m)
+        if parsed_z3 is not None:
+            return parsed_z3
         else:
-            return BitVec(s.store[module_name][var_name], 32)
+            return BitVec(sym_val, 32)
     elif e.__class__.__name__ == "IntegerLiteralExpressionSyntax":
         int_val = IntVal(e.value)
         return Int2BV(int_val, 32)
@@ -606,10 +759,13 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
                 module_name = m.curr_module
                 if module_name in s.store and var_name in s.store[module_name]:
                     sym_val = s.store[module_name][var_name]
-                    if isinstance(sym_val, str) and sym_val.isdigit():
-                        return BitVecVal(int(sym_val), 32)
-                    elif isinstance(sym_val, str):
-                        return BitVec(sym_val, 32)
+                    if isinstance(sym_val, str):
+                        # Try to parse as Verilog literal (e.g., 1'b0, 32'd5, 8'hFF)
+                        lit_val, lit_width = parse_verilog_literal(sym_val)
+                        if lit_val is not None:
+                            return BitVecVal(lit_val, 32)
+                        else:
+                            return BitVec(sym_val, 32)
                     else:
                         return sym_val
                 else:
@@ -660,8 +816,7 @@ def solve_pc(s: Solver) -> bool:
         model = s.model()
         return True
     else:
-        print("unsat")
-        print(s)
+        print(f"unsat: {s}, unsat core: {s.unsat_core()}")
         print(s.unsat_core())
         return False
 
@@ -670,28 +825,28 @@ def evaluate_expr(parsedList, s: SymbolicState, m: ExecutionManager):
         res = eval_expr(i, s, m)
     return res
 
-def evaluate_expr_to_smt(lhs, rhs, op, s: SymbolicState, m: ExecutionManager) -> str: 
+def evaluate_expr_to_smt(lhs, rhs, op, s: SymbolicState, m: ExecutionManager) -> str:
     """Helper function to resolve binary symbolic expressions."""
     if (isinstance(lhs,tuple) and isinstance(rhs,tuple)):
         return f"({op} ({eval_expr(lhs, s, m)})  ({eval_expr(rhs, s, m)}))"
     elif (isinstance(lhs,tuple)):
-        if (isinstance(rhs,str)) and not rhs.isdigit():
+        if (isinstance(rhs,str)) and not is_verilog_literal(rhs):
             return f"({op} ({eval_expr(lhs, s, m)}) {s.get_symbolic_expr(m.curr_module, rhs)})"
         else:
             return f"({op} ({eval_expr(lhs, s, m)}) {str(rhs)})"
     elif (isinstance(rhs,tuple)):
-        if (isinstance(lhs,str)) and not lhs.isdigit():
+        if (isinstance(lhs,str)) and not is_verilog_literal(lhs):
             return f"({op} ({s.get_symbolic_expr(m.curr_module, lhs)}) ({eval_expr(rhs, s, m)}))"
         else:
             return f"({op} {str(lhs)}  ({eval_expr(rhs, s, m)}))"
     else:
-        if (isinstance(lhs ,str) and isinstance(rhs , str)) and not lhs.isdigit() and not rhs.isdigit():
+        if (isinstance(lhs ,str) and isinstance(rhs , str)) and not is_verilog_literal(lhs) and not is_verilog_literal(rhs):
             return f"({op} {s.get_symbolic_expr(m.curr_module, lhs)} {s.get_symbolic_expr(m.curr_module, rhs)})"
-        elif (isinstance(lhs ,str)) and not lhs.isdigit():
+        elif (isinstance(lhs ,str)) and not is_verilog_literal(lhs):
             return f"({op} {s.get_symbolic_expr(m.curr_module, lhs)} {str(rhs)})"
-        elif (isinstance(rhs ,str)) and not rhs.isdigit():
+        elif (isinstance(rhs ,str)) and not is_verilog_literal(rhs):
             return f"({op} {str(lhs)}  {s.get_symbolic_expr(m.curr_module, rhs)})"
-        else: 
+        else:
             return f"({op} {str(lhs)} {str(rhs)})"
  
 def eval_expr(expr, s: SymbolicState, m: ExecutionManager) -> str:

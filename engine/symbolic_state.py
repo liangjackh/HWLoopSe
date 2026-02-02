@@ -1,4 +1,4 @@
-"""The Symbolic State is comprised of the path condition and the symbolic store. There 
+"""The Symbolic State is comprised of the path condition and the symbolic store. There
 are some other methods here that may be helpful, too."""
 
 import z3
@@ -10,13 +10,34 @@ class SymbolicState:
     sort = BitVecSort(32)
     clock_cycle: int = 0
     #TODO need to change to be a nested mapping of module names to dictionaries
-    # can be initalized at the beginning of the run 
+    # can be initalized at the beginning of the run
     store = {}
+
+    # Pending non-blocking assignments: {module_name: {var_name: value}}
+    # These are applied at the beginning of the next cycle
+    pending_nba = {}
 
     # set to true when evaluating a conditoin so that
     # evaluating the expression knows to add the expr to the
     # PC, set to false after
     cond: bool = False
+
+    def apply_pending_nba(self):
+        """Apply pending non-blocking assignments to the store.
+        This should be called at the beginning of each new cycle."""
+        for module_name, updates in self.pending_nba.items():
+            if module_name not in self.store:
+                self.store[module_name] = {}
+            for var_name, value in updates.items():
+                self.store[module_name][var_name] = value
+        # Clear pending assignments after applying
+        self.pending_nba = {}
+
+    def add_pending_nba(self, module_name: str, var_name: str, value):
+        """Add a non-blocking assignment to the pending queue."""
+        if module_name not in self.pending_nba:
+            self.pending_nba[module_name] = {}
+        self.pending_nba[module_name][var_name] = value
 
     def get_symbolic_expr(self, module_name: str, var_name: str) -> str:
         """Just looks up a symbolic expression associated with a specific variable name

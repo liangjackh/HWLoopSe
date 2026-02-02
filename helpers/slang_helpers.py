@@ -4,9 +4,21 @@ import re
 from helpers.utils import init_symbol
 from engine.execution_manager import ExecutionManager
 from engine.symbolic_state import SymbolicState
-from helpers.rvalue_to_z3 import solve_pc
+from helpers.rvalue_to_z3 import solve_pc, parse_verilog_literal
 from helpers.rvalue_parser import conjunction_with_pointers
 from z3 import Not, is_bool, BoolVal, ExprRef, BitVecRef, BitVecVal
+
+
+def normalize_verilog_literal(val_str: str) -> str:
+    """Normalize Verilog literals (e.g., 1'b0, 32'd5) to decimal strings.
+
+    If the value is a Verilog literal, convert it to a decimal string.
+    Otherwise, return the original string unchanged.
+    """
+    lit_val, _ = parse_verilog_literal(val_str)
+    if lit_val is not None:
+        return str(lit_val)
+    return val_str
 
 
 def substitute_symbols(expr_str: str, store: dict) -> str:
@@ -685,7 +697,8 @@ class SymbolicDFS:
                     s.store[m.curr_module][lhs_var] = "".join(parts)
                 elif hasattr(expr.right, "literal"):
                     # Handle literal expressions (IntegerLiteralExpression, etc.)
-                    s.store[m.curr_module][lhs_var] = str(expr.right.literal.value)
+                    # Normalize Verilog literals to decimal strings
+                    s.store[m.curr_module][lhs_var] = normalize_verilog_literal(str(expr.right.literal.value))
                 else:
                     # Handle complex RHS expressions (e.g., out + 1 + out_wire)
                     # Convert RHS to string representation and substitute symbolic values
@@ -697,27 +710,30 @@ class SymbolicDFS:
                 ...
 
         elif kind == ps.SyntaxKind.NonblockingAssignmentExpression:
+            # Non-blocking assignments (<=) are deferred to the next cycle
+            # The RHS is evaluated with current values, but the update happens at the next cycle
             if hasattr(expr.left, "identifier"):
                 lhs_var = expr.left.identifier.value
-                # Check for simple var-to-var assignment first
+                # Evaluate RHS with current store values
                 if hasattr(expr.right, "identifier") and expr.right.identifier.value in s.store[m.curr_module]:
-                    s.store[m.curr_module][lhs_var] = s.store[m.curr_module][expr.right.identifier.value]
+                    rhs_value = s.store[m.curr_module][expr.right.identifier.value]
                 elif expr.right.kind == ps.SyntaxKind.ConcatenationExpression:
                     # Handle concatenation on RHS
                     concat_value = ""
                     for operand in expr.right.expressions:
                         if hasattr(operand, "value"):
                             concat_value += str(operand.value)
-                    s.store[m.curr_module][lhs_var] = concat_value
+                    rhs_value = concat_value
                 elif hasattr(expr.right, "literal"):
-                    # Handle literal expressions
-                    s.store[m.curr_module][lhs_var] = str(expr.right.literal.value)
+                    # Handle literal expressions - normalize Verilog literals
+                    rhs_value = normalize_verilog_literal(str(expr.right.literal.value))
                 else:
                     # Handle complex RHS expressions (e.g., out + 1 + out_wire)
                     # Convert RHS to string representation and substitute symbolic values
                     rhs_str = conjunction_with_pointers(expr.right, s, m)
-                    rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
-                    s.store[m.curr_module][lhs_var] = rhs_with_symbols
+                    rhs_value = substitute_symbols(rhs_str, s.store[m.curr_module])
+                # Add to pending non-blocking assignments (will be applied at next cycle)
+                s.add_pending_nba(m.curr_module, lhs_var, rhs_value)
             else:
                 # LHS doesn't have an identifier attribute — skip for now
                 ...
@@ -797,13 +813,16 @@ class SymbolicDFS:
 
         # Handle PropertySpecSyntax - contains assertion condition
         if kind == ps.SyntaxKind.PropertySpec:
+            print(f"[visiting statement: PropertySpec]")  # DEBUG
             self._handle_property_spec(m, s, stmt, modules, direction)
             return
 
         if kind == ps.SyntaxKind.ExpressionStatement:
+            print(f"[visiting statement: ExpressionStatement]")  # DEBUG
             self.visit_expr(m, s, stmt.expr)
 
         elif kind == ps.StatementKind.Block and hasattr(stmt, "body"):
+            print(f"[visiting statement: Block]")  # DEBUG
             for substmt in stmt.body:
                 self.visit_stmt(m, s, substmt, modules, direction)
 

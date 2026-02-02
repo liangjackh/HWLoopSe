@@ -1,10 +1,17 @@
 [Info] Found 2 top-level module instance(s):
   - place_holder
   - test_1
-Executing for 2 clock cycles
+Executing for 1 clock cycles
 Visiting node type: InstanceSymbol
 Visiting node type: InstanceBodySymbol
 Module place_holder single instance
+[DEBUG build_cfg] all_nodes count: 4, edgelist count: 0
+[DEBUG build_cfg] partition_points: [0, 3]
+[DEBUG build_cfg] edgelist: []
+[DEBUG build_cfg] cfg_edges: []
+[DEBUG build_cfg] basic_block_list count: 1
+[DEBUG build_cfg] paths computed: 1 paths
+[DEBUG build_cfg] paths: [[-1, 0, -2]]
 [DEBUG build_cfg] all_nodes count: 11, edgelist count: 2
 [DEBUG build_cfg] partition_points: [0, 2, 3, 7, 10]
 [DEBUG build_cfg] edgelist: [(2, 3), (2, 7)]
@@ -12,6 +19,13 @@ Module place_holder single instance
 [DEBUG build_cfg] basic_block_list count: 3
 [DEBUG build_cfg] paths computed: 2 paths
 [DEBUG build_cfg] paths: [[-1, 0, 1, -2], [-1, 0, 2, -2]]
+[DEBUG build_cfg] all_nodes count: 4, edgelist count: 0
+[DEBUG build_cfg] partition_points: [0, 3]
+[DEBUG build_cfg] edgelist: []
+[DEBUG build_cfg] cfg_edges: []
+[DEBUG build_cfg] basic_block_list count: 1
+[DEBUG build_cfg] paths computed: 1 paths
+[DEBUG build_cfg] paths: [[-1, 0, -2]]
 [DEBUG build_cfg] all_nodes count: 12, edgelist count: 2
 [DEBUG build_cfg] partition_points: [0, 2, 3, 7, 11]
 [DEBUG build_cfg] edgelist: [(2, 3), (2, 7)]
@@ -22,6 +36,13 @@ Module place_holder single instance
 Visiting node type: InstanceSymbol
 Visiting node type: InstanceBodySymbol
 Module test_1 single instance
+[DEBUG build_cfg] all_nodes count: 4, edgelist count: 0
+[DEBUG build_cfg] partition_points: [0, 3]
+[DEBUG build_cfg] edgelist: []
+[DEBUG build_cfg] cfg_edges: []
+[DEBUG build_cfg] basic_block_list count: 1
+[DEBUG build_cfg] paths computed: 1 paths
+[DEBUG build_cfg] paths: [[-1, 0, -2]]
 [DEBUG build_cfg] all_nodes count: 12, edgelist count: 2
 [DEBUG build_cfg] partition_points: [0, 2, 3, 7, 11]
 [DEBUG build_cfg] edgelist: [(2, 3), (2, 7)]
@@ -31,8 +52,8 @@ Module test_1 single instance
 [DEBUG build_cfg] paths: [[-1, 0, 1, -2], [-1, 0, 2, -2]]
 Here
 Branch points explored: 0
-Module place_holder has 2 always blocks
-Module test_1 has 1 always blocks
+Module place_holder has 4 always blocks
+Module test_1 has 2 always blocks
 DFS visiting symbol: test_1
 - symbol test_1 not iterable, skipping children traversal.
 DFS visiting symbol: place_holder_2
@@ -54,6 +75,9 @@ DFS visiting symbol: out
 DFS visiting symbol: out
 - adding to symbolic store: out(variable, para, port, or net)
 - symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
 DFS visiting symbol: 
 - visiting procedural block body
 - symbol  not iterable, skipping children traversal.
@@ -84,27 +108,6 @@ DFS visiting symbol: out_wire
 DFS visiting symbol: 
 - visiting procedural block body
 - symbol  not iterable, skipping children traversal.
-DFS visiting symbol: test_1
-- symbol test_1 not iterable, skipping children traversal.
-DFS visiting symbol: place_holder_2
-DFS visiting symbol: CLK
-- adding to symbolic store: CLK(variable, para, port, or net)
-- symbol CLK not iterable, skipping children traversal.
-DFS visiting symbol: CLK
-- adding to symbolic store: CLK(variable, para, port, or net)
-- symbol CLK not iterable, skipping children traversal.
-DFS visiting symbol: RST
-- adding to symbolic store: RST(variable, para, port, or net)
-- symbol RST not iterable, skipping children traversal.
-DFS visiting symbol: RST
-- adding to symbolic store: RST(variable, para, port, or net)
-- symbol RST not iterable, skipping children traversal.
-DFS visiting symbol: out
-- adding to symbolic store: out(variable, para, port, or net)
-- symbol out not iterable, skipping children traversal.
-DFS visiting symbol: out
-- adding to symbolic store: out(variable, para, port, or net)
-- symbol out not iterable, skipping children traversal.
 DFS visiting symbol: 
 - visiting procedural block body
 - symbol  not iterable, skipping children traversal.
@@ -132,67 +135,82 @@ DFS visiting symbol: out
 DFS visiting symbol: 
 - visiting procedural block body
 - symbol  not iterable, skipping children traversal.
-461 checking states Executing path 1 / 64
-Initial state:
-{'place_holder': {'CLK': '2PMrSS8X87x414cn', 'RST': 'BoAE0HGY0xMhyw3x', 'out': 'WnFypc5LQKCeGZqv', 'out_wire': 'BAsGijTtHppL2SQP'}, 'test_1': {'CLK': 'QkD4iBiXB3OFKbiF', 'RST': 'aJBLIlymQgRrHGEd', 'out': '4dnmRQF1BivVGVRU'}}
-DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
-DEBUG: basic_block_list has 3 blocks
-DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
-DEBUG: basic_block[2] = [' begin', '\n      out <= out + 1;', '\n    end']
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+461 checking states Executing path 1 / 8
+[cond3]Initial state:
+{'place_holder': {'CLK': 'IxHtYURLMrmaqBvp', 'RST': 'BC2cq2dBIuF7mWxf', 'out': '5xILSz19cDgKYHZJ', 'out_wire': 'IccAjCqsPN9cJ45J'}, 'test_1': {'CLK': 'vdYz37pry2egnj3F', 'RST': 'd1oX7OWzcTQTE1jC', 'out': 'MnF1CMO9JQoTlq3J'}}
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
 Skipping dummy node in path
-visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
-Skipping dummy node in path
-DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
-DEBUG: basic_block_list has 3 blocks
-DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
-DEBUG: basic_block[2] = [' begin', '\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
-Skipping dummy node in path
-visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
-Skipping dummy node in path
-DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
-DEBUG: basic_block_list has 3 blocks
-DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
-DEBUG: basic_block[2] = [' begin', '\n      out <= out + 1;', '\n    end']
-Skipping dummy node in path
-visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
-Skipping dummy node in path
-DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
-DEBUG: basic_block_list has 3 blocks
-DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
-DEBUG: basic_block[2] = [' begin', '\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
-Skipping dummy node in path
-visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
-Skipping dummy node in path
-DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
-DEBUG: basic_block_list has 3 blocks
-DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
-DEBUG: basic_block[2] = [' begin', '\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
-Skipping dummy node in path
-visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
 Skipping dummy node in path
 DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
 DEBUG: basic_block_list has 3 blocks
-DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
-DEBUG: basic_block[2] = [' begin', '\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
 Skipping dummy node in path
 visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
 visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
 Skipping dummy node in path
-494 checking path 1 / 64
-Cycle 0 final state:
-{'place_holder': {'CLK': '2PMrSS8X87x414cn', 'RST': 'BoAE0HGY0xMhyw3x', 'out': "1'b0", 'out_wire': 'BAsGijTtHppL2SQP'}, 'test_1': {'CLK': 'QkD4iBiXB3OFKbiF', 'RST': 'aJBLIlymQgRrHGEd', 'out': "1'b0"}}
-Cycle 0 final path condition:
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+494 checking path 1 / 8
+[cond1]Cycle 0 final state:
+{'place_holder': {'CLK': 'IxHtYURLMrmaqBvp', 'RST': 'BC2cq2dBIuF7mWxf', 'out': "1'b0", 'out_wire': 'IccAjCqsPN9cJ45J'}, 'test_1': {'CLK': 'vdYz37pry2egnj3F', 'RST': 'd1oX7OWzcTQTE1jC', 'out': "1'b0"}}
+[cond1]Cycle 0 final path condition:
 []
 ------------------------
 DFS visiting symbol: {}
@@ -224,27 +242,6 @@ DFS visiting symbol: out_wire
 DFS visiting symbol: 
 - visiting procedural block body
 - symbol  not iterable, skipping children traversal.
-DFS visiting symbol: test_1
-- symbol test_1 not iterable, skipping children traversal.
-DFS visiting symbol: place_holder_2
-DFS visiting symbol: CLK
-- adding to symbolic store: CLK(variable, para, port, or net)
-- symbol CLK not iterable, skipping children traversal.
-DFS visiting symbol: CLK
-- adding to symbolic store: CLK(variable, para, port, or net)
-- symbol CLK not iterable, skipping children traversal.
-DFS visiting symbol: RST
-- adding to symbolic store: RST(variable, para, port, or net)
-- symbol RST not iterable, skipping children traversal.
-DFS visiting symbol: RST
-- adding to symbolic store: RST(variable, para, port, or net)
-- symbol RST not iterable, skipping children traversal.
-DFS visiting symbol: out
-- adding to symbolic store: out(variable, para, port, or net)
-- symbol out not iterable, skipping children traversal.
-DFS visiting symbol: out
-- adding to symbolic store: out(variable, para, port, or net)
-- symbol out not iterable, skipping children traversal.
 DFS visiting symbol: 
 - visiting procedural block body
 - symbol  not iterable, skipping children traversal.
@@ -272,72 +269,984 @@ DFS visiting symbol: out
 DFS visiting symbol: 
 - visiting procedural block body
 - symbol  not iterable, skipping children traversal.
-461 checking states Executing path 2 / 64
-Initial state:
-{'place_holder': {'CLK': 'MCxsFt47JQm6t8aY', 'RST': 'U3ExWIcRUrvK0YMn', 'out': 'vV0e1qoTgcsvbxV1', 'out_wire': '0MV0wlMO9yemLJ2z'}, 'test_1': {'CLK': 'XDKqCKGr62c5ORJv', 'RST': '7KcFShjuYBD1kbzb', 'out': 'QWcz51LxMvJvZTob'}}
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+461 checking states Executing path 2 / 8
+[cond3]Initial state:
+{'place_holder': {'CLK': 'VP52JYfDtk1rqXcE', 'RST': 'fEL1lC6cJ4NHUsDX', 'out': 'FDSP1upVWF1zEmPy', 'out_wire': 'ZQjlaJL9CRzvmJGB'}, 'test_1': {'CLK': '61H2iLUodh7UMVjV', 'RST': 'DwEPek1LPlAztZ6Q', 'out': 'GDNznzYeMDWk8hAO'}}
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
 DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
 DEBUG: basic_block_list has 3 blocks
-DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
-DEBUG: basic_block[2] = [' begin', '\n      out <= out + 1;', '\n    end']
 Skipping dummy node in path
 visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
 visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
 Skipping dummy node in path
 DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
 DEBUG: basic_block_list has 3 blocks
-DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
-DEBUG: basic_block[2] = [' begin', '\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
 Skipping dummy node in path
 visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
 visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
 Skipping dummy node in path
-DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
-DEBUG: basic_block_list has 3 blocks
-DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
-DEBUG: basic_block[2] = [' begin', '\n      out <= out + 1;', '\n    end']
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
 Skipping dummy node in path
-visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
-Skipping dummy node in path
-DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
-DEBUG: basic_block_list has 3 blocks
-DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
-DEBUG: basic_block[2] = [' begin', '\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
-Skipping dummy node in path
-visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
-Skipping dummy node in path
-DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
-DEBUG: basic_block_list has 3 blocks
-DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
-DEBUG: basic_block[2] = [' begin', '\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
-Skipping dummy node in path
-visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
 Skipping dummy node in path
 DEBUG: cfg_path=[-1, 0, 2, -2], directions=[0, 0]
 DEBUG: basic_block_list has 3 blocks
-DEBUG: basic_block[0] = ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-DEBUG: basic_block[1] = [' begin', '\n      out <= 0;', '\n    end']
-DEBUG: basic_block[2] = [' begin', '\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
 Skipping dummy node in path
 visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
-visiting basic_block: [' begin', '\n      out <= out + 2;', '\n    end', '\n    assert (out % 2 == 0) else begin\n      $error']
-Parsing expression to Z3:  (out % 2 == 0), type: <class 'pyslang.pyslang.ParenthesizedExpressionSyntax'>
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2) else begin\n      $error("As']
+[visiting statement: ExpressionStatement]
+[DEBUG parse_expr_to_Z3] expr:  (out <= 2), type: <class 'pyslang.pyslang.ParenthesizedExpressionSyntax'>, class: ParenthesizedExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.ParenthesizedExpression
+[DEBUG ParenthesizedExpressionSyntax] unwrapping to: out <= 2
+[DEBUG parse_expr_to_Z3] expr: out <= 2, type: <class 'pyslang.pyslang.BinaryExpressionSyntax'>, class: BinaryExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.LessThanEqualExpression
+[DEBUG parse_expr_to_Z3] expr: out, type: <class 'pyslang.pyslang.IdentifierNameSyntax'>, class: IdentifierNameSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IdentifierName
+[DEBUG parse_expr_to_Z3] expr:  2, type: <class 'pyslang.pyslang.LiteralExpressionSyntax'>, class: LiteralExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IntegerLiteralExpression
+[DEBUG BinaryExpressionSyntax] lhs=0 + 1, rhs=2, op_token= <=
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
 Skipping dummy node in path
-494 checking path 2 / 64
-Cycle 0 final state:
-{'place_holder': {'CLK': 'MCxsFt47JQm6t8aY', 'RST': 'U3ExWIcRUrvK0YMn', 'out': "1'b0", 'out_wire': '0MV0wlMO9yemLJ2z'}, 'test_1': {'CLK': 'XDKqCKGr62c5ORJv', 'RST': '7KcFShjuYBD1kbzb', 'out': "(1'b0  +  2)"}}
-Cycle 0 final path condition:
+494 checking path 2 / 8
+[cond1]Cycle 0 final state:
+{'place_holder': {'CLK': 'VP52JYfDtk1rqXcE', 'RST': 'fEL1lC6cJ4NHUsDX', 'out': "1'b0", 'out_wire': 'ZQjlaJL9CRzvmJGB'}, 'test_1': {'CLK': '61H2iLUodh7UMVjV', 'RST': 'DwEPek1LPlAztZ6Q', 'out': '(0  +  1)'}}
+[cond1]Cycle 0 final path condition:
 []
 ------------------------
-Assertion violation
-{}
-0
-0
-Elapsed time 0.019210045000000342
+DFS visiting symbol: {}
+- not a Symbol, skipping: {}
+DFS visiting symbol: place_holder
+- symbol place_holder not iterable, skipping children traversal.
+DFS visiting symbol: place_holder
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out_wire
+- adding to symbolic store: out_wire(variable, para, port, or net)
+- symbol out_wire not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+461 checking states Executing path 3 / 8
+[cond3]Initial state:
+{'place_holder': {'CLK': 'u53o0ztlDNTCW4Tp', 'RST': 'H1bw1E8LUnF7pne1', 'out': 'VHzwkX07td5i7Ptn', 'out_wire': 'DblriKLbVTD6BTxy'}, 'test_1': {'CLK': 'MH9701m5GATc57iF', 'RST': 'rJT7zRzksTQtp6S1', 'out': 'r2hw8A2zKI7fcBJH'}}
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 2, -2], directions=[0, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2) else begin\n      $error("As']
+[visiting statement: ExpressionStatement]
+[DEBUG parse_expr_to_Z3] expr:  (out <= 2), type: <class 'pyslang.pyslang.ParenthesizedExpressionSyntax'>, class: ParenthesizedExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.ParenthesizedExpression
+[DEBUG ParenthesizedExpressionSyntax] unwrapping to: out <= 2
+[DEBUG parse_expr_to_Z3] expr: out <= 2, type: <class 'pyslang.pyslang.BinaryExpressionSyntax'>, class: BinaryExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.LessThanEqualExpression
+[DEBUG parse_expr_to_Z3] expr: out, type: <class 'pyslang.pyslang.IdentifierNameSyntax'>, class: IdentifierNameSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IdentifierName
+[DEBUG parse_expr_to_Z3] expr:  2, type: <class 'pyslang.pyslang.LiteralExpressionSyntax'>, class: LiteralExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IntegerLiteralExpression
+[DEBUG BinaryExpressionSyntax] lhs=0 + 1, rhs=2, op_token= <=
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+494 checking path 3 / 8
+[cond1]Cycle 0 final state:
+{'place_holder': {'CLK': 'u53o0ztlDNTCW4Tp', 'RST': 'H1bw1E8LUnF7pne1', 'out': '(0  +  1)', 'out_wire': 'DblriKLbVTD6BTxy'}, 'test_1': {'CLK': 'MH9701m5GATc57iF', 'RST': 'rJT7zRzksTQtp6S1', 'out': "1'b0"}}
+[cond1]Cycle 0 final path condition:
+[]
+------------------------
+DFS visiting symbol: {}
+- not a Symbol, skipping: {}
+DFS visiting symbol: place_holder
+- symbol place_holder not iterable, skipping children traversal.
+DFS visiting symbol: place_holder
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out_wire
+- adding to symbolic store: out_wire(variable, para, port, or net)
+- symbol out_wire not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+461 checking states Executing path 4 / 8
+[cond3]Initial state:
+{'place_holder': {'CLK': 'Hnibt13CHiUOEivo', 'RST': 'dPVQj8Oq23tNopY8', 'out': 'dXGFJFzX3cvf7YOO', 'out_wire': 'PRMBMQEDFKBFYhuw'}, 'test_1': {'CLK': 'HVPuX3jOPcOTDMje', 'RST': 'qbCM5nGcqm4ozuid', 'out': '1BM0BBDH1U7JMLFx'}}
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 2, -2], directions=[0, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2) else begin\n      $error("As']
+[visiting statement: ExpressionStatement]
+[DEBUG parse_expr_to_Z3] expr:  (out <= 2), type: <class 'pyslang.pyslang.ParenthesizedExpressionSyntax'>, class: ParenthesizedExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.ParenthesizedExpression
+[DEBUG ParenthesizedExpressionSyntax] unwrapping to: out <= 2
+[DEBUG parse_expr_to_Z3] expr: out <= 2, type: <class 'pyslang.pyslang.BinaryExpressionSyntax'>, class: BinaryExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.LessThanEqualExpression
+[DEBUG parse_expr_to_Z3] expr: out, type: <class 'pyslang.pyslang.IdentifierNameSyntax'>, class: IdentifierNameSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IdentifierName
+[DEBUG parse_expr_to_Z3] expr:  2, type: <class 'pyslang.pyslang.LiteralExpressionSyntax'>, class: LiteralExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IntegerLiteralExpression
+[DEBUG BinaryExpressionSyntax] lhs=0 + 1, rhs=2, op_token= <=
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 2, -2], directions=[0, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2) else begin\n      $error("As']
+[visiting statement: ExpressionStatement]
+[DEBUG parse_expr_to_Z3] expr:  (out <= 2), type: <class 'pyslang.pyslang.ParenthesizedExpressionSyntax'>, class: ParenthesizedExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.ParenthesizedExpression
+[DEBUG ParenthesizedExpressionSyntax] unwrapping to: out <= 2
+[DEBUG parse_expr_to_Z3] expr: out <= 2, type: <class 'pyslang.pyslang.BinaryExpressionSyntax'>, class: BinaryExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.LessThanEqualExpression
+[DEBUG parse_expr_to_Z3] expr: out, type: <class 'pyslang.pyslang.IdentifierNameSyntax'>, class: IdentifierNameSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IdentifierName
+[DEBUG parse_expr_to_Z3] expr:  2, type: <class 'pyslang.pyslang.LiteralExpressionSyntax'>, class: LiteralExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IntegerLiteralExpression
+[DEBUG BinaryExpressionSyntax] lhs=0 + 1, rhs=2, op_token= <=
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+494 checking path 4 / 8
+[cond1]Cycle 0 final state:
+{'place_holder': {'CLK': 'Hnibt13CHiUOEivo', 'RST': 'dPVQj8Oq23tNopY8', 'out': '(0  +  1)', 'out_wire': 'PRMBMQEDFKBFYhuw'}, 'test_1': {'CLK': 'HVPuX3jOPcOTDMje', 'RST': 'qbCM5nGcqm4ozuid', 'out': '(0  +  1)'}}
+[cond1]Cycle 0 final path condition:
+[]
+------------------------
+DFS visiting symbol: {}
+- not a Symbol, skipping: {}
+DFS visiting symbol: place_holder
+- symbol place_holder not iterable, skipping children traversal.
+DFS visiting symbol: place_holder
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out_wire
+- adding to symbolic store: out_wire(variable, para, port, or net)
+- symbol out_wire not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+461 checking states Executing path 5 / 8
+[cond3]Initial state:
+{'place_holder': {'CLK': 'ncrby6PMteJT94ds', 'RST': 'urqnXGiN02dOlscH', 'out': 'S4p8IyKUIbWkQobk', 'out_wire': 'Zgo7ErYX81pGgVyk'}, 'test_1': {'CLK': 'rirSBaXT6ePWgRzV', 'RST': 'dEBRJSgwvtNBGXLO', 'out': 'VSjSJhm2guOEnlBE'}}
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 2, -2], directions=[0, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+494 checking path 5 / 8
+[cond1]Cycle 0 final state:
+{'place_holder': {'CLK': 'ncrby6PMteJT94ds', 'RST': 'urqnXGiN02dOlscH', 'out': "1'b0", 'out_wire': 'Zgo7ErYX81pGgVyk'}, 'test_1': {'CLK': 'rirSBaXT6ePWgRzV', 'RST': 'dEBRJSgwvtNBGXLO', 'out': "1'b0"}}
+[cond1]Cycle 0 final path condition:
+[]
+------------------------
+DFS visiting symbol: {}
+- not a Symbol, skipping: {}
+DFS visiting symbol: place_holder
+- symbol place_holder not iterable, skipping children traversal.
+DFS visiting symbol: place_holder
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out_wire
+- adding to symbolic store: out_wire(variable, para, port, or net)
+- symbol out_wire not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+461 checking states Executing path 6 / 8
+[cond3]Initial state:
+{'place_holder': {'CLK': 'wMY5RKi4ljRZDK18', 'RST': '4AuvxNSeZfy9bDH2', 'out': 'HkNngVDw7b7nAkop', 'out_wire': 'CFVpyV1sJJFJWK6O'}, 'test_1': {'CLK': '7OBOLiGI0KmU7tAO', 'RST': 'ijtqUfT66njtFpty', 'out': 'r9uFe5LZXB5s4hq2'}}
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 2, -2], directions=[0, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 2, -2], directions=[0, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2) else begin\n      $error("As']
+[visiting statement: ExpressionStatement]
+[DEBUG parse_expr_to_Z3] expr:  (out <= 2), type: <class 'pyslang.pyslang.ParenthesizedExpressionSyntax'>, class: ParenthesizedExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.ParenthesizedExpression
+[DEBUG ParenthesizedExpressionSyntax] unwrapping to: out <= 2
+[DEBUG parse_expr_to_Z3] expr: out <= 2, type: <class 'pyslang.pyslang.BinaryExpressionSyntax'>, class: BinaryExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.LessThanEqualExpression
+[DEBUG parse_expr_to_Z3] expr: out, type: <class 'pyslang.pyslang.IdentifierNameSyntax'>, class: IdentifierNameSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IdentifierName
+[DEBUG parse_expr_to_Z3] expr:  2, type: <class 'pyslang.pyslang.LiteralExpressionSyntax'>, class: LiteralExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IntegerLiteralExpression
+[DEBUG BinaryExpressionSyntax] lhs=0 + 1, rhs=2, op_token= <=
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+494 checking path 6 / 8
+[cond1]Cycle 0 final state:
+{'place_holder': {'CLK': 'wMY5RKi4ljRZDK18', 'RST': '4AuvxNSeZfy9bDH2', 'out': "1'b0", 'out_wire': 'CFVpyV1sJJFJWK6O'}, 'test_1': {'CLK': '7OBOLiGI0KmU7tAO', 'RST': 'ijtqUfT66njtFpty', 'out': '(0  +  1)'}}
+[cond1]Cycle 0 final path condition:
+[]
+------------------------
+DFS visiting symbol: {}
+- not a Symbol, skipping: {}
+DFS visiting symbol: place_holder
+- symbol place_holder not iterable, skipping children traversal.
+DFS visiting symbol: place_holder
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out_wire
+- adding to symbolic store: out_wire(variable, para, port, or net)
+- symbol out_wire not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+461 checking states Executing path 7 / 8
+[cond3]Initial state:
+{'place_holder': {'CLK': '3RaZ071yWjSNWvjg', 'RST': 'lDlolwrX5BftNS94', 'out': '0jJyC1StyzROEBtP', 'out_wire': 'qMPSZp7B8viWJEXw'}, 'test_1': {'CLK': 'm3Xo4xUkFbtxG43Q', 'RST': 'qoKCs0pNyQNl5EPI', 'out': 'Lw3U6a1t7CPmS2l6'}}
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 2, -2], directions=[0, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 2, -2], directions=[0, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2) else begin\n      $error("As']
+[visiting statement: ExpressionStatement]
+[DEBUG parse_expr_to_Z3] expr:  (out <= 2), type: <class 'pyslang.pyslang.ParenthesizedExpressionSyntax'>, class: ParenthesizedExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.ParenthesizedExpression
+[DEBUG ParenthesizedExpressionSyntax] unwrapping to: out <= 2
+[DEBUG parse_expr_to_Z3] expr: out <= 2, type: <class 'pyslang.pyslang.BinaryExpressionSyntax'>, class: BinaryExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.LessThanEqualExpression
+[DEBUG parse_expr_to_Z3] expr: out, type: <class 'pyslang.pyslang.IdentifierNameSyntax'>, class: IdentifierNameSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IdentifierName
+[DEBUG parse_expr_to_Z3] expr:  2, type: <class 'pyslang.pyslang.LiteralExpressionSyntax'>, class: LiteralExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IntegerLiteralExpression
+[DEBUG BinaryExpressionSyntax] lhs=0 + 1, rhs=2, op_token= <=
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 1, -2], directions=[1, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+494 checking path 7 / 8
+[cond1]Cycle 0 final state:
+{'place_holder': {'CLK': '3RaZ071yWjSNWvjg', 'RST': 'lDlolwrX5BftNS94', 'out': '(0  +  1)', 'out_wire': 'qMPSZp7B8viWJEXw'}, 'test_1': {'CLK': 'm3Xo4xUkFbtxG43Q', 'RST': 'qoKCs0pNyQNl5EPI', 'out': "1'b0"}}
+[cond1]Cycle 0 final path condition:
+[]
+------------------------
+DFS visiting symbol: {}
+- not a Symbol, skipping: {}
+DFS visiting symbol: place_holder
+- symbol place_holder not iterable, skipping children traversal.
+DFS visiting symbol: place_holder
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out_wire
+- adding to symbolic store: out_wire(variable, para, port, or net)
+- symbol out_wire not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: test_1
+- symbol test_1 not iterable, skipping children traversal.
+DFS visiting symbol: place_holder_2
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: CLK
+- adding to symbolic store: CLK(variable, para, port, or net)
+- symbol CLK not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: RST
+- adding to symbolic store: RST(variable, para, port, or net)
+- symbol RST not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: out
+- adding to symbolic store: out(variable, para, port, or net)
+- symbol out not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+DFS visiting symbol: 
+- visiting procedural block body
+- symbol  not iterable, skipping children traversal.
+461 checking states Executing path 8 / 8
+[cond3]Initial state:
+{'place_holder': {'CLK': 'HFSwG5Q2uGqJ5vPp', 'RST': '7pPjTkpZYkpxTOPv', 'out': 'C025dyvfeFmfEWc2', 'out_wire': 'TW9dJKGBkP2rfHQn'}, 'test_1': {'CLK': 'rz3GnST9wqLA3ZIl', 'RST': '2aVvp0jDl08rYgaU', 'out': 'B1rRT3EUhemEO8yB'}}
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 2, -2], directions=[0, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 2, -2], directions=[0, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2) else begin\n      $error("As']
+[visiting statement: ExpressionStatement]
+[DEBUG parse_expr_to_Z3] expr:  (out <= 2), type: <class 'pyslang.pyslang.ParenthesizedExpressionSyntax'>, class: ParenthesizedExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.ParenthesizedExpression
+[DEBUG ParenthesizedExpressionSyntax] unwrapping to: out <= 2
+[DEBUG parse_expr_to_Z3] expr: out <= 2, type: <class 'pyslang.pyslang.BinaryExpressionSyntax'>, class: BinaryExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.LessThanEqualExpression
+[DEBUG parse_expr_to_Z3] expr: out, type: <class 'pyslang.pyslang.IdentifierNameSyntax'>, class: IdentifierNameSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IdentifierName
+[DEBUG parse_expr_to_Z3] expr:  2, type: <class 'pyslang.pyslang.LiteralExpressionSyntax'>, class: LiteralExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IntegerLiteralExpression
+[DEBUG BinaryExpressionSyntax] lhs=0 + 1, rhs=2, op_token= <=
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, -2], directions=[0]
+DEBUG: basic_block_list has 1 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+DEBUG: cfg_path=[-1, 0, 2, -2], directions=[0, 0]
+DEBUG: basic_block_list has 3 blocks
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2) else begin\n      $error("As']
+[visiting statement: ExpressionStatement]
+[DEBUG parse_expr_to_Z3] expr:  (out <= 2), type: <class 'pyslang.pyslang.ParenthesizedExpressionSyntax'>, class: ParenthesizedExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.ParenthesizedExpression
+[DEBUG ParenthesizedExpressionSyntax] unwrapping to: out <= 2
+[DEBUG parse_expr_to_Z3] expr: out <= 2, type: <class 'pyslang.pyslang.BinaryExpressionSyntax'>, class: BinaryExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.LessThanEqualExpression
+[DEBUG parse_expr_to_Z3] expr: out, type: <class 'pyslang.pyslang.IdentifierNameSyntax'>, class: IdentifierNameSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IdentifierName
+[DEBUG parse_expr_to_Z3] expr:  2, type: <class 'pyslang.pyslang.LiteralExpressionSyntax'>, class: LiteralExpressionSyntax
+[DEBUG parse_expr_to_Z3] kind: SyntaxKind.IntegerLiteralExpression
+[DEBUG BinaryExpressionSyntax] lhs=0 + 1, rhs=2, op_token= <=
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+494 checking path 8 / 8
+[cond1]Cycle 0 final state:
+{'place_holder': {'CLK': 'HFSwG5Q2uGqJ5vPp', 'RST': '7pPjTkpZYkpxTOPv', 'out': '(0  +  1)', 'out_wire': 'TW9dJKGBkP2rfHQn'}, 'test_1': {'CLK': 'rz3GnST9wqLA3ZIl', 'RST': '2aVvp0jDl08rYgaU', 'out': '(0  +  1)'}}
+[cond1]Cycle 0 final path condition:
+[]
+------------------------
+Branch points explored: 24
+Paths explored: 8
+Elapsed time 0.04323614200000003

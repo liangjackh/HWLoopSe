@@ -474,6 +474,10 @@ class ExecutionEngine:
                 manager.curr_module = manager.names_list[modules_seen]
                 manager.cycle = 0
                 for complete_single_cycle_path in curr_path[module_name]:
+                    # Apply pending non-blocking assignments from previous cycle
+                    # (only applies when cycle > 0, i.e., not the first cycle)
+                    if manager.cycle > 0:
+                        state.apply_pending_nba()
                     #for cfg_path in complete_single_cycle_path:
                     for cfg_idx, cfg_path in enumerate(complete_single_cycle_path):
                         directions = cfgs_by_module[module_name][cfg_idx].compute_direction(cfg_path)
