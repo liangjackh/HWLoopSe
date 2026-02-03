@@ -5,6 +5,7 @@ module place_holder (
 );
   
   wire [31:0] out_wire; 
+  wire [31:0] out_wire1; 
   initial begin
     out = 0;
   end
@@ -22,6 +23,12 @@ module place_holder (
     .CLK (CLK),
     .RST (RST),
     .out (out_wire)
+  );
+
+  place_holder_2 test_2(
+    .CLK (CLK),
+    .RST (RST),
+    .out (out_wire1)
   );
   
 endmodule

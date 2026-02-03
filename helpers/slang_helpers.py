@@ -710,30 +710,27 @@ class SymbolicDFS:
                 ...
 
         elif kind == ps.SyntaxKind.NonblockingAssignmentExpression:
-            # Non-blocking assignments (<=) are deferred to the next cycle
-            # The RHS is evaluated with current values, but the update happens at the next cycle
             if hasattr(expr.left, "identifier"):
                 lhs_var = expr.left.identifier.value
-                # Evaluate RHS with current store values
+                # Check for simple var-to-var assignment first
                 if hasattr(expr.right, "identifier") and expr.right.identifier.value in s.store[m.curr_module]:
-                    rhs_value = s.store[m.curr_module][expr.right.identifier.value]
+                    s.store[m.curr_module][lhs_var] = s.store[m.curr_module][expr.right.identifier.value]
                 elif expr.right.kind == ps.SyntaxKind.ConcatenationExpression:
                     # Handle concatenation on RHS
                     concat_value = ""
                     for operand in expr.right.expressions:
                         if hasattr(operand, "value"):
                             concat_value += str(operand.value)
-                    rhs_value = concat_value
+                    s.store[m.curr_module][lhs_var] = concat_value
                 elif hasattr(expr.right, "literal"):
-                    # Handle literal expressions - normalize Verilog literals
-                    rhs_value = normalize_verilog_literal(str(expr.right.literal.value))
+                    # Handle literal expressions
+                    s.store[m.curr_module][lhs_var] = str(expr.right.literal.value)
                 else:
                     # Handle complex RHS expressions (e.g., out + 1 + out_wire)
                     # Convert RHS to string representation and substitute symbolic values
                     rhs_str = conjunction_with_pointers(expr.right, s, m)
-                    rhs_value = substitute_symbols(rhs_str, s.store[m.curr_module])
-                # Add to pending non-blocking assignments (will be applied at next cycle)
-                s.add_pending_nba(m.curr_module, lhs_var, rhs_value)
+                    rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
+                    s.store[m.curr_module][lhs_var] = rhs_with_symbols
             else:
                 # LHS doesn't have an identifier attribute — skip for now
                 ...
@@ -827,7 +824,20 @@ class SymbolicDFS:
                 self.visit_stmt(m, s, substmt, modules, direction)
 
         elif kind == ps.StatementKind.Conditional or isinstance(stmt, ps.ConditionalStatementSyntax):
-            m.branch_count += 1
+            print(f"[visiting statement: Conditional]")  # DEBUG
+            # Track unique branch points by syntax source location (start line/column)
+            if hasattr(stmt, 'syntax') and stmt.syntax is not None:
+                sr = stmt.syntax.sourceRange()
+                branch_id = (m.curr_module, sr.start.offset if hasattr(sr.start, 'offset') else str(sr.start))
+            elif hasattr(stmt, 'sourceRange'):
+                sr = stmt.sourceRange
+                branch_id = (m.curr_module, sr.start.offset if hasattr(sr, 'start') and hasattr(sr.start, 'offset') else str(sr))
+            else:
+                branch_id = (m.curr_module, str(stmt))
+            if branch_id not in m.branch_points_seen:
+                m.branch_points_seen.add(branch_id)
+                m.branch_count += 1
+            print("[slang_helper] branch_count: Conditional Statement:", m.branch_count, "branch_id:", branch_id)  # DEBUG
             # PySlang 7.0 uses conditions list, not predicate attribute
             # Pattern matches usage in dfs_stmt() method (line 550)
             cond_expr = stmt.conditions[0].expr if (hasattr(stmt, 'conditions') and stmt.conditions) else None
@@ -891,7 +901,18 @@ class SymbolicDFS:
 
         elif kind == ps.StatementKind.WhileLoop:
             # print("whileloop")  # DEBUG
-            m.branch_count += 1
+            # Track unique branch points by syntax source location (start offset)
+            if hasattr(stmt, 'syntax') and stmt.syntax is not None:
+                sr = stmt.syntax.sourceRange()
+                branch_id = (m.curr_module, sr.start.offset if hasattr(sr.start, 'offset') else str(sr.start))
+            elif hasattr(stmt, 'sourceRange'):
+                sr = stmt.sourceRange
+                branch_id = (m.curr_module, sr.start.offset if hasattr(sr, 'start') and hasattr(sr.start, 'offset') else str(sr))
+            else:
+                branch_id = (m.curr_module, str(stmt))
+            if branch_id not in m.branch_points_seen:
+                m.branch_points_seen.add(branch_id)
+                m.branch_count += 1
             if hasattr(stmt, "cond"):
                 self.visit_expr(m, s, stmt.cond)
                 s.pc.push()
@@ -931,7 +952,18 @@ class SymbolicDFS:
 
         elif kind == ps.StatementKind.DoWhileLoop:
             # print("dowhile")  # DEBUG
-            m.branch_count += 1
+            # Track unique branch points by syntax source location (start offset)
+            if hasattr(stmt, 'syntax') and stmt.syntax is not None:
+                sr = stmt.syntax.sourceRange()
+                branch_id = (m.curr_module, sr.start.offset if hasattr(sr.start, 'offset') else str(sr.start))
+            elif hasattr(stmt, 'sourceRange'):
+                sr = stmt.sourceRange
+                branch_id = (m.curr_module, sr.start.offset if hasattr(sr, 'start') and hasattr(sr.start, 'offset') else str(sr))
+            else:
+                branch_id = (m.curr_module, str(stmt))
+            if branch_id not in m.branch_points_seen:
+                m.branch_points_seen.add(branch_id)
+                m.branch_count += 1
             if hasattr(stmt, "body"):
                 self.visit_stmt(m, s, stmt.body, modules, direction)
             if hasattr(stmt, "cond"):
@@ -940,7 +972,18 @@ class SymbolicDFS:
         #elif kind == ps.StatementKind.Case:
         elif stmt.__class__.__name__ == "CaseStatementSyntax":
             # print("case")  # DEBUG
-            m.branch_count += 1
+            # Track unique branch points by syntax source location (start offset)
+            if hasattr(stmt, 'syntax') and stmt.syntax is not None:
+                sr = stmt.syntax.sourceRange()
+                branch_id = (m.curr_module, sr.start.offset if hasattr(sr.start, 'offset') else str(sr.start))
+            elif hasattr(stmt, 'sourceRange'):
+                sr = stmt.sourceRange
+                branch_id = (m.curr_module, sr.start.offset if hasattr(sr, 'start') and hasattr(sr.start, 'offset') else str(sr))
+            else:
+                branch_id = (m.curr_module, str(stmt))
+            if branch_id not in m.branch_points_seen:
+                m.branch_points_seen.add(branch_id)
+                m.branch_count += 1
             self.visit_expr(m, s, stmt.expr)
 
             cond_z3 = self.expr_to_z3(m, s, stmt.expr)

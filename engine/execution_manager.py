@@ -78,6 +78,7 @@ class ExecutionManager:
     cache = None
     path_count = 0
     branch_count = 0
+    branch_points_seen = set()  # Track unique branch points by source location
 
     def merge_states(self, state: SymbolicState, store, flag, module_name=""):
         """Merges two states. The flag is for when we are just merging a particular module"""
@@ -99,6 +100,7 @@ class ExecutionManager:
     def init_run(self, m: ExecutionManager, module) -> None:
         """Initalize run for a module - accepts both Symbol Objects and Syntax Nodes"""
         m.init_run_flag = True
+        print(f"[init_run] initializing module: {module.name}")
 
         # Handle different module types:
         # - InstanceSymbol: use .body (Symbol Object approach)
@@ -116,6 +118,8 @@ class ExecutionManager:
 
         if module_body is not None:
             self.count_conditionals(m, module_body)
+        
+        print(f"[init_run] total paths for module {module.name}: {m.num_paths}")
         # these are for the COI opt
         #self.lhs_signals(m, module.members)
         #self.get_assertions(m, module.members)
@@ -126,40 +130,146 @@ class ExecutionManager:
         stmts = items
         if isinstance(items, ps.BlockStatementSyntax):
             # PySlang uses .items, not .statements for BlockStatementSyntax
+            # not reach in test_2.v
             stmts = getattr(items, 'items', getattr(items, 'statements', items))
         # If stmts is iterable, traverse each statement
         if hasattr(stmts, '__iter__'):
+            print(f"[count_conditionals] traversing statements  {stmts.name} in block")
             for item in stmts:
-                self.count_conditionals(m, item)
+                if type(item) == ps.ProceduralBlockSymbol:
+                    print(f"-   ProceduralBlockSymbol: {str(item.body)}")
+                    # Recurse into the body of the procedural block
+                    self.count_conditionals(m, item.body)
+                elif type(item) == ps.InstanceSymbol:
+                    print(f"-   InstanceSymbol: {item.name}")
+                    # Recurse into the instance body to count conditionals in submodules
+                    if hasattr(item, 'body'):
+                        print(f"    Recursing into InstanceSymbol body: {item.body}")
+                        self.count_conditionals(m, item.body)
+                else:
+                    #print(f"    -item: {item.name}, type: {type(item)},Dir: {dir(item)}")
+                    print(f"    -item: {item.name}, type: {type(item)}")
+                    # For other items, recurse into the item itself
+                    self.count_conditionals(m, item)
         elif items is not None:
-            # Check for each conditional type and recurse into their bodies
+            # Check for Statement objects first (compiled AST with .kind attribute)
+            if hasattr(items, 'kind'):
+                kind = items.kind
+                # Handle Conditional Statement (compiled AST)
+                if kind == ps.StatementKind.Conditional:
+                    print(f"[count_conditionals] found StatementKind.Conditional")
+                    m.num_paths *= 2  # Each if-else doubles the paths
+                    # Conditional statements have ifTrue and ifFalse attributes
+                    if hasattr(items, 'ifTrue'):
+                        self.count_conditionals(m, items.ifTrue)
+                    if hasattr(items, 'ifFalse') and items.ifFalse is not None:
+                        self.count_conditionals(m, items.ifFalse)
+                    return
+                # Handle Case Statement (compiled AST)
+                elif kind == ps.StatementKind.Case:
+                    print(f"[count_conditionals] found StatementKind.Case")
+                    # Case statement: multiply by number of cases
+                    num_cases = len(items.items) if hasattr(items, 'items') else 2
+                    m.num_paths *= num_cases
+                    if hasattr(items, 'items'):
+                        for case in items.items:
+                            if hasattr(case, 'stmt'):
+                                self.count_conditionals(m, case.stmt)
+                    return
+                # Handle Loop Statements (compiled AST)
+                elif kind in [ps.StatementKind.ForLoop, ps.StatementKind.WhileLoop,
+                             ps.StatementKind.DoWhileLoop, ps.StatementKind.RepeatLoop,
+                             ps.StatementKind.ForeverLoop]:
+                    print(f"[count_conditionals] found loop: {kind}")
+                    m.num_paths *= 2  # Loops can be entered or not (simplified)
+                    if hasattr(items, 'body'):
+                        self.count_conditionals(m, items.body)
+                    return
+                # Handle ForeachLoop if it exists
+                elif hasattr(ps.StatementKind, 'ForeachLoop') and kind == ps.StatementKind.ForeachLoop:
+                    print(f"[count_conditionals] found ForeachLoop")
+                    m.num_paths *= 2
+                    if hasattr(items, 'body'):
+                        self.count_conditionals(m, items.body)
+                    return
+                # Handle Block Statement (compiled AST)
+                elif kind == ps.StatementKind.Block:
+                    print(f"[count_conditionals] found StatementKind.Block")
+                    if hasattr(items, 'body'):
+                        body = items.body
+                        # Check if body is iterable (list of statements) or a single statement
+                        if hasattr(body, '__iter__') and not isinstance(body, str):
+                            for substmt in body:
+                                self.count_conditionals(m, substmt)
+                        else:
+                            # Single statement
+                            self.count_conditionals(m, body)
+                    return
+                # Handle List Statement (compiled AST)
+                elif kind == ps.StatementKind.List:
+                    print(f"[count_conditionals] found StatementKind.List")
+                    # List statements use 'list' attribute, not 'body'
+                    if hasattr(items, 'list'):
+                        lst = items.list
+                        print(f"[count_conditionals] List content type: {type(lst)}")
+                        # Check if list is iterable
+                        if hasattr(lst, '__iter__') and not isinstance(lst, str):
+                            for substmt in lst:
+                                print(f"[count_conditionals] List substmt: {substmt}, kind: {getattr(substmt, 'kind', 'N/A')}")
+                                self.count_conditionals(m, substmt)
+                        else:
+                            # Single statement
+                            self.count_conditionals(m, lst)
+                    elif hasattr(items, 'body'):
+                        # Fallback to body if list doesn't exist
+                        body = items.body
+                        if hasattr(body, '__iter__') and not isinstance(body, str):
+                            for substmt in body:
+                                self.count_conditionals(m, substmt)
+                        else:
+                            self.count_conditionals(m, body)
+                    else:
+                        print(f"[count_conditionals] List has no list/body attr, dir: {dir(items)}")
+                    return
+                # Handle Timed Statement (compiled AST)
+                elif kind == ps.StatementKind.Timed:
+                    print(f"[count_conditionals] found StatementKind.Timed")
+                    if hasattr(items, 'stmt'):
+                        self.count_conditionals(m, items.stmt)
+                    return
+
+            # Check for Syntax objects (uncompiled AST)
             if isinstance(items, ps.ConditionalStatementSyntax):
-                m.num_paths += 1
+                print(f"[count_conditionals] found ConditionalStatementSyntax: {items.name}")
+                m.num_paths *= 2  # Each if-else doubles the paths
                 self.count_conditionals(m, items.ifTrue)
                 if items.ifFalse is not None:
                     self.count_conditionals(m, items.ifFalse)
             elif isinstance(items, ps.CaseStatementSyntax):
-                m.num_paths += 1
+                print(f"[count_conditionals] found CaseStatementSyntax: {items.name}")
+                num_cases = len(items.items) if hasattr(items, 'items') else 2
+                m.num_paths *= num_cases
                 for case in items.items:
                     # Case items may have .statements or .statement attribute
                     case_body = getattr(case, 'statements', getattr(case, 'statement', None))
                     self.count_conditionals(m, case_body)
             elif isinstance(items, ps.ForLoopStatementSyntax):
-                m.num_paths += 1
+                m.num_paths *= 2
                 self.count_conditionals(m, items.body)
             elif hasattr(ps, "ForeachLoopStatementSyntax") and isinstance(items, ps.ForeachLoopStatementSyntax):
-                m.num_paths += 1
+                m.num_paths *= 2
                 self.count_conditionals(m, items.body)
             elif hasattr(ps, "WhileLoopStatementSyntax") and isinstance(items, ps.WhileLoopStatementSyntax):
-                m.num_paths += 1
+                m.num_paths *= 2
                 self.count_conditionals(m, items.body)
             elif hasattr(ps, "DoWhileLoopStatementSyntax") and isinstance(items, ps.DoWhileLoopStatementSyntax):
-                m.num_paths += 1
+                m.num_paths *= 2
                 self.count_conditionals(m, items.body)
             elif hasattr(ps, "RepeatLoopStatementSyntax") and isinstance(items, ps.RepeatLoopStatementSyntax):
-                m.num_paths += 1
+                m.num_paths *= 2
                 self.count_conditionals(m, items.body)
             elif isinstance(items, ps.BlockStatementSyntax):
+                print(f"[count_conditionals] found BlockStatementSyntax: {items.name}")
                 # PySlang uses .items, not .statements for BlockStatementSyntax
                 self.count_conditionals(m, items.items)
             elif hasattr(ps, "AlwaysConstructSyntax") and isinstance(items, ps.AlwaysConstructSyntax):

@@ -1,5 +1,80 @@
 # Changelog
 
+## [2026-02-03] [Bug Fix] Fixed count_conditionals and branch_count tracking
+
+### Problem
+1. `count_conditionals` reported wrong path counts (e.g., `place_holder` showed 2 paths instead of 4)
+2. `branch_count` showed 160 instead of the actual unique branch points (4)
+
+### Root Causes & Fixes
+
+1. **Statement objects vs Syntax objects** (`engine/execution_manager.py`)
+   - `count_conditionals` only checked for Syntax types (e.g., `ConditionalStatementSyntax`) but `ProceduralBlockSymbol.body` returns Statement objects (compiled AST) with `.kind` attribute
+   - **Fix**: Added comprehensive handling for `StatementKind` values (lines 157-238):
+     - `StatementKind.Conditional`: Recurse into `ifTrue`/`ifFalse`
+     - `StatementKind.Case`: Recurse into case items via `.items`
+     - `StatementKind.Block`: Recurse into `.body` (check if iterable)
+     - `StatementKind.List`: Use `.list` attribute (NOT `.body`!)
+     - `StatementKind.Timed`: Recurse into `.stmt`
+     - Loop kinds (`ForLoop`, `WhileLoop`, etc.): Recurse into `.body`
+
+2. **StatementKind.List uses `.list`, not `.body`** (`engine/execution_manager.py`)
+   - `StatementKind.List` objects have a `.list` attribute containing child statements
+   - **Fix**: Changed to use `items.list` instead of `items.body` (lines 203-224)
+
+3. **ProceduralBlockSymbol handling** (`engine/execution_manager.py`)
+   - Was recursing into the symbol itself instead of its body
+   - **Fix**: Changed to recurse into `item.body` for `ProceduralBlockSymbol` (lines 138-141)
+
+4. **InstanceSymbol not handled** (`engine/execution_manager.py`)
+   - Submodule instances were not being traversed for conditional counting
+   - **Fix**: Added `InstanceSymbol` handling to recurse into `item.body` (lines 142-147)
+
+5. **Additive vs multiplicative path counting** (`engine/execution_manager.py`)
+   - Path counting used `m.num_paths += 1` but each if-else **doubles** paths
+   - **Fix**: Changed to `m.num_paths *= 2` for conditionals and loops (lines 160, 172, 183, etc.)
+   - For case statements: `m.num_paths *= num_cases`
+
+6. **branch_count accumulated across all paths** (`helpers/slang_helpers.py`, `engine/execution_manager.py`)
+   - `branch_count` incremented every time a conditional was visited, not unique branch points
+   - **Fix**: Added `branch_points_seen` set to track unique branch points (line 81)
+   - **Fix**: Use syntax source location offset as unique identifier:
+     ```python
+     if hasattr(stmt, 'syntax') and stmt.syntax is not None:
+         sr = stmt.syntax.sourceRange()
+         branch_id = (m.curr_module, sr.start.offset)
+     ```
+   - **Fix**: Reset both `branch_count` and `branch_points_seen` before path exploration (`engine/execution_engine.py`, lines 432-433)
+
+### PySlang Library Usage
+
+**Statement objects (compiled AST) attributes:**
+
+| StatementKind | Child Attribute | Notes |
+|---------------|-----------------|-------|
+| `StatementKind.Block` | `.body` | Can be iterable or single statement |
+| `StatementKind.List` | `.list` | **NOT `.body`!** Returns Python list |
+| `StatementKind.Timed` | `.stmt` | Single statement |
+| `StatementKind.Conditional` | `.ifTrue`, `.ifFalse`, `.conditions` | |
+| `StatementKind.Case` | `.items` | Case items have `.stmt` |
+
+**ProceduralBlockSymbol:**
+- `proc_block.body` returns a Statement object (compiled AST)
+- Must check `stmt.kind` for `StatementKind` values, not Syntax types
+
+**InstanceSymbol:**
+- `instance.body` returns the instance body symbol
+- Can be iterated to find nested module contents
+
+**Source location for unique identification:**
+- `stmt.syntax.sourceRange().start.offset` provides stable unique identifier
+- Don't use `str(sourceRange)` - includes memory address which changes
+
+### Result
+- `place_holder`: Now correctly shows 4 paths (2 × 2 from submodule)
+- `test_1`: Correctly shows 2 paths
+- `branch_count`: Now shows 4 unique branch points instead of 160
+
 ## [2026-02-02] [Bug Fix] Fixed Verilog literal parsing and non-blocking assignment semantics
 
 ### Problem

@@ -428,6 +428,10 @@ class ExecutionEngine:
 
         #print(f"total_paths: {total_paths}")
 
+        # Reset branch_count and branch_points_seen before starting path exploration
+        manager.branch_count = 0
+        manager.branch_points_seen = set()
+
         for i in range(len(total_paths)):
             manager.prev_store = state.store
             init_state(state, manager.prev_store, module, visitor)
