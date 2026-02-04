@@ -399,7 +399,7 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
     Returns:
         Z3 expression (BitVecRef, BoolRef, etc.)
     """
-    print(f"[DEBUG parse_expr_to_Z3] expr: {e}, type: {type(e)}, class: {e.__class__.__name__}")
+    #print(f"[DEBUG parse_expr_to_Z3] expr: {e}, type: {type(e)}, class: {e.__class__.__name__}")
     if hasattr(e, 'kind'):
         print(f"[DEBUG parse_expr_to_Z3] kind: {e.kind}")
     if hasattr(e, 'op'):

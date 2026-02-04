@@ -573,7 +573,7 @@ class SymbolicDFS:
 
     def dfs(self, symbol):
         """Main DFS traversal of symbols"""
-        print("DFS visiting symbol:", getattr(symbol, "name", str(symbol)))  # DEBUG
+        #print("DFS visiting symbol:", getattr(symbol, "name", str(symbol)))  # DEBUG
         if not isinstance(symbol, ps.Symbol):
             print(f"- not a Symbol, skipping: {symbol}")  # DEBUG
             return

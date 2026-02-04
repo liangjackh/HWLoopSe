@@ -1,5 +1,67 @@
 # Changelog
 
+## [2026-02-04] [Feature] Implemented lhs_signals and get_assertions for COI analysis
+
+### Summary
+Implemented `lhs_signals` and `get_assertions` functions in `engine/execution_manager.py` based on the Sylvia reference implementation. These functions support Cone of Influence (COI) optimization by tracking signal writes and assertion conditions.
+
+### Changes
+
+1. **`lhs_signals(m, items)`** (`engine/execution_manager.py`, lines 284-348)
+   - Traverses PySlang AST to track which signals are written to in each always block
+   - Populates `m.always_writes` dictionary: `{ProceduralBlockSymbol: [signal_names]}`
+   - Handles all Statement kinds: `Block`, `List`, `Timed`, `Conditional`, `Case`, loops
+   - Extracts LHS signal names from `ExpressionStatement` assignments
+
+2. **`_extract_lhs_from_expr(m, expr)`** (`engine/execution_manager.py`, lines 350-375)
+   - Helper function to extract LHS signal names from assignment expressions
+   - Handles `ExpressionKind.Assignment` and `ExpressionKind.BinaryOp`
+   - Also checks syntax class names for `AssignmentExpression` and `NonblockingAssignment`
+
+3. **`_get_signal_name(expr)`** (`engine/execution_manager.py`, lines 377-411)
+   - Helper function to extract signal name from expression (LHS of assignment)
+   - Handles various expression kinds:
+     - `NamedValue`: Direct variable reference via `expr.symbol.name`
+     - `ElementSelect`: Array access - recurses into `expr.value`
+     - `RangeSelect`: Part select - recurses into `expr.value`
+     - `Concatenation`: Returns first element's name
+   - Falls back to `expr.name` or `expr.identifier.valueText`
+
+4. **`get_assertions(m, items)`** (`engine/execution_manager.py`, lines 413-495)
+   - Traverses PySlang AST to find and collect assertion conditions
+   - Populates `m.assertions` list with assertion condition expressions
+   - Handles:
+     - `StatementKind.ImmediateAssertion`: Extracts `items.cond` or `items.expr`
+     - `StatementKind.ConcurrentAssertion`: Extracts `items.propertySpec`
+   - Also checks syntax class names for `ImmediateAssertionStatement` and `AssertPropertyStatement`
+
+5. **Enabled COI functions in `init_run`** (`engine/execution_manager.py`, lines 124-126)
+   - Uncommented and updated calls to `lhs_signals` and `get_assertions`
+   - Both functions now called with `module_body` after `count_conditionals`
+
+### PySlang Library Usage
+
+**Expression kinds for assignments:**
+- `ExpressionKind.Assignment`: Blocking assignment (`=`)
+- `ExpressionKind.NamedValue`: Variable reference - access name via `expr.symbol.name`
+- `ExpressionKind.ElementSelect`: Array element access `arr[i]` - base in `expr.value`
+- `ExpressionKind.RangeSelect`: Part select `sig[7:0]` - base in `expr.value`
+- `ExpressionKind.Concatenation`: `{a, b, c}` - elements in `expr.operands`
+
+**Assertion statement kinds:**
+- `StatementKind.ImmediateAssertion`: Immediate assertions (`assert(cond)`)
+  - Condition in `items.cond` or `items.expr`
+- `StatementKind.ConcurrentAssertion`: Concurrent assertions (`assert property`)
+  - Property spec in `items.propertySpec`
+
+### Result
+- `get_assertions` successfully finds ImmediateAssertion statements:
+  ```
+  [get_assertions] Found ImmediateAssertion: Expression(ExpressionKind.BinaryOp)
+  ```
+- `lhs_signals` populates `m.always_writes` for COI analysis
+- Test passes: Branch points explored: 4, Paths explored: 32
+
 ## [2026-02-03] [Bug Fix] Fixed count_conditionals and branch_count tracking
 
 ### Problem

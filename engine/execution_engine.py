@@ -201,8 +201,10 @@ class ExecutionEngine:
             # a dictionary keyed by module name, that gives the list of cfgs
             cfgs_by_module = {}
             cfg_count_by_module = {}
-            for module in modules:
+            for module in modules: # in fact is instanceSymbol
+                print("-----------------------------------")
                 sv_module_name = get_module_name(module)
+                print(f"Processing module: {sv_module_name}, is a {module.definition.name}") 
                 #print(sv_module_name)
                 #modules_dict[sv_module_name] = sv_module_name
                 modules_dict[sv_module_name] = module
@@ -213,6 +215,7 @@ class ExecutionEngine:
                 # Pass the module directly - init_run now handles both Symbol Objects and Syntax Nodes
                 sub_manager.init_run(sub_manager, module)
                 self.module_count_sv(manager, module) 
+                print(f"Module {sv_module_name} instance count: {manager.instance_count}")
                 if sv_module_name in manager.instance_count:
                     print(f"Module {sv_module_name} has {manager.instance_count[sv_module_name]} instances")
                     manager.instances_seen[sv_module_name] = 0
@@ -222,7 +225,9 @@ class ExecutionEngine:
                     cfgs_by_module.pop(sv_module_name, None)
                     for i in range(num_instances):
                         instance_name = f"{sv_module_name}_{i}"
+                        print(f"Module {sv_module_name} instance {i} named {instance_name}")
                         manager.names_list.append(instance_name)
+                        print(f"[execute_sv] Added {instance_name} in names_list")
                         cfgs_by_module[instance_name] = []
 
                          # 1) discover always blocks once
@@ -318,6 +323,7 @@ class ExecutionEngine:
                     manager.dependencies[sv_module_name] = {}
                     manager.intermodule_dependencies[sv_module_name] = {}
                     manager.cond_assigns[sv_module_name] = {}
+                print(f"[sum] manager.name_list: {manager.names_list}")
             total_paths = 1
             for x in manager.child_num_paths.values():
                 total_paths *= x

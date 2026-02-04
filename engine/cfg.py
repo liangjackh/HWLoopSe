@@ -470,7 +470,7 @@ class CFG:
         self.make_paths()
         print(f"[DEBUG build_cfg] cfg_edges: {self.cfg_edges}")
         print(f"[DEBUG build_cfg] basic_block_list count: {len(self.basic_block_list)}")
-        # print(self.basic_block_list)
+        print(f"[DEBUG build_cfg] basic_block_list: {self.basic_block_list}")
         # print(self.cfg_edges)
 
         G = nx.DiGraph()
