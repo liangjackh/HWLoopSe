@@ -198,132 +198,72 @@ class ExecutionEngine:
             manager.cache = self.cache
             manager.sv = True
             modules_dict = {}
-            # a dictionary keyed by module name, that gives the list of cfgs
+            # CFGs keyed by module definition name (shared across instances)
+            cfgs_by_definition = {}
+            # CFGs keyed by instance name (references to cfgs_by_definition)
             cfgs_by_module = {}
-            cfg_count_by_module = {}
-            for module in modules: # in fact is instanceSymbol
+
+            # Step 1: Group instances by their module definition name
+            # definition_name -> list of (instance_name, instance_symbol)
+            definitions_to_instances = {}
+            for module in modules:
+                instance_name = get_module_name(module)  # actual instance name
+                definition_name = module.definition.name  # module definition name
                 print("-----------------------------------")
-                sv_module_name = get_module_name(module)
-                print(f"Processing module: {sv_module_name}, is a {module.definition.name}") 
-                #print(sv_module_name)
-                #modules_dict[sv_module_name] = sv_module_name
-                modules_dict[sv_module_name] = module
-                always_blocks_by_module = {sv_module_name: []}
-                manager.seen_mod[sv_module_name] = {}
-                cfgs_by_module[sv_module_name] = []
-                sub_manager = ExecutionManager()
-                # Pass the module directly - init_run now handles both Symbol Objects and Syntax Nodes
-                sub_manager.init_run(sub_manager, module)
-                self.module_count_sv(manager, module) 
-                print(f"Module {sv_module_name} instance count: {manager.instance_count}")
-                if sv_module_name in manager.instance_count:
-                    print(f"Module {sv_module_name} has {manager.instance_count[sv_module_name]} instances")
-                    manager.instances_seen[sv_module_name] = 0
-                    manager.instances_loc[sv_module_name] = ""
-                    num_instances = manager.instance_count[sv_module_name]
-                    #cfgs_by_module.pop(sv_module_name, None)
-                    cfgs_by_module.pop(sv_module_name, None)
-                    for i in range(num_instances):
-                        instance_name = f"{sv_module_name}_{i}"
-                        print(f"Module {sv_module_name} instance {i} named {instance_name}")
-                        manager.names_list.append(instance_name)
-                        print(f"[execute_sv] Added {instance_name} in names_list")
-                        cfgs_by_module[instance_name] = []
+                print(f"Processing instance: {instance_name}, definition: {definition_name}")
 
-                         # 1) discover always blocks once
-                        probe = CFG()
-                        probe.get_always_sv(manager, state, module)
+                modules_dict[instance_name] = module # instance_dict in fact
 
-                        # 2) build a fresh CFG per always block (SV walker)
-                        for ab in probe.always_blocks:
-                            ab_body = getattr(ab, "statement", getattr(ab, "members", ab))
-                            c = CFG()
-                            c.module_name = instance_name
-                            c.basic_blocks_sv(manager, state, ab_body)
-                            c.partition()
-                            c.build_cfg(manager, state)
-                            cfgs_by_module[instance_name].append(c)
+                if definition_name not in definitions_to_instances:
+                    definitions_to_instances[definition_name] = []
+                definitions_to_instances[definition_name].append((instance_name, module))
 
+            # Step 2: Build CFGs once per module definition
+            for definition_name, instances in definitions_to_instances.items():
+                print(f"Building CFGs for module definition: {definition_name} ({len(instances)} instance(s))")
 
-                        """# build X CFGx for the particular module 
-                        cfg = CFG()
-                        cfg.reset()
-                        cfg.get_always_sv(manager, state, module.items)
-                        cfg_count = len(cfg.always_blocks)
-                        for k in range(cfg_count):
-                            cfg.basic_blocks(manager, state, cfg.always_blocks[k])
-                            cfg.partition()
-                            # print(cfg.all_nodes)
-                            # print(cfg.partition_points)
-                            # print(len(cfg.basic_block_list))
-                            # print(cfg.edgelist)
-                            cfg.build_cfg(manager, state)
-                            cfg.module_name = ast.name
+                # Use the first instance to build CFGs (all instances of same definition have same structure)
+                _, representative_module = instances[0]
 
-                            cfgs_by_module[instance_name].append(deepcopy(cfg))
-                            cfg.reset()"""
-                            #print(cfg.paths)
-                        state.store[instance_name] = {}
-                        manager.dependencies[instance_name] = {}
-                        manager.intermodule_dependencies[instance_name] = {}
-                        manager.cond_assigns[instance_name] = {}
-                else: 
-                    """print(f"Module {sv_module_name} single instance")
-                    manager.names_list.append(sv_module_name)
-                    # build X CFGx for the particular module 
-                    cfg = CFG()
-                    cfg.all_nodes = []
-                    #cfg.partition_points = []
-                    cfg.get_always_sv(manager, state, module)
-                    cfg_count = len(cfg.always_blocks)
-                    # TODO: resolve deepcopy issue here
-                    always_blocks_by_module[sv_module_name] = cfg.always_blocks
-                    for k in range(cfg_count):
-                        cfg.basic_blocks_sv(manager, state, always_blocks_by_module[sv_module_name][k])
-                        cfg.partition()
-                        # print(cfg.partition_points)
-                        # print(len(cfg.basic_block_list))
-                        # print(cfg.edgelist)
-                        cfg.build_cfg(manager, state)
-                        #print(cfg.cfg_edges)
+                # Discover always blocks
+                probe = CFG()
+                probe.get_always_sv(manager, state, representative_module)
 
-                        #TODO: double-check curr_module starts at the right spot
-                        cfg.module_name = manager.curr_module
-                        # TODO: used to be Deepcopy in Sylvia,too 
-                        cfgs_by_module[sv_module_name].append(cfg)
-                        cfg.reset()
-                        #print(cfg.paths)"""
-                    
+                cfgs_by_definition[definition_name] = []
+                for ab in probe.always_blocks:
+                    ab_body = getattr(ab, "statement", getattr(ab, "members", ab))
+                    c = CFG()
+                    c.module_name = definition_name
+                    c.basic_blocks_sv(manager, state, ab_body)
+                    c.partition()
+                    c.build_cfg(manager, state)
+                    cfgs_by_definition[definition_name].append(c)
 
+                print(f"  Built {len(cfgs_by_definition[definition_name])} CFG(s) for {definition_name}")
 
-                    print(f"Module {sv_module_name} single instance")
-                    manager.names_list.append(sv_module_name)
-                    modules_dict[sv_module_name] = module                 # store AST
-                    
+            # Step 3: Create per-instance state and reference shared CFGs
+            for definition_name, instances in definitions_to_instances.items():
+                # Track instance count per definition
+                manager.instance_count[definition_name] = len(instances)
+                if len(instances) > 1:
+                    manager.instances_seen[definition_name] = 0
+                    manager.instances_loc[definition_name] = ""
 
-                    # discover always blocks once
-                    probe = CFG()
-                    probe.get_always_sv(manager, state, module)
-                    always_blocks_by_module[sv_module_name] = probe.always_blocks
-                    #print(probe.always_blocks)
+                for instance_name, module in instances:
+                    print(f"Setting up instance: {instance_name} (definition: {definition_name})")
+                    manager.names_list.append(instance_name)
+                    manager.seen_mod[instance_name] = {}
 
-                    # fresh CFG per always (SV walker)
-                    cfgs_by_module[sv_module_name] = []
-                    for ab in always_blocks_by_module[sv_module_name]:
-                        ab_body = getattr(ab, "statement", getattr(ab, "members", ab))
-                        c = CFG()
-                        c.module_name = sv_module_name
-                        c.basic_blocks_sv(manager, state, ab_body)
-                        c.partition()
-                        c.build_cfg(manager, state)
-                        cfgs_by_module[sv_module_name].append(c)
+                    # Reference shared CFGs from definition
+                    cfgs_by_module[instance_name] = cfgs_by_definition[definition_name]
 
+                    # Per-instance state
+                    state.store[instance_name] = {}
+                    manager.dependencies[instance_name] = {}
+                    manager.intermodule_dependencies[instance_name] = {}
+                    manager.cond_assigns[instance_name] = {}
 
-                    state.store[sv_module_name] = {}
-                    manager.dependencies[sv_module_name] = {}
-                    manager.intermodule_dependencies[sv_module_name] = {}
-                    manager.cond_assigns[sv_module_name] = {}
-                print(f"[sum] manager.name_list: {manager.names_list}")
+            print(f"[sum] manager.names_list: {manager.names_list}")
             total_paths = 1
             for x in manager.child_num_paths.values():
                 total_paths *= x

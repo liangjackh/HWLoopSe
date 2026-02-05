@@ -1,5 +1,41 @@
 # Changelog
 
+## [2026-02-05] [Refactor] Optimized CFG construction to share CFGs across instances of same module definition
+
+### Problem
+When a module definition has multiple instances (e.g., `place_holder_2` instantiated as `test_1` and `test_2`), the code was building redundant CFGs for each instance. Additionally, instance names were generated as `{module_name}_{index}` (e.g., `place_holder_2_0`, `place_holder_2_1`) instead of using actual Verilog instance names.
+
+### Changes
+
+1. **Grouped instances by module definition** (`engine/execution_engine.py`, lines 206-219)
+   - Added `definitions_to_instances` dictionary: `{definition_name: [(instance_name, module), ...]}`
+   - Uses `module.definition.name` to get the module definition name
+   - Uses `get_module_name(module)` to get the actual instance name
+
+2. **Build CFGs once per module definition** (`engine/execution_engine.py`, lines 221-242)
+   - Added `cfgs_by_definition` dictionary: `{definition_name: [cfg_list]}`
+   - CFGs are built only once using the first instance as representative
+   - For `test_2.v`: builds CFGs for `place_holder` (1 instance) and `place_holder_2` (2 instances) only twice total, not 3 times
+
+3. **Reference shared CFGs per instance** (`engine/execution_engine.py`, lines 244-264)
+   - `cfgs_by_module[instance_name]` now references `cfgs_by_definition[definition_name]`
+   - Per-instance state (`state.store`, `manager.dependencies`, etc.) remains separate
+   - Uses actual instance names: `test_1`, `test_2` instead of `place_holder_2_0`, `place_holder_2_1`
+
+### PySlang Library Usage
+
+**Getting module definition name vs instance name:**
+- `module.definition.name`: Returns the module definition name (e.g., `place_holder_2`)
+- `get_module_name(module)` / `module.name`: Returns the instance name (e.g., `test_1`)
+
+### Result
+For `test_2.v` with 3 instances (place_holder, test_1, test_2) of 2 module definitions:
+- Before: Built 3 sets of CFGs (one per instance)
+- After: Built 2 sets of CFGs (one per definition), shared across instances
+- Instance names now match Verilog source: `place_holder`, `test_1`, `test_2`
+- Branch tracking uses actual instance names: `branch_id: ('test_1', 629)`
+- Execution: Branch points explored: 4, Paths explored: 32
+
 ## [2026-02-04] [Feature] Implemented lhs_signals and get_assertions for COI analysis
 
 ### Summary
