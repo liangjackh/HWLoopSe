@@ -84,6 +84,16 @@ def main():
     optparser.add_option("--explore_time", help="Time to explore in seconds", dest="explore_time")
     optparser.add_option("--strategy", dest="strategy", default="blind",
                          help="Exploration strategy: blind or directed, Default=blind")
+    optparser.add_option("--auto-plan", action="store_true", dest="auto_plan",
+                         default=False, help="Enable LLM-based milestone generation")
+    optparser.add_option("--target", dest="target",
+                         help="Verification target expression (e.g., 'test_1.out > 3')")
+    optparser.add_option("--llm-api-key", dest="llm_api_key",
+                         help="API key for LLM (OpenAI or Anthropic)")
+    optparser.add_option("--llm-provider", dest="llm_provider", default="auto",
+                         help="LLM provider: openai, anthropic, or auto (Default=auto)")
+    optparser.add_option("--mock", action="store_true", dest="mock",
+                         default=False, help="Use mock LLM responses for testing")
     (options, args) = optparser.parse_args()
 
 
@@ -257,16 +267,72 @@ def main():
             symbol_visitor = SlangSymbolVisitor()
 
             # Configure exploration strategy
-            if options.strategy == "directed":
+            if options.auto_plan:
+                # LLM-based milestone generation flow
+                from frontend.context_slicer import ContextSlicer
+                from frontend.llm_planner import LLMPlanner
+                from frontend.condition_parser import parse_condition
+                from engine.strategies import MilestoneDirectedStrategy
+                from engine.milestone import Milestone, MilestoneManager
+
+                if not options.target:
+                    print("[Error] --auto-plan requires --target to specify verification goal")
+                    exit(1)
+
+                print(f"[main] Auto-plan mode enabled for target: {options.target}")
+
+                # 1. Slice Context
+                slicer = ContextSlicer(driver, compilation, modules)
+                context_code = slicer.get_context(options.target)
+                print(f"[main] Extracted {len(context_code)} chars of RTL context")
+
+                # 2. Get Valid Signal Names (reuse SymbolicDFS)
+                # Do a quick traversal to collect all signal names
+                all_signals = set()
+                for module in modules:
+                    my_visitor_for_symbol.symbolic_store.clear()
+                    my_visitor_for_symbol.visited.clear()
+                    my_visitor_for_symbol.dfs(module)
+                    all_signals.update(my_visitor_for_symbol.symbolic_store.keys())
+                all_signals = list(all_signals)
+                print(f"[main] Found {len(all_signals)} signals: {all_signals[:10]}...")
+
+                # 3. Call LLM Planner
+                planner = LLMPlanner(
+                    api_key=options.llm_api_key,
+                    provider=options.llm_provider,
+                    mock=options.mock
+                )
+                milestone_dicts = planner.generate_plan(context_code, options.target, all_signals)
+                print(f"[main] Generated {len(milestone_dicts)} milestones:")
+                for m in milestone_dicts:
+                    print(f"  Step {m['step']}: {m['description']} ({m['condition']})")
+
+                # 4. Convert to Backend Milestone Objects
+                milestones = []
+                for m in milestone_dicts:
+                    try:
+                        signal_path, operator, value = parse_condition(m['condition'])
+                        milestone = Milestone(m['description'], signal_path, operator, value)
+                        milestones.append(milestone)
+                    except ValueError as e:
+                        print(f"[main] Warning: Skipping invalid milestone: {e}")
+
+                # 5. Create strategy with milestones
+                milestone_manager = MilestoneManager(milestones)
+                strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles))
+                engine.set_strategy(strategy)
+                print(f"[main] Using directed strategy with {len(milestones)} milestones")
+
+            elif options.strategy == "directed":
                 from engine.strategies import MilestoneDirectedStrategy
                 from engine.milestone import MilestoneManager
 
-                # TODO: Milestone generation will be configured separately
-                # For now, create an empty milestone manager (will be populated later)
+                # Manual directed mode without auto-plan (empty milestones)
                 milestone_manager = MilestoneManager([])
                 strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles))
                 engine.set_strategy(strategy)
-                print(f"[main] Using directed strategy")
+                print(f"[main] Using directed strategy (no milestones)")
             else:
                 from engine.strategies import BlindSearchStrategy
                 strategy = BlindSearchStrategy()

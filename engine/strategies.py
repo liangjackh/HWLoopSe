@@ -322,7 +322,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         print(f"[DirectedStrategy] Starting milestone-directed search")
         print(f"[DirectedStrategy] Milestones: {self.milestone_manager.milestones}")
-        print(f"[DirectedStrategy] Max cycles: {min(self.max_cycles, num_cycles)}")
+        print(f"[DirectedStrategy] Max cycles: {min(self.max_cycles, int(num_cycles))}")
 
         # Reset milestone progress
         self.milestone_manager.reset()
