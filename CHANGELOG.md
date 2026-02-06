@@ -1,5 +1,50 @@
 # Changelog
 
+## [2026-02-06] [Refactor] Implemented Strategy Pattern for pluggable exploration strategies
+
+### Problem
+The exploration logic was tightly coupled inside `ExecutionEngine.execute_sv()`, making it difficult to experiment with different search strategies (e.g., blind exhaustive search vs. milestone-directed search).
+
+### Changes
+
+1. **Created `engine/milestone.py`** - Milestone management system
+   - `Milestone` class: Represents a verification goal with signal name, operator, and target value
+   - `MilestoneManager` class: Manages milestone checking and tracking
+   - Methods: `check_milestone()`, `get_completed_count()`, `get_progress()`
+
+2. **Created `engine/strategies.py`** - Exploration strategy implementations
+   - `ExplorationStrategy` (ABC): Abstract base class with `run()` method
+   - `BlindSearchStrategy`: Existing Cartesian product logic (legacy behavior preserved)
+   - `MilestoneDirectedStrategy`: New LLM-guided, priority-queue-based exploration (placeholder for future milestone configuration)
+
+3. **Refactored `engine/execution_engine.py`**
+   - Added `strategy` attribute and `set_strategy()` method (lines 43-48)
+   - Extracted exploration loop into `BlindSearchStrategy.run()`
+   - `execute_sv()` now delegates to strategy after setup phase (lines 311-327)
+   - Falls back to `BlindSearchStrategy` if no strategy is set
+
+4. **Updated `main.py`** - CLI argument for strategy selection
+   - Added `--strategy` option: `blind` (default) or `directed` (lines 85-86)
+   - Strategy configuration before `engine.execute_sv()` (lines 259-274)
+
+### Usage
+
+```bash
+# Default blind search (existing behavior)
+python3 -m main 1 designs/test-designs/test_2.v --sv
+
+# Explicit blind search
+python3 -m main 1 designs/test-designs/test_2.v --sv --strategy blind
+
+# Directed search (milestone configuration TBD)
+python3 -m main 1 designs/test-designs/test_2.v --sv --strategy directed
+```
+
+### Result
+- Blind search strategy verified: Branch points explored: 4, Paths explored: 32
+- Strategy pattern enables easy addition of new exploration strategies
+- Milestone-directed strategy ready for milestone configuration
+
 ## [2026-02-05] [Refactor] Optimized CFG construction to share CFGs across instances of same module definition
 
 ### Problem

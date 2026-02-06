@@ -82,6 +82,8 @@ def main():
     optparser.add_option("--use_cache", action="store_true", dest="use_cache",
                          default=False, help="Use the query caching, Default=False")
     optparser.add_option("--explore_time", help="Time to explore in seconds", dest="explore_time")
+    optparser.add_option("--strategy", dest="strategy", default="blind",
+                         help="Exploration strategy: blind or directed, Default=blind")
     (options, args) = optparser.parse_args()
 
 
@@ -252,7 +254,25 @@ def main():
             # delegate method from z3Visitor
             my_visitor_for_symbol.expr_to_z3 = lambda m, s, e: parse_expr_to_Z3(e, s, m)
 
-            symbol_visitor = SlangSymbolVisitor() 
+            symbol_visitor = SlangSymbolVisitor()
+
+            # Configure exploration strategy
+            if options.strategy == "directed":
+                from engine.strategies import MilestoneDirectedStrategy
+                from engine.milestone import MilestoneManager
+
+                # TODO: Milestone generation will be configured separately
+                # For now, create an empty milestone manager (will be populated later)
+                milestone_manager = MilestoneManager([])
+                strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles))
+                engine.set_strategy(strategy)
+                print(f"[main] Using directed strategy")
+            else:
+                from engine.strategies import BlindSearchStrategy
+                strategy = BlindSearchStrategy()
+                engine.set_strategy(strategy)
+                print("[main] Using blind search strategy")
+
             engine.execute_sv(my_visitor_for_symbol, modules, None, num_cycles)
             #symbol_visitor.visit(modules)
             #print(f"symbol_visitor.branch_points: {symbol_visitor.branch_points}")

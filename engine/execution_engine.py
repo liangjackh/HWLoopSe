@@ -8,7 +8,7 @@ from .cfg import CFG
 import re
 import os
 from optparse import OptionParser
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 import random, string
 import time
 import gc
@@ -20,6 +20,9 @@ from copy import deepcopy
 import pyslang as ps
 from helpers.slang_helpers import get_module_name, init_state
 
+if TYPE_CHECKING:
+    from .strategies import ExplorationStrategy
+
 # Tuple of PySlang AST node types that represent conditional/loop statements
 CONDITIONALS = (
     ps.ConditionalStatementSyntax,
@@ -29,12 +32,20 @@ CONDITIONALS = (
     ps.LoopStatementSyntax,
     ps.DoWhileStatementSyntax
 )
+
+
 class ExecutionEngine:
     # Drives the entire symbolic execution process
     module_depth: int = 0 # Tracks current module nesting depth during execution
     debug: bool = True # Boolean flag to enable debug output
     done: bool = False # Boolean flag indicating if execution is complete
     cache = None # Optional Redis cache for Z3 solver results TODO
+    strategy: Optional['ExplorationStrategy'] = None  # Pluggable exploration strategy
+
+    def set_strategy(self, strategy: 'ExplorationStrategy') -> None:
+        """Set the exploration strategy to use."""
+        self.strategy = strategy
+        print(f"[ExecutionEngine] Strategy set to: {strategy.__class__.__name__}")
 
     def check_pc_SAT(self, s: Solver, constraint: ExprRef) -> bool:
         """Check if pc is satisfiable before taking path."""
@@ -279,246 +290,42 @@ class ExecutionEngine:
                 manager.opt_1 = False
             manager.modules = modules_dict
 
-            mapped_paths = {}
-            
-            #print(total_paths)
-
-
-
-
-        print("Here")
-        print(f"Branch points explored: {manager.branch_count}")     #TODO
-
-
+        # Delegate exploration to the strategy
+        print("Starting exploration...")
+        print(f"Branch points explored: {manager.branch_count}")
 
         if self.debug:
             manager.debug = True
-        # NOTE: assertions_always_intersect() was removed - it depended on PyVerilog functions
-        # This function call has been commented out. If assertion intersection logic is needed,
-        # it should be reimplemented using PySlang AST types.
-        # self.assertions_always_intersect(manager) # Where is this function defined?
 
         manager.seen = {}
-        
-        # === 新增代码开始  gemini ===
+
         if not manager.names_list:
             print("[Error] No modules found to execute. Please check if the input file contains valid modules.")
             return
-        # === 新增代码结束 ===
 
         for name in manager.names_list:
             manager.seen[name] = []
 
-            # each module has a mapping table of cfg idx to path list
-            mapped_paths[name] = {}
-        
-        # 原来的出错行
-        manager.curr_module = manager.names_list[0]
-        # ... (之后的代码)
-        for name in manager.names_list:
-            manager.seen[name] = []
-
-            # each module has a mapping table of cfg idx to path list
-            mapped_paths[name] = {}
         manager.curr_module = manager.names_list[0]
 
-        # index into cfgs list
-        """curr_cfg = 0
-        for module_name in cfgs_by_module:
-            for cfg in cfgs_by_module[module_name]:
-                mapped_paths[module_name][curr_cfg] = cfg.paths
-                curr_cfg += 1
-            curr_cfg = 0"""
-        for module_name, cfg_list in cfgs_by_module.items():
-            for i, cfg in enumerate(cfg_list):
-                mapped_paths[module_name][i] = cfg.paths
+        # Use strategy if set, otherwise fall back to BlindSearchStrategy
+        if self.strategy is None:
+            from .strategies import BlindSearchStrategy
+            self.strategy = BlindSearchStrategy()
+            print("[ExecutionEngine] No strategy set, using BlindSearchStrategy")
 
+        # Run the exploration strategy
+        self.strategy.run(
+            engine=self,
+            visitor=visitor,
+            modules=modules,
+            modules_dict=modules_dict,
+            cfgs_by_module=cfgs_by_module,
+            manager=manager,
+            state=state,
+            num_cycles=num_cycles
+        )
 
-        #stride_length = cfg_count
-        # Single-cycle path combination: Use generators (OOM fix - this is the main fix)
-        # Multi-cycle and cross-module: Reverted to list-based for explanation purposes
-        single_paths_by_module = {}
-        total_paths_by_module = {}
-        for module_name in cfgs_by_module:
-            print(f"Module {module_name} has {len(cfgs_by_module[module_name])} always blocks")
-            # Single-cycle path combination: Use generator (lazy evaluation - prevents OOM)
-            single_paths_by_module[module_name] = product(*mapped_paths[module_name].values())
-            # NOTE: This will consume the generator above, so we need to recreate it
-            total_paths_by_module[module_name] = list(tuple(product(product(*mapped_paths[module_name].values()), repeat=int(num_cycles))))
-        # {total_paths_by_module}")
-        #print(f"single paths by module: {total_paths_by_module}")
-        if not total_paths_by_module:
-            total_paths = []
-        else:
-            keys = list(total_paths_by_module.keys())
-            values = []
-            for key in keys:
-                module_paths = total_paths_by_module[key]
-                if not module_paths:
-                    module_paths = [tuple(() for _ in range(int(num_cycles)))]
-                values.append(module_paths)
-            #print(f"Module {key} paths: {module_paths}")
-            # build total_paths as a list of dicts where each dict picks one path (possibly multi-cycle)
-            # from each module. This takes the Cartesian product across modules, selecting a single
-            # path entry for every module in each combination.
-
-            total_paths = []
-            for path_combo in product(*values):
-                # ensure each module value is a list (so iteration like `for complete_single_cycle_path in curr_path[module_name]` works)
-                total_paths.append({k: list(p) for k, p in zip(keys, path_combo)})
-        
-        #single_paths = list(product(*mapped_paths[manager.curr_module].values()))
-        #total_paths = list(tuple(product(single_paths, repeat=int(num_cycles))))
-
-        # for each combinatoin of multicycle paths
-
-        #print(f"total_paths: {total_paths}")
-
-        # Reset branch_count and branch_points_seen before starting path exploration
-        manager.branch_count = 0
-        manager.branch_points_seen = set()
-
-        for i in range(len(total_paths)):
-            manager.prev_store = state.store
-            init_state(state, manager.prev_store, module, visitor)
-            # initalize inputs with symbols for all submodules too
-            for module_name in manager.names_list:
-                manager.curr_module = module_name
-                # actually want to terminate this part after the decl and comb part
-                #compilation.getRoot().visit(my_visitor_for_symbol.visit)
-                # Clear visitor state before processing each module to avoid mixing variables
-                visitor.symbolic_store.clear() #TODO:clear is a waste
-                visitor.visited.clear()
-                visitor.dfs(modules_dict[module_name])
-                # Transfer discovered variables to state.store with fresh symbols
-                for var_name in visitor.symbolic_store:
-                    if var_name not in state.store[module_name]:
-                        state.store[module_name][var_name] = init_symbol()
-                #self.search_strategy.visit_module(manager, state, ast, modules_dict)
-                
-            """for cfg_idx in range(cfg_count):
-                for node in cfgs_by_module[manager.curr_module][cfg_idx].decls:
-                    visitor.dfs(node)
-                    #self.search_strategy.visit_stmt(manager, state, node, modules_dict, None)
-                for node in cfgs_by_module[manager.curr_module][cfg_idx].comb:
-                    visitor.dfs(node)
-                    #self.search_strategy.visit_stmt(manager, state, node, modules_dict, None) """
-            for c in cfgs_by_module[manager.curr_module]:
-                for node in c.decls:
-                    visitor.dfs(node)
-                for node in c.comb:
-                    visitor.dfs(node)
-
-   
-            manager.curr_module = manager.names_list[0]
-            # makes assumption top level module is first in line
-            # ! no longer path code as in bit string, but indices
-
-             
-            print(f"461 checking states Executing path {i+1} / {len(total_paths)}")
-            self.check_state(manager, state)
-
-            curr_path = total_paths[i]
-            modules_seen = 0
-            for module_name in curr_path:
-                manager.curr_module = manager.names_list[modules_seen]
-                manager.cycle = 0
-                for complete_single_cycle_path in curr_path[module_name]:
-                    # Apply pending non-blocking assignments from previous cycle
-                    # (only applies when cycle > 0, i.e., not the first cycle)
-                    if manager.cycle > 0:
-                        state.apply_pending_nba()
-                    #for cfg_path in complete_single_cycle_path:
-                    for cfg_idx, cfg_path in enumerate(complete_single_cycle_path):
-                        directions = cfgs_by_module[module_name][cfg_idx].compute_direction(cfg_path)
-                        if self.debug:
-                            print(f"DEBUG: cfg_path={cfg_path}, directions={directions}")
-                            print(f"DEBUG: basic_block_list has {len(cfgs_by_module[module_name][cfg_idx].basic_block_list)} blocks")
-                            #for bb_idx, bb in enumerate(cfgs_by_module[module_name][cfg_idx].basic_block_list):
-                                #print(f"DEBUG: basic_block[{bb_idx}] = {[str(s)[:50] if s else 'None' for s in bb]}")
-                        #directions = cfgs_by_module[module_name][complete_single_cycle_path.index(cfg_path)].compute_direction(cfg_path)
-                        k: int = 0
-                        for basic_block_idx in cfg_path:
-                            if basic_block_idx < 0: 
-                                print("Skipping dummy node in path")
-                                # dummy node
-                                continue
-                            else:
-                                direction = directions[k]
-                                k += 1
-                                basic_block = cfgs_by_module[module_name][cfg_idx].basic_block_list[basic_block_idx]
-                                print(f"visiting basic_block: {[str(s)[:50] if s else 'None' for s in basic_block]}")
-                                #basic_block = cfgs_by_module[module_name][complete_single_cycle_path.index(cfg_path)].basic_block_list[basic_block_idx]
-                                for stmt in basic_block:
-                                    # print(f"updating curr mod {manager.curr_module}")
-                                    #self.check_state(manager, state)
-                                    visitor.visit_stmt(manager, state, stmt, modules_dict, direction)
-                                    #self.search_strategy.visit_stmt(manager, state, stmt, modules_dict, direction)
-                    # only do once, and the last CFG 
-                    #for node in cfgs_by_module[module_name][complete_single_cycle_path.index(cfg_path)].comb:
-                        #self.search_strategy.visit_stmt(manager, state, node, modules_dict, None)  
-                    manager.cycle += 1
-                modules_seen += 1
-            manager.cycle = 0
-            self.done = True
-            print(f"494 checking path {i+1} / {len(total_paths)}")
-            self.check_state(manager, state)
-            self.done = False
-
-            manager.curr_level = 0
-            for module_name in manager.instances_seen:
-                manager.instances_seen[module_name] = 0
-                manager.instances_loc[module_name] = ""
-            if self.debug:
-                print("------------------------")
-            if (manager.assertion_violation):
-                print("Assertion violation")
-                # Print violated assertions info (constraints stored here since solver uses push/pop)
-                if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
-                    print("Violated assertion details:")
-                    for va in manager.violated_assertions:
-                        print(f"  - condition: {va.get('condition', 'N/A')}")
-                        print(f"    z3_condition: {va.get('z3_condition', 'N/A')}")
-                        print(f"    path condition: {va.get('path condition', 'N/A')}")
-                        print(f"    kind: {va.get('kind', 'N/A')}")
-                #manager.assertion_violation = False
-                counterexample = {}
-                symbols_to_values = {}
-                solver_start = time.process_time()
-                if self.solve_pc(state.pc):
-                    solver_end = time.process_time()
-                    manager.solver_time += solver_end - solver_start
-                    solved_model = state.pc.model()
-                    decls =  solved_model.decls()
-                    for item in decls:
-                        symbols_to_values[item.name()] = solved_model[item]
-
-                    # plug in phase
-                    for module in state.store:
-                        for signal in state.store[module]:
-                            for symbol in symbols_to_values:
-                                if state.store[module][signal] == symbol:
-                                    counterexample[signal] = symbols_to_values[symbol]
-
-                    print(counterexample)
-                else:
-                    print("UNSAT")
-                return
-            
-            state.pc.reset()
-
-            for module in manager.dependencies:
-                module = {}
-                
-            
-            manager.ignore = False
-            manager.abandon = False
-            manager.reg_writes.clear()
-            for name in manager.names_list:
-                state.store[name] = {}
-            manager.path_count += 1
-        print(f"Branch points explored: {manager.branch_count}")
-        print(f"Paths explored: {manager.path_count}")
         self.module_depth -= 1
 
     def check_state(self, manager, state):
