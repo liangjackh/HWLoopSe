@@ -223,8 +223,37 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
         """
         if self.mock:
             print(f"[LLMPlanner] Mock mode: returning hardcoded milestones for '{target}'")
+
+            # Extract module name from target (e.g., "place_holder.out > 2" -> "place_holder")
+            module_name = None
+            if '.' in target:
+                module_name = target.split('.')[0]
+
             # Find matching mock response or use default
             milestones = self.MOCK_RESPONSES.get(target, self.MOCK_RESPONSES["default"])
+
+            # If we have a module name, prefix signal names in conditions
+            if module_name:
+                milestones = []
+                base_milestones = self.MOCK_RESPONSES.get(target, self.MOCK_RESPONSES["default"])
+                for m in base_milestones:
+                    milestone = m.copy()
+                    condition = milestone['condition']
+
+                    # Add module prefix to signal names that don't already have one
+                    # Simple heuristic: if condition contains a signal name without '.', prefix it
+                    if '.' not in condition:
+                        # Extract signal name (first word before operator)
+                        import re
+                        match = re.match(r'(\w+)\s*([<>=!]+)', condition)
+                        if match:
+                            signal = match.group(1)
+                            # Prefix with module name
+                            condition = condition.replace(signal, f"{module_name}.{signal}", 1)
+                            milestone['condition'] = condition
+
+                    milestones.append(milestone)
+
             return milestones
 
         if not self.client:

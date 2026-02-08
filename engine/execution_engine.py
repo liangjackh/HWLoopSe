@@ -42,6 +42,12 @@ class ExecutionEngine:
     cache = None # Optional Redis cache for Z3 solver results TODO
     strategy: Optional['ExplorationStrategy'] = None  # Pluggable exploration strategy
 
+    # Auto-plan configuration
+    auto_plan_enabled: bool = False  # Enable LLM-based milestone generation
+    llm_api_key: Optional[str] = None  # API key for LLM provider
+    llm_provider: str = "auto"  # LLM provider: openai, anthropic, or auto
+    llm_mock: bool = False  # Use mock LLM responses for testing
+
     def set_strategy(self, strategy: 'ExplorationStrategy') -> None:
         """Set the exploration strategy to use."""
         self.strategy = strategy
@@ -197,9 +203,19 @@ class ExecutionEngine:
                 for i in range(manager.child_num_paths[child]):
                     manager.seen_mod[child][(to_binary(i))] = {}
 
-    def execute_sv(self, visitor, modules, manager: Optional[ExecutionManager], num_cycles: int) -> None:
+    def execute_sv(self, visitor, modules, manager: Optional[ExecutionManager], num_cycles: int,
+                   driver=None, compilation=None) -> None:
         """Main entry point for PySlang execution
-        Drives symbolic execution for SystemVerilog designs."""
+        Drives symbolic execution for SystemVerilog designs.
+
+        Args:
+            visitor: SymbolicDFS visitor for traversing AST
+            modules: List of module instances
+            manager: ExecutionManager (or None to create new)
+            num_cycles: Number of clock cycles to execute
+            driver: PySlang driver (needed for auto-plan context slicing)
+            compilation: PySlang compilation (needed for auto-plan context slicing)
+        """
         gc.collect()
         print(f"Executing for {num_cycles} clock cycles")
         self.module_depth += 1
@@ -289,6 +305,82 @@ class ExecutionEngine:
             else:
                 manager.opt_1 = False
             manager.modules = modules_dict
+
+        # Step 4: Auto-plan milestone generation (if enabled)
+        if self.auto_plan_enabled:
+            print("[ExecutionEngine] Auto-plan mode enabled")
+
+            # Check if driver and compilation are available
+            if driver is None or compilation is None:
+                print("[ExecutionEngine] Warning: Auto-plan requires driver and compilation objects")
+                print("[ExecutionEngine] Falling back to blind strategy")
+            else:
+                from frontend.assertion_extractor import extract_verification_targets
+                from frontend.context_slicer import ContextSlicer
+                from frontend.llm_planner import LLMPlanner
+                from frontend.condition_parser import parse_condition
+                from engine.milestone import Milestone, MilestoneManager
+                from engine.strategies import MilestoneDirectedStrategy
+
+                # 4.1: Extract verification targets from assertions
+                targets = extract_verification_targets(modules, manager)
+
+                if not targets:
+                    print("[ExecutionEngine] No assertions found in design, using blind strategy")
+                else:
+                    print(f"[ExecutionEngine] Found {len(targets)} verification target(s) from assertions")
+
+                    # 4.2: For each target, generate milestones
+                    all_milestones = []
+                    for target in targets:
+                        print(f"[ExecutionEngine] Planning for: {target.description}")
+
+                        # Extract RTL context
+                        slicer = ContextSlicer(driver, compilation, modules)
+                        context = slicer.get_context(target.target_expr)
+                        print(f"[ExecutionEngine] Extracted {len(context)} chars of RTL context")
+
+                        # Get valid signal names (reuse SymbolicDFS)
+                        all_signals = set()
+                        for module in modules:
+                            visitor.symbolic_store.clear()
+                            visitor.visited.clear()
+                            visitor.dfs(module)
+                            all_signals.update(visitor.symbolic_store.keys())
+                        all_signals = list(all_signals)
+                        print(f"[ExecutionEngine] Found {len(all_signals)} signals")
+
+                        # Generate milestones using LLM
+                        planner = LLMPlanner(
+                            api_key=self.llm_api_key,
+                            provider=self.llm_provider,
+                            mock=self.llm_mock
+                        )
+                        milestone_dicts = planner.generate_plan(context, target.target_expr, all_signals)
+                        print(f"[ExecutionEngine] Generated {len(milestone_dicts)} milestones for this target")
+
+                        # Convert to Milestone objects
+                        for m in milestone_dicts:
+                            try:
+                                signal_path, operator, value = parse_condition(m['condition'])
+                                milestone = Milestone(m['description'], signal_path, operator, value)
+                                all_milestones.append(milestone)
+                                print(f"[ExecutionEngine]   Step {m['step']}: {m['description']} ({m['condition']})")
+                            except ValueError as e:
+                                print(f"[ExecutionEngine] Warning: Skipping invalid milestone: {e}")
+
+                    # 4.3: Create directed strategy with milestones
+                    if all_milestones:
+                        milestone_manager = MilestoneManager(all_milestones)
+                        # Note: Using BlindSearchStrategy for now due to path explosion issues
+                        # in MilestoneDirectedStrategy. The milestones are still generated and
+                        # can be used for analysis or future directed search improvements.
+                        print(f"[ExecutionEngine] Generated {len(all_milestones)} milestone(s)")
+                        print(f"[ExecutionEngine] Note: Using blind strategy (directed strategy has scalability issues)")
+                        # TODO: Fix MilestoneDirectedStrategy path explosion before enabling
+                        # self.strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles))
+                    else:
+                        print("[ExecutionEngine] No valid milestones generated, using blind strategy")
 
         # Delegate exploration to the strategy
         print("Starting exploration...")

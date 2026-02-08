@@ -295,16 +295,18 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
     at branch points and prioritizing paths that make progress toward milestones.
     """
 
-    def __init__(self, milestone_manager: 'MilestoneManager', max_cycles: int = 100):
+    def __init__(self, milestone_manager: 'MilestoneManager', max_cycles: int = 100, max_paths: int = 1000):
         """
         Initialize the directed strategy.
 
         Args:
             milestone_manager: Manager for milestone checking
             max_cycles: Maximum clock cycles before timeout
+            max_paths: Maximum number of paths to explore before giving up
         """
         self.milestone_manager = milestone_manager
         self.max_cycles = max_cycles
+        self.max_paths = max_paths
         self.paths_explored = 0
 
     def run(
@@ -322,7 +324,8 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         print(f"[DirectedStrategy] Starting milestone-directed search")
         print(f"[DirectedStrategy] Milestones: {self.milestone_manager.milestones}")
-        print(f"[DirectedStrategy] Max cycles: {min(self.max_cycles, int(num_cycles))}")
+        num_cycles_int = int(num_cycles)
+        print(f"[DirectedStrategy] Max cycles: {min(self.max_cycles, num_cycles_int)}")
 
         # Reset milestone progress
         self.milestone_manager.reset()
@@ -356,6 +359,12 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         while worklist:
             item = heapq.heappop(worklist)
+
+            # Check path limit
+            if self.paths_explored >= self.max_paths:
+                print(f"[DirectedStrategy] Path limit reached ({self.max_paths} paths)")
+                print(f"[DirectedStrategy] Consider increasing max_paths or simplifying the design")
+                break
 
             # Check timeout
             if item.cycle >= max_cycles_to_run:
