@@ -89,7 +89,9 @@ def main():
     optparser.add_option("--llm-api-key", dest="llm_api_key",
                          help="API key for LLM (OpenAI or Anthropic)")
     optparser.add_option("--llm-provider", dest="llm_provider", default="auto",
-                         help="LLM provider: openai, anthropic, or auto (Default=auto)")
+                         help="LLM provider: openai, anthropic, deepseek, or auto (Default=auto)")
+    optparser.add_option("--llm-base-url", dest="llm_base_url",
+                         help="Custom base URL for LLM API (e.g., https://api.deepseek.com)")
     optparser.add_option("--mock", action="store_true", dest="mock",
                          default=False, help="Use mock LLM responses for testing")
     (options, args) = optparser.parse_args()
@@ -118,6 +120,7 @@ def main():
         engine.llm_api_key = options.llm_api_key
         engine.llm_provider = options.llm_provider
         engine.llm_mock = options.mock
+        engine.llm_base_url = options.llm_base_url
         print(f"[main] Auto-plan enabled (provider={options.llm_provider}, mock={options.mock})")
 
 

@@ -45,8 +45,9 @@ class ExecutionEngine:
     # Auto-plan configuration
     auto_plan_enabled: bool = False  # Enable LLM-based milestone generation
     llm_api_key: Optional[str] = None  # API key for LLM provider
-    llm_provider: str = "auto"  # LLM provider: openai, anthropic, or auto
+    llm_provider: str = "auto"  # LLM provider: openai, anthropic, deepseek, or auto
     llm_mock: bool = False  # Use mock LLM responses for testing
+    llm_base_url: Optional[str] = None  # Custom base URL for LLM API
 
     def set_strategy(self, strategy: 'ExplorationStrategy') -> None:
         """Set the exploration strategy to use."""
@@ -354,7 +355,8 @@ class ExecutionEngine:
                         planner = LLMPlanner(
                             api_key=self.llm_api_key,
                             provider=self.llm_provider,
-                            mock=self.llm_mock
+                            mock=self.llm_mock,
+                            base_url=self.llm_base_url
                         )
                         milestone_dicts = planner.generate_plan(context, target.target_expr, all_signals)
                         print(f"[ExecutionEngine] Generated {len(milestone_dicts)} milestones for this target")

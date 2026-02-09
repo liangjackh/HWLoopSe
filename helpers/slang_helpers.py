@@ -590,21 +590,22 @@ class SymbolicDFS:
             ps.SymbolKind.Port,
             ps.SymbolKind.Net,
         ):
-            print(f"- adding to symbolic store: {symbol.name}(variable, para, port, or net)")  # DEBUG
+            #print(f"- adding to symbolic store: {symbol.name}(variable, para, port, or net)")  # DEBUG
             self.symbolic_store[symbol.name] = symbol
 
         # Update path condition for conditional statements
         if symbol.kind == ps.SymbolKind.ProceduralBlock and hasattr(symbol, "body"):
-            print("- visiting procedural block body")  # DEBUG
+            #print("- visiting procedural block body")  # DEBUG
             self.dfs_stmt(symbol.body)
         elif symbol.kind == ps.SymbolKind.ContinuousAssign and hasattr(symbol, "assignment"):
-            print("- visiting continuous assignment")  # DEBUG
+            #print("- visiting continuous assignment")  # DEBUG
             self.dfs_expr(symbol.assignment)
 
         # Recursively visit children if available
         # PySlang 9.x: symbols are directly iterable (no 'members' attribute)
         # PySlang 7.x: symbols have 'members' attribute
         if hasattr(symbol, "members"):
+            print(f"- visiting members of symbol {symbol.name}")  # DEBUG/
             for member in symbol.members:
                 self.dfs(member)
         else:
@@ -613,7 +614,7 @@ class SymbolicDFS:
                 for child in symbol:
                     self.dfs(child)
             except TypeError:
-                print(f"- symbol {symbol.name} not iterable, skipping children traversal.")  # DEBUG
+                #print(f"- symbol {symbol.name} not iterable, skipping children traversal.")  # DEBUG
                 pass  # Symbol is not iterable
 
         if hasattr(symbol, "body") and symbol.kind != ps.SymbolKind.ProceduralBlock:

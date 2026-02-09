@@ -5,7 +5,7 @@ module place_holder (
 );
   
   wire [31:0] out_wire; 
-  wire [31:0] out_wire1; 
+  //wire [31:0] out_wire1; 
   initial begin
     out = 0;
   end
@@ -25,11 +25,11 @@ module place_holder (
     .out (out_wire)
   );
 
-  place_holder_2 test_2(
-    .CLK (CLK),
-    .RST (RST),
-    .out (out_wire1)
-  );
+  //place_holder_2 test_2(
+  //  .CLK (CLK),
+  //  .RST (RST),
+  //  .out (out_wire1)
+  //);
   
 endmodule
 
@@ -49,9 +49,10 @@ module place_holder_2 (
     else begin
       out <= out + 1;
     end
-    assert (out <= 2) else begin
-      $error("Assertion failed: out is not even!");
-    end
+    assert (out <= 2);
+    //assert (out <= 2) else begin
+    //  $error("Assertion failed: out is not even!");
+    //end
   end
     
 endmodule

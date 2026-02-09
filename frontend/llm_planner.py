@@ -53,18 +53,20 @@ IMPORTANT: Only use signal names that appear in the RTL code. Do not invent sign
         ],
     }
 
-    def __init__(self, api_key: Optional[str] = None, provider: str = "auto", mock: bool = False):
+    def __init__(self, api_key: Optional[str] = None, provider: str = "auto", mock: bool = False, base_url: Optional[str] = None):
         """
         Initialize the LLM Planner.
 
         Args:
             api_key: API key for the LLM provider. If None, uses environment variables.
-            provider: "openai", "anthropic", or "auto" (detect from key format)
+            provider: "openai", "anthropic", "deepseek", or "auto" (detect from key format)
             mock: If True, return hardcoded responses without calling API
+            base_url: Custom base URL for API (e.g., for DeepSeek or other OpenAI-compatible APIs)
         """
         self.mock = mock
         self.api_key = api_key
         self.provider = provider
+        self.base_url = base_url
         self.client = None
 
         if not mock:
@@ -76,7 +78,7 @@ IMPORTANT: Only use signal names that appear in the RTL code. Do not invent sign
 
         # Try environment variables if no key provided
         if not api_key:
-            api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
+            api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("DEEPSEEK_API_KEY")
 
         if not api_key:
             print("[LLMPlanner] Warning: No API key provided. Use --mock for testing.")
@@ -99,6 +101,12 @@ IMPORTANT: Only use signal names that appear in the RTL code. Do not invent sign
             if provider == "openai":
                 from openai import OpenAI
                 self.client = OpenAI(api_key=api_key)
+            elif provider == "deepseek":
+                from openai import OpenAI
+                # DeepSeek uses OpenAI-compatible API
+                base_url = self.base_url or "https://api.deepseek.com"
+                self.client = OpenAI(api_key=api_key, base_url=base_url)
+                print(f"[LLMPlanner] Using DeepSeek API at {base_url}")
             elif provider == "anthropic":
                 import anthropic
                 self.client = anthropic.Anthropic(api_key=api_key)
@@ -107,7 +115,7 @@ IMPORTANT: Only use signal names that appear in the RTL code. Do not invent sign
             print("[LLMPlanner] Install with: pip install openai anthropic")
 
     def _call_openai(self, rtl_context: str, target: str) -> str:
-        """Call OpenAI API."""
+        """Call OpenAI API (or OpenAI-compatible APIs like DeepSeek)."""
         user_prompt = f"""RTL Code:
 ```verilog
 {rtl_context}
@@ -117,8 +125,14 @@ Verification Target: {target}
 
 Generate milestones to reach this target. Return ONLY the JSON array."""
 
+        # Choose model based on provider
+        if self.provider == "deepseek":
+            model = "deepseek-chat"  # DeepSeek's chat model
+        else:
+            model = "gpt-4"  # OpenAI default
+
         response = self.client.chat.completions.create(
-            model="gpt-4",
+            model=model,
             messages=[
                 {"role": "system", "content": self.SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt}
@@ -264,7 +278,7 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
         for attempt in range(max_retries):
             try:
                 # Call appropriate API
-                if self.provider == "openai":
+                if self.provider in ["openai", "deepseek"]:
                     response = self._call_openai(rtl_context, target)
                 else:
                     response = self._call_anthropic(rtl_context, target)
