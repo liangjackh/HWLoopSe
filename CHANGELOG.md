@@ -1,5 +1,71 @@
 # Changelog
 
+## [2026-02-10] [Feature] Added compound condition support for LLM-generated milestones
+
+### Problem
+The LLM planner was generating milestones with compound conditions like `RST == 0 && out == 1`, but the `Milestone` class only supported simple conditions with a single signal, operator, and value. This caused parsing errors:
+```
+Cannot parse value '0 && out == 1' in condition: RST == 0 && out == 1
+```
+
+### Changes
+
+1. **Extended condition parser** (`frontend/condition_parser.py`)
+   - Added `SimpleCondition` dataclass: stores `signal_path`, `operator`, `value`
+   - Added `CompoundCondition` dataclass: stores `op` (`&&`, `||`, `!`) and list of `operands`
+   - Added `Condition` type alias: `Union[SimpleCondition, CompoundCondition]`
+   - Added `parse_compound_condition()`: Parses compound expressions with `&&`, `||`, `!` operators
+   - Added `get_all_signals()`: Extracts all signal names from a compound condition tree
+   - Added `to_dict()`: Converts condition tree to JSON-serializable format
+
+2. **Updated Milestone class** (`engine/milestone.py`)
+   - Changed constructor from `Milestone(description, signal_path, operator, value)` to `Milestone(description, condition_str)`
+   - Milestone now stores `condition_str` and parsed `condition` (SimpleCondition or CompoundCondition)
+   - Added `_build_simple_condition()`: Builds Z3 expression for simple conditions
+   - Added `_build_condition_recursive()`: Recursively builds Z3 expressions for compound conditions
+   - Uses Z3 `And()`, `Or()`, `Not()` for compound operators
+
+3. **Updated ExecutionEngine** (`engine/execution_engine.py`)
+   - Simplified milestone creation: `Milestone(m['description'], m['condition'])`
+   - Removed `parse_condition()` import (no longer needed)
+   - Updated milestone JSON output to use `condition_str` instead of separate signal/operator/value fields
+
+4. **Updated LLM planner validation** (`frontend/llm_planner.py`)
+   - `_validate_signals()` now uses `parse_compound_condition()` and `get_all_signals()`
+   - Correctly validates all signals in compound conditions
+
+### Condition Parser Usage
+
+```python
+from frontend.condition_parser import parse_compound_condition, get_all_signals
+
+# Simple condition
+cond = parse_compound_condition("out > 2")
+# Returns: SimpleCondition(signal_path='out', operator='>', value=2)
+
+# Compound condition
+cond = parse_compound_condition("RST == 0 && out == 1")
+# Returns: CompoundCondition(op='&&', operands=[
+#   SimpleCondition(signal_path='RST', operator='==', value=0),
+#   SimpleCondition(signal_path='out', operator='==', value=1)
+# ])
+
+# Extract all signals
+signals = get_all_signals(cond)  # Returns: ['RST', 'out']
+```
+
+### Result
+- LLM-generated milestones with compound conditions now parse correctly
+- Milestones written to `milestones.json` with full condition strings
+- Example output:
+  ```json
+  {
+    "step": 1,
+    "description": "Reset released, first clock edge increments out to 1",
+    "condition": "RST == 0 && out == 1"
+  }
+  ```
+
 ## [2026-02-06] [Refactor] Implemented Strategy Pattern for pluggable exploration strategies
 
 ### Problem

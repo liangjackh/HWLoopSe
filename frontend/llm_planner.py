@@ -1,9 +1,13 @@
 """LLM Planner for generating milestones from RTL context."""
 
 import json
+import time
 import os
 from typing import List, Dict, Any, Optional
-from .condition_parser import parse_condition, extract_signal_name, extract_instance_path
+from .condition_parser import (
+    parse_condition, parse_compound_condition, get_all_signals,
+    extract_signal_name, extract_instance_path
+)
 
 
 class LLMPlanner:
@@ -13,25 +17,39 @@ class LLMPlanner:
     Supports both OpenAI and Anthropic APIs, with a mock mode for testing.
     """
 
-    SYSTEM_PROMPT = """You are an expert Hardware Verification Engineer. Your task is to analyze RTL (Verilog/SystemVerilog) code and generate a sequence of milestones (waypoints) that will guide a symbolic execution engine toward a verification target.
+    SYSTEM_PROMPT = """You are an expert Hardware Verification Engineer specializing in Directed Symbolic Execution.
+Your task is to analyze the provided SystemVerilog code and break down the path to a specific Verification Target into a sequence of intermediate **Milestones** (Waypoints).
 
-A milestone is a condition that the design should reach during execution. The symbolic execution engine will prioritize paths that reach these milestones.
+**Goal:**
+The Symbolic Execution Engine will use your milestones to steer the search. If the milestones are too far apart or logically impossible, the engine will fail.
 
-Rules:
-1. Each milestone must reference ONLY signals that exist in the provided RTL code.
-2. Milestones should form a logical progression toward the target.
-3. Start with reset/initialization conditions.
-4. Include intermediate states that must be reached before the target.
-5. The final milestone should be the verification target itself.
+**CRITICAL RULES:**
+1.  **Exact Signal Names**: You MUST use the exact signal names found in the source code.
+    * If the target is in a submodule, use the hierarchical path (e.g., `u_core.u_alu.result`, NOT just `result`).
+    * Do not invent signals (e.g., do not use `fifo_count` if the code says `fifo_cnt`).
+2.  **Simple Conditions**: Milestones must be boolean expressions using simple operators:
+    * Allowed: `==`, `!=`, `>`, `<`, `>=`, `<=`, `&&`, `||`, `!`.
+    * FORBIDDEN: SystemVerilog specific syntax like `@(posedge clk)`, `|->`, `$rose`, `$past`.
+3.  **Logical Sequence**: The milestones must represent a feasible execution trace.
+    * Step 0 is usually Reset or Initialization.
+    * Intermediate steps should bridge the gap (e.g., incrementing a counter, finite state machine transitions).
+    * The Final step MUST be the Verification Target itself.
+4.  **JSON Output Only**: Return a raw JSON list of objects. Do not wrap in markdown code blocks.
 
-Output Format: Return a JSON array of milestone objects:
+**JSON Format:**
 [
-  {"step": 1, "description": "Reset state", "condition": "rst == 1"},
-  {"step": 2, "description": "Counter initialized", "condition": "cnt == 0"},
-  {"step": 3, "description": "Target reached", "condition": "cnt > 10"}
-]
-
-IMPORTANT: Only use signal names that appear in the RTL code. Do not invent signal names."""
+  {
+    "step": 0,
+    "description": "Brief explanation (e.g., System Reset)",
+    "condition": "rst_n == 0"
+  },
+  {
+    "step": 1,
+    "description": "State machine enters IDLE",
+    "condition": "u_ctrl.state == 0"
+  },
+  ...
+]"""
 
     # Mock responses for testing without API
     MOCK_RESPONSES = {
@@ -195,22 +213,26 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
         for m in milestones:
             condition = m.get("condition", "")
             try:
-                signal_path, _, _ = parse_condition(condition)
-                signal_name = extract_signal_name(signal_path)
+                # Use compound condition parser to handle &&, ||, !
+                parsed = parse_compound_condition(condition)
+                signal_paths = get_all_signals(parsed)
 
-                # Check if signal exists
-                if signal_name not in known_set:
-                    # Try case-insensitive match
-                    if signal_name.lower() in known_lower:
-                        suggestion = known_lower[signal_name.lower()]
-                        errors.append(f"Signal '{signal_name}' not found. Did you mean '{suggestion}'?")
-                    else:
-                        # Find similar signals
-                        similar = [s for s in known_signals if signal_name.lower() in s.lower() or s.lower() in signal_name.lower()]
-                        if similar:
-                            errors.append(f"Signal '{signal_name}' not found. Similar signals: {similar[:3]}")
+                for signal_path in signal_paths:
+                    signal_name = extract_signal_name(signal_path)
+
+                    # Check if signal exists
+                    if signal_name not in known_set:
+                        # Try case-insensitive match
+                        if signal_name.lower() in known_lower:
+                            suggestion = known_lower[signal_name.lower()]
+                            errors.append(f"Signal '{signal_name}' not found. Did you mean '{suggestion}'?")
                         else:
-                            errors.append(f"Signal '{signal_name}' not found in design.")
+                            # Find similar signals
+                            similar = [s for s in known_signals if signal_name.lower() in s.lower() or s.lower() in signal_name.lower()]
+                            if similar:
+                                errors.append(f"Signal '{signal_name}' not found. Similar signals: {similar[:3]}")
+                            else:
+                                errors.append(f"Signal '{signal_name}' not found in design.")
             except ValueError as e:
                 errors.append(f"Cannot parse condition '{condition}': {e}")
 
@@ -284,15 +306,19 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
                     response = self._call_anthropic(rtl_context, target)
 
                 # Parse response
+                print(f"[LLMPlanner] LLM response: {response}... (truncated)")
                 milestones = self._parse_json_response(response)
 
                 # Validate signals
+                print(f"[LLMPlanner] known signals: {known_signals}")
                 errors = self._validate_signals(milestones, known_signals)
 
                 if not errors:
                     print(f"[LLMPlanner] Generated {len(milestones)} milestones (attempt {attempt + 1})")
+                    time.sleep(5)
                     return milestones
 
+                time.sleep(5)
                 # Self-correction: feed errors back to LLM
                 print(f"[LLMPlanner] Validation errors (attempt {attempt + 1}): {errors}")
 

@@ -149,7 +149,7 @@ To use a different DeepSeek model:
 ```python
 # In frontend/llm_planner.py, modify _call_openai():
 if self.provider == "deepseek":
-    model = "deepseek-coder"  # or other DeepSeek models
+    model = "deepseek-reasoner"  # or other DeepSeek models
 ```
 
 ## Integration Details

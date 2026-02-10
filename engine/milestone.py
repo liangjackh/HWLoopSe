@@ -1,30 +1,31 @@
 """Milestone management for directed symbolic execution."""
 
-from typing import List, Optional, Tuple, Any
-from z3 import Solver, sat, ExprRef, BitVecVal, ULE, ULT, UGE, UGT
+from typing import List, Optional, Tuple, Any, Union
+from z3 import Solver, sat, ExprRef, BitVecVal, ULE, ULT, UGE, UGT, And, Or, Not
 from .symbolic_state import SymbolicState
+from frontend.condition_parser import (
+    parse_compound_condition, SimpleCondition, CompoundCondition, Condition
+)
 
 
 class Milestone:
-    """Represents a single milestone condition."""
+    """Represents a single milestone condition (simple or compound)."""
 
-    def __init__(self, name: str, signal_path: str, operator: str, value: int):
+    def __init__(self, description: str, condition_str: str):
         """
         Initialize a milestone.
 
         Args:
-            name: Human-readable name for the milestone (e.g., "M0 (Reset)")
-            signal_path: Hierarchical signal path (e.g., "test_1.out")
-            operator: Comparison operator ("==", "!=", "<", "<=", ">", ">=")
-            value: Target value to compare against
+            description: Human-readable description (e.g., "Reset state")
+            condition_str: Condition string (e.g., "RST == 1" or "RST == 0 && out == 0")
         """
-        self.name = name
-        self.signal_path = signal_path
-        self.operator = operator
-        self.value = value
+        self.description = description
+        self.condition_str = condition_str
+        # Parse the condition
+        self.condition = parse_compound_condition(condition_str)
 
     def __repr__(self):
-        return f"Milestone({self.name}: {self.signal_path} {self.operator} {self.value})"
+        return f"Milestone({self.description}: {self.condition_str})"
 
 
 class MilestoneManager:
@@ -63,18 +64,27 @@ class MilestoneManager:
         Parse a hierarchical signal path and look up its value in the state.
 
         Args:
-            signal_path: Hierarchical path like "test_1.out"
+            signal_path: Hierarchical path like "test_1.out" or just "out"
             state: Current symbolic state
 
         Returns:
             The symbolic value from state.store, or None if not found
         """
         parts = signal_path.split(".")
-        if len(parts) != 2:
+
+        if len(parts) == 2:
+            module_name, var_name = parts
+        elif len(parts) == 1:
+            # Non-hierarchical signal - search in all modules
+            var_name = parts[0]
+            for module_name, module_store in state.store.items():
+                if var_name in module_store:
+                    return module_store[var_name]
+            print(f"[MilestoneManager] Variable not found: {var_name}")
+            return None
+        else:
             print(f"[MilestoneManager] Invalid signal path format: {signal_path}")
             return None
-
-        module_name, var_name = parts
 
         if module_name not in state.store:
             print(f"[MilestoneManager] Module not found: {module_name}")
@@ -86,33 +96,60 @@ class MilestoneManager:
 
         return state.store[module_name][var_name]
 
-    def build_z3_condition(self, milestone: Milestone, state: SymbolicState) -> Optional[ExprRef]:
+    def _get_signal_z3_value(self, signal_path: str, state: SymbolicState) -> Optional[ExprRef]:
         """
-        Build a Z3 condition for the given milestone.
+        Get the Z3 value for a signal.
 
         Args:
-            milestone: The milestone to build condition for
+            signal_path: Signal path
             state: Current symbolic state
 
         Returns:
-            Z3 expression representing the milestone condition, or None on error
+            Z3 expression for the signal value
         """
         from helpers.rvalue_to_z3 import parse_infix_expr_to_z3
 
-        signal_value = self.parse_hierarchical_signal(milestone.signal_path, state)
+        signal_value = self.parse_hierarchical_signal(signal_path, state)
         if signal_value is None:
             return None
 
         # Convert signal value to Z3 if it's a string expression
         if isinstance(signal_value, str):
             # Parse the expression string to Z3
-            module_name = milestone.signal_path.split(".")[0]
-            signal_value = parse_infix_expr_to_z3(signal_value, state.store.get(module_name, {}))
+            parts = signal_path.split(".")
+            if len(parts) == 2:
+                module_name = parts[0]
+            else:
+                # Find the module containing this signal
+                module_name = None
+                for mod_name, module_store in state.store.items():
+                    if signal_path in module_store:
+                        module_name = mod_name
+                        break
+            if module_name:
+                signal_value = parse_infix_expr_to_z3(signal_value, state.store.get(module_name, {}))
+
+        return signal_value
+
+    def _build_simple_condition(self, cond: SimpleCondition, state: SymbolicState) -> Optional[ExprRef]:
+        """
+        Build a Z3 condition for a simple condition.
+
+        Args:
+            cond: SimpleCondition object
+            state: Current symbolic state
+
+        Returns:
+            Z3 expression
+        """
+        signal_value = self._get_signal_z3_value(cond.signal_path, state)
+        if signal_value is None:
+            return None
 
         # Build the comparison
-        target = BitVecVal(milestone.value, 32)
+        target = BitVecVal(cond.value, 32)
 
-        op = milestone.operator
+        op = cond.operator
         if op == "==":
             return signal_value == target
         elif op == "!=":
@@ -127,6 +164,64 @@ class MilestoneManager:
             return UGE(signal_value, target)
         else:
             print(f"[MilestoneManager] Unknown operator: {op}")
+            return None
+
+    def build_z3_condition(self, milestone: Milestone, state: SymbolicState) -> Optional[ExprRef]:
+        """
+        Build a Z3 condition for the given milestone.
+
+        Args:
+            milestone: The milestone to build condition for
+            state: Current symbolic state
+
+        Returns:
+            Z3 expression representing the milestone condition, or None on error
+        """
+        return self._build_condition_recursive(milestone.condition, state)
+
+    def _build_condition_recursive(self, cond: Condition, state: SymbolicState) -> Optional[ExprRef]:
+        """
+        Recursively build Z3 condition for simple or compound conditions.
+
+        Args:
+            cond: SimpleCondition or CompoundCondition
+            state: Current symbolic state
+
+        Returns:
+            Z3 expression
+        """
+        if isinstance(cond, SimpleCondition):
+            return self._build_simple_condition(cond, state)
+        elif isinstance(cond, CompoundCondition):
+            if cond.op == "&&":
+                # AND all operands
+                z3_operands = []
+                for operand in cond.operands:
+                    z3_op = self._build_condition_recursive(operand, state)
+                    if z3_op is None:
+                        return None
+                    z3_operands.append(z3_op)
+                return And(*z3_operands)
+            elif cond.op == "||":
+                # OR all operands
+                z3_operands = []
+                for operand in cond.operands:
+                    z3_op = self._build_condition_recursive(operand, state)
+                    if z3_op is None:
+                        return None
+                    z3_operands.append(z3_op)
+                return Or(*z3_operands)
+            elif cond.op == "!":
+                # NOT the single operand
+                z3_op = self._build_condition_recursive(cond.operands[0], state)
+                if z3_op is None:
+                    return None
+                return Not(z3_op)
+            else:
+                print(f"[MilestoneManager] Unknown compound operator: {cond.op}")
+                return None
+        else:
+            print(f"[MilestoneManager] Unknown condition type: {type(cond)}")
             return None
 
     def check_milestone(self, state: SymbolicState, solver: Solver) -> bool:

@@ -7,6 +7,7 @@ from .symbolic_state import SymbolicState
 from .cfg import CFG
 import re
 import os
+import json
 from optparse import OptionParser
 from typing import Optional, TYPE_CHECKING
 import random, string
@@ -16,6 +17,7 @@ from itertools import product
 import logging
 from helpers.utils import to_binary, init_symbol
 import sys
+import time
 from copy import deepcopy
 import pyslang as ps
 from helpers.slang_helpers import get_module_name, init_state
@@ -307,6 +309,7 @@ class ExecutionEngine:
                 manager.opt_1 = False
             manager.modules = modules_dict
 
+
         # Step 4: Auto-plan milestone generation (if enabled)
         if self.auto_plan_enabled:
             print("[ExecutionEngine] Auto-plan mode enabled")
@@ -319,7 +322,6 @@ class ExecutionEngine:
                 from frontend.assertion_extractor import extract_verification_targets
                 from frontend.context_slicer import ContextSlicer
                 from frontend.llm_planner import LLMPlanner
-                from frontend.condition_parser import parse_condition
                 from engine.milestone import Milestone, MilestoneManager
                 from engine.strategies import MilestoneDirectedStrategy
 
@@ -364,8 +366,7 @@ class ExecutionEngine:
                         # Convert to Milestone objects
                         for m in milestone_dicts:
                             try:
-                                signal_path, operator, value = parse_condition(m['condition'])
-                                milestone = Milestone(m['description'], signal_path, operator, value)
+                                milestone = Milestone(m['description'], m['condition'])
                                 all_milestones.append(milestone)
                                 print(f"[ExecutionEngine]   Step {m['step']}: {m['description']} ({m['condition']})")
                             except ValueError as e:
@@ -379,12 +380,33 @@ class ExecutionEngine:
                         # can be used for analysis or future directed search improvements.
                         print(f"[ExecutionEngine] Generated {len(all_milestones)} milestone(s)")
                         print(f"[ExecutionEngine] Note: Using blind strategy (directed strategy has scalability issues)")
+
+                        # Write milestones to file
+                        milestone_output = {
+                            "target": target.description,
+                            "target_expr": target.target_expr,
+                            "milestones": [
+                                {
+                                    "step": i,
+                                    "description": m.description,
+                                    "condition": m.condition_str
+                                }
+                                for i, m in enumerate(all_milestones)
+                            ]
+                        }
+                        milestone_file = "milestones.json"
+                        with open(milestone_file, "w") as f:
+                            json.dump(milestone_output, f, indent=2)
+                        print(f"[ExecutionEngine] Milestones written to {milestone_file}")
                         # TODO: Fix MilestoneDirectedStrategy path explosion before enabling
                         # self.strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles))
                     else:
                         print("[ExecutionEngine] No valid milestones generated, using blind strategy")
 
         # Delegate exploration to the strategy
+
+        
+        time.sleep(20)  # brief pause before starting exploration
         print("Starting exploration...")
         print(f"Branch points explored: {manager.branch_count}")
 

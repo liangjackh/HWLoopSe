@@ -1,0 +1,46 @@
+{
+  "target": "Violate assertion 'out <= 2' in place_holder",
+  "target_expr": "place_holder.out > 2",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System Reset",
+      "condition": "RST == 1"
+    },
+    {
+      "step": 1,
+      "description": "Reset released, first clock edge increments out to 1",
+      "condition": "RST == 0 && out == 1"
+    },
+    {
+      "step": 2,
+      "description": "Second clock edge increments out to 2",
+      "condition": "RST == 0 && out == 2"
+    },
+    {
+      "step": 3,
+      "description": "Third clock edge increments out to 3, satisfying target",
+      "condition": "out > 2"
+    },
+    {
+      "step": 4,
+      "description": "System Reset",
+      "condition": "RST == 1"
+    },
+    {
+      "step": 5,
+      "description": "Reset released, first clock edge increments out to 1",
+      "condition": "RST == 0 && out == 1"
+    },
+    {
+      "step": 6,
+      "description": "Second clock edge increments out to 2",
+      "condition": "RST == 0 && out == 2"
+    },
+    {
+      "step": 7,
+      "description": "Third clock edge increments out to 3, satisfying target",
+      "condition": "out > 2"
+    }
+  ]
+}
