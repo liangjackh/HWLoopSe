@@ -1,5 +1,64 @@
 # Changelog
 
+## [2026-02-11] [Refactor] Modular architecture for ExecutionEngine
+
+### Problem
+`main.py` was handling too many low-level tasks: PySlang compilation, visitor initialization, lambda binding, strategy selection. This made the code hard to maintain and test.
+
+### Changes
+
+1. **Created `engine/config.py`** - Configuration dataclass
+   - `EngineConfig` dataclass with all execution options
+   - `from_options()` class method to create config from CLI options
+   - Clean separation of configuration from execution logic
+
+2. **Created `engine/strategy_factory.py`** - Factory pattern for strategies
+   - `StrategyFactory.create(config)` creates appropriate strategy
+   - Supports `blind`, `directed`, `lookahead` strategies
+   - Centralizes strategy instantiation logic
+
+3. **Refactored `engine/execution_engine.py`**
+   - Added `__init__()`: Proper instance initialization
+   - Added `_compile_design()`: PySlang compilation (moved from main.py)
+   - Added `_discover_modules()`: Module discovery and top module selection
+   - Added `_setup_visitors()`: Visitor initialization with Z3 lambda binding
+   - Added `_configure_from_config()`: Configure engine from EngineConfig
+   - Added `run()`: Clean public API that orchestrates the full workflow
+
+4. **Simplified `main.py`**
+   - Reduced from ~310 lines to ~160 lines
+   - Now just: parse args → create config → create engine → `engine.run()`
+   - All toolchain logic moved to ExecutionEngine
+
+### Architecture
+
+```
+main.py (CLI)
+    ↓
+EngineConfig.from_options()
+    ↓
+ExecutionEngine.run(file_path, config)
+    ├── _compile_design()      # PySlang compilation
+    ├── _setup_visitors()      # SymbolicDFS, Z3 binding
+    ├── StrategyFactory.create() # Strategy selection
+    └── execute_sv()           # Actual execution
+```
+
+### Usage
+
+```bash
+# Same CLI interface, cleaner internals
+python3 -m main 1 designs/test-designs/test_2.v --sv
+python3 -m main 1 designs/test-designs/test_2.v --sv -B  # Debug mode
+python3 -m main 1 designs/test-designs/test_2.v --sv --auto-plan --llm-provider deepseek
+```
+
+### Result
+- `main.py` is now a thin CLI wrapper
+- `ExecutionEngine` manages the full toolchain internally
+- Easy to use programmatically: `engine = ExecutionEngine(); engine.run(file, config)`
+- All existing functionality preserved
+
 ## [2026-02-10] [Feature] Added compound condition support for LLM-generated milestones
 
 ### Problem
