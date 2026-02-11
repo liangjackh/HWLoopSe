@@ -1,310 +1,162 @@
-"""This file is the entrypoint of the execution."""
+"""Lightweight entry point for the symbolic execution engine.
+
+This file handles CLI argument parsing and delegates all work to ExecutionEngine.
+"""
 from __future__ import absolute_import
 from __future__ import print_function
-import z3
-from z3 import Solver, Int, BitVec, Context, BitVecSort, ExprRef, BitVecRef, If, BitVecVal, And
 import sys
 import os
-from optparse import OptionParser
-from typing import Optional
-import random, string
-import time
-from itertools import product
+import threading
 import logging
 import gc
-from engine.execution_manager import ExecutionManager
-from engine.symbolic_state import SymbolicState
-from helpers.rvalue_parser import tokenize, parse_tokens, evaluate
-from engine.execution_engine import ExecutionEngine
-import pyslang as ps
-from helpers.slang_helpers import SlangSymbolVisitor, SymbolicDFS
-# SlangNodeVisitor removed 
-import redis
-import threading
-import time
+from optparse import OptionParser
 
-from helpers.rvalue_to_z3 import parse_expr_to_Z3
+from engine.execution_engine import ExecutionEngine
+from engine.config import EngineConfig
 
 gc.collect()
 
+# Setup logging
 with open('errors.log', 'w'):
     pass
 logging.basicConfig(filename='errors.log', level=logging.DEBUG)
 logging.debug("Starting over")
 
-
 INFO = "Verilog Symbolic Execution Engine"
-USAGE = "Usage: python3 -m main <num_cycles> <verilog_file>.v > out.txt"
-    
+USAGE = "Usage: python3 -m main <num_cycles> <verilog_file>.v --sv"
+
+
 def timeout_exit():
-    """This only happens when the timer runs out."""
+    """Exit handler when timer runs out."""
     print("Execution time limit exceeded. Exiting.")
     sys.exit(1)
 
-def showVersion():
+
+def show_version():
+    """Display version info and exit."""
     print(INFO)
     print(USAGE)
     sys.exit()
-    
-def main():
-    """Entrypoint of the program."""
-    engine: ExecutionEngine = ExecutionEngine()
-    optparser = OptionParser()
-    optparser.add_option("-v", "--version", action="store_true", dest="showversion",
-                         default=False, help="Show the version")
-    optparser.add_option("-I", "--include", dest="include", action="append",
-                         help="Include path")
-    optparser.add_option("-D", dest="define", action="append",
-                         default=[], help="Macro Definition")
-    optparser.add_option("-B", "--debug", action="store_true", dest="showdebug", help="Debug Mode")
-    optparser.add_option("-t", "--top", dest="topmodule",
-                         default="top", help="Top module, Default=top")
-    optparser.add_option("--nobind", action="store_true", dest="nobind",
-                         default=False, help="No binding traversal, Default=False")
-    optparser.add_option("--noreorder", action="store_true", dest="noreorder",
-                         default=False, help="No reordering of binding dataflow, Default=False")
-    optparser.add_option("-o", "--output", dest="outputfile",
-                         default="out.png", help="Graph file name, Default=out.png")
-    optparser.add_option("-s", "--search", dest="searchtarget", action="append",
-                         default=[], help="Search Target Signal")
-    optparser.add_option("--sv", action="store_true", dest="sv",
-                         default=False, help="enable SystemVerilog parser")
-    optparser.add_option("--walk", action="store_true", dest="walk",
-                         default=False, help="Walk contineous signals, Default=False")
-    optparser.add_option("--identical", action="store_true", dest="identical",
-                         default=False, help="# Identical Laef, Default=False")
-    optparser.add_option("--step", dest="step", type='int',
-                         default=1, help="# Search Steps, Default=1")
-    optparser.add_option("--reorder", action="store_true", dest="reorder",
-                         default=False, help="Reorder the contineous tree, Default=False")
-    optparser.add_option("--delay", action="store_true", dest="delay",
-                         default=False, help="Inset Delay Node to walk Regs, Default=False")
-    optparser.add_option("--use_cache", action="store_true", dest="use_cache",
-                         default=False, help="Use the query caching, Default=False")
-    optparser.add_option("--explore_time", help="Time to explore in seconds", dest="explore_time")
-    optparser.add_option("--strategy", dest="strategy", default="blind",
-                         help="Exploration strategy: blind or directed, Default=blind")
-    optparser.add_option("--auto-plan", action="store_true", dest="auto_plan",
-                         default=False, help="Enable LLM-based milestone generation from assertions")
-    optparser.add_option("--llm-api-key", dest="llm_api_key",
-                         help="API key for LLM (OpenAI or Anthropic)")
-    optparser.add_option("--llm-provider", dest="llm_provider", default="auto",
-                         help="LLM provider: openai, anthropic, deepseek, or auto (Default=auto)")
-    optparser.add_option("--llm-base-url", dest="llm_base_url",
-                         help="Custom base URL for LLM API (e.g., https://api.deepseek.com)")
-    optparser.add_option("--mock", action="store_true", dest="mock",
-                         default=False, help="Use mock LLM responses for testing")
-    (options, args) = optparser.parse_args()
 
 
-    num_cycles = args[0]
-    filelist = args[1:]
+def create_option_parser() -> OptionParser:
+    """Create and configure the option parser."""
+    parser = OptionParser()
+    parser.add_option("-v", "--version", action="store_true", dest="showversion",
+                      default=False, help="Show the version")
+    parser.add_option("-I", "--include", dest="include", action="append",
+                      help="Include path")
+    parser.add_option("-D", dest="define", action="append",
+                      default=[], help="Macro Definition")
+    parser.add_option("-B", "--debug", action="store_true", dest="showdebug",
+                      help="Debug Mode")
+    parser.add_option("-t", "--top", dest="topmodule",
+                      default="top", help="Top module, Default=top")
+    parser.add_option("--nobind", action="store_true", dest="nobind",
+                      default=False, help="No binding traversal, Default=False")
+    parser.add_option("--noreorder", action="store_true", dest="noreorder",
+                      default=False, help="No reordering of binding dataflow, Default=False")
+    parser.add_option("-o", "--output", dest="outputfile",
+                      default="out.png", help="Graph file name, Default=out.png")
+    parser.add_option("-s", "--search", dest="searchtarget", action="append",
+                      default=[], help="Search Target Signal")
+    parser.add_option("--sv", action="store_true", dest="sv",
+                      default=False, help="Enable SystemVerilog parser")
+    parser.add_option("--walk", action="store_true", dest="walk",
+                      default=False, help="Walk continuous signals, Default=False")
+    parser.add_option("--identical", action="store_true", dest="identical",
+                      default=False, help="# Identical Leaf, Default=False")
+    parser.add_option("--step", dest="step", type='int',
+                      default=1, help="# Search Steps, Default=1")
+    parser.add_option("--reorder", action="store_true", dest="reorder",
+                      default=False, help="Reorder the continuous tree, Default=False")
+    parser.add_option("--delay", action="store_true", dest="delay",
+                      default=False, help="Insert Delay Node to walk Regs, Default=False")
+    parser.add_option("--use_cache", action="store_true", dest="use_cache",
+                      default=False, help="Use the query caching, Default=False")
+    parser.add_option("--explore_time", help="Time to explore in seconds",
+                      dest="explore_time")
+    parser.add_option("--strategy", dest="strategy", default="blind",
+                      help="Exploration strategy: blind, directed, or lookahead, Default=blind")
+    parser.add_option("--auto-plan", action="store_true", dest="auto_plan",
+                      default=False, help="Enable LLM-based milestone generation from assertions")
+    parser.add_option("--llm-api-key", dest="llm_api_key",
+                      help="API key for LLM (OpenAI, Anthropic, or DeepSeek)")
+    parser.add_option("--llm-provider", dest="llm_provider", default="auto",
+                      help="LLM provider: openai, anthropic, deepseek, or auto (Default=auto)")
+    parser.add_option("--llm-base-url", dest="llm_base_url",
+                      help="Custom base URL for LLM API (e.g., https://api.deepseek.com)")
+    parser.add_option("--mock", action="store_true", dest="mock",
+                      default=False, help="Use mock LLM responses for testing")
+    return parser
 
-    if options.showversion:
-        showVersion()
-    
-    if options.use_cache:
-        engine.cache = redis.Redis(host='localhost', port=6379, db=0)
 
-    timer = None
-    if options.explore_time:
-        timer = threading.Timer(int(options.explore_time), timeout_exit)
-        timer.start()
+def prepare_filelist(filelist: list) -> str:
+    """Prepare input file path, creating .F file if multiple files provided.
 
-    if options.showdebug:
-        engine.debug = True
-        from helpers.debug import set_debug
-        set_debug(True)
+    Args:
+        filelist: List of input file paths
 
-    # Configure auto-plan if enabled
-    if options.auto_plan:
-        engine.auto_plan_enabled = True
-        engine.llm_api_key = options.llm_api_key
-        engine.llm_provider = options.llm_provider
-        engine.llm_mock = options.mock
-        engine.llm_base_url = options.llm_base_url
-        print(f"[main] Auto-plan enabled (provider={options.llm_provider}, mock={options.mock})")
-
-
+    Returns:
+        Single file path (original or generated .F file)
+    """
     for f in filelist:
         if not os.path.exists(f):
-            raise IOError("file not found: " + f)
+            raise IOError(f"file not found: {f}")
 
-    # If more than one file, create a .F file listing all files
     if len(filelist) > 1:
         flist_path = "filelist.F"
         with open(flist_path, "w") as flist:
             for f in filelist:
                 flist.write(f + "\n")
-        filelist = [flist_path]
+        return flist_path
 
-    if len(filelist) == 0:
-        showVersion()
-    
-    if options.sv:
-        start = time.process_time()
+    return filelist[0] if filelist else None
 
-        # 使用 Driver 简化文件加载（自动处理 .F filelist、include 路径等）
-        driver = ps.Driver()
-        driver.addStandardArgs()
 
-        # 设置 include 路径
-        if options.include:
-            for inc_path in options.include:
-                driver.sourceLoader.addSearchDirectories(inc_path)
+def main():
+    """Entry point of the program."""
+    # Parse arguments
+    parser = create_option_parser()
+    options, args = parser.parse_args()
 
-        # 加载源文件（Driver 自动处理 .F 文件列表）
-        input_file = filelist[0]
-        if not os.path.exists(input_file):
-            print(f"[Error] File not found: {input_file}")
-            exit(1)
+    if options.showversion:
+        show_version()
 
-        if input_file.endswith('.F') or input_file.endswith('.f'):
-            # 使用 Driver 内置的 filelist 解析（支持 +incdir+, +define+ 等）
-            driver.processCommandFiles(input_file, True, False)
-        else:
-            driver.sourceLoader.addFiles(input_file)
+    if len(args) < 2:
+        show_version()
 
-        driver.processOptions()
-        driver.parseAllSources()
+    num_cycles = args[0]
+    filelist = args[1:]
 
-        # 创建 Compilation
-        compilation = driver.createCompilation()
+    # Prepare input file
+    input_file = prepare_filelist(filelist)
+    if not input_file:
+        show_version()
 
-        # 获取模块
-        modules = list(compilation.getRoot().topInstances)
+    # Only SystemVerilog mode is supported via the new API
+    if not options.sv:
+        print("[Error] Only SystemVerilog mode (--sv) is supported.")
+        print("Please add --sv flag to your command.")
+        sys.exit(1)
 
-        # Also collect all nested module instances
-        def collect_all_instances(symbol, collected):
-            """Recursively collect all module instances including nested ones"""
-            if symbol.kind == ps.SymbolKind.Instance:
-                collected.append(symbol)
-                # Recursively check children
-                for child in symbol.body:
-                    collect_all_instances(child, collected)
+    # Create configuration from options
+    config = EngineConfig.from_options(options, num_cycles)
 
-        # If user specified a top module with -t, find and use only that module
-        # Otherwise, use the first top instance
-        top_module = None
-        if options.topmodule and options.topmodule != "top":
-            # Find the module with the specified name (by instance name or definition name)
-            # First check top instances
-            for module in modules:
-                if module.name == options.topmodule or (hasattr(module.body, 'definition') and module.body.definition.name == options.topmodule):
-                    top_module = module
-                    break
+    # Setup timeout timer if specified
+    timer = None
+    if config.explore_time:
+        timer = threading.Timer(config.explore_time, timeout_exit)
+        timer.start()
 
-            # If not found in top instances, search nested instances
-            if not top_module:
-                for module in modules:
-                    for child in module.body:
-                        if child.kind == ps.SymbolKind.Instance:
-                            if child.name == options.topmodule or (hasattr(child.body, 'definition') and child.body.definition.name == options.topmodule):
-                                top_module = child
-                                break
-                    if top_module:
-                        break
-
-            if not top_module:
-                print(f"[Error] Specified top module '{options.topmodule}' not found")
-                print(f"Available modules: {[m.name for m in modules]}")
-                exit(1)
-        else:
-            # Use the first top instance
-            top_module = modules[0] if modules else None
-
-        # Only process the selected top module and its children
-        all_instances = []
-        if top_module:
-            collect_all_instances(top_module, all_instances)
-            modules = all_instances
-        else:
-            modules = []
-
-        if not modules:
-            print("No top instances found, searching syntax trees for definitions...")
-            syntax_trees = compilation.getSyntaxTrees()
-            for tree in syntax_trees:
-                for member in tree.root.members:
-                    if hasattr(member, 'kind') and 'ModuleDeclaration' in str(member.kind):
-                        modules.append(member)
-
-        # 6. --- 关键修改：正确的错误打印逻辑 ---
-        # 获取所有诊断信息
-        diags = compilation.getAllDiagnostics()
-        
-        # 创建诊断引擎和文本客户端（使用 Driver 的 sourceManager）
-        diag_engine = ps.DiagnosticEngine(driver.sourceManager)
-        client = ps.TextDiagnosticClient()
-        diag_engine.addClient(client)
-        
-        # 将诊断信息交给引擎处理
-        for d in diags:
-            diag_engine.issue(d)
-            
-        # 获取格式化后的错误信息字符串
-        report = client.getString()
-        
-        # 检查是否有 Error 级别的诊断
-        has_errors = any(d.isError() for d in diags)
-        
-        if report:
-            print("\n" + "="*40)
-            print("COMPILATION DIAGNOSTICS:")
-            print("="*40)
-            print(report)
-            print("="*40 + "\n")
-            
-        if has_errors:
-            print("[Fatal] Compilation failed with errors. See above.")
-            exit(1)
-            
-        if not modules:
-            print("[Error] No modules found in the design! (And no syntax errors reported?)")
-            exit(1)
-        else:
-            print(f"[Info] Found {len(modules)} top-level module instance(s):")
-            for mod in modules:
-                print(f"  - {mod.name}")
-
-        # 7. 编译成功，开始执行符号执行
-        successful_compilation = not has_errors
-        
-        if successful_compilation:
-            my_visitor_for_symbol = SymbolicDFS(num_cycles)
-            # delegate method from z3Visitor
-            my_visitor_for_symbol.expr_to_z3 = lambda m, s, e: parse_expr_to_Z3(e, s, m)
-
-            symbol_visitor = SlangSymbolVisitor()
-
-            # Configure exploration strategy
-            # Set strategy based on options
-            if options.strategy == "directed":
-                from engine.strategies import MilestoneDirectedStrategy
-                from engine.milestone import MilestoneManager
-
-                # Manual directed mode without auto-plan (empty milestones)
-                milestone_manager = MilestoneManager([])
-                strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles))
-                engine.set_strategy(strategy)
-                print(f"[main] Using directed strategy (no milestones)")
-            else:
-                from engine.strategies import BlindSearchStrategy
-                strategy = BlindSearchStrategy()
-                engine.set_strategy(strategy)
-                print("[main] Using blind search strategy")
-
-            # Execute with driver and compilation for auto-plan support
-            engine.execute_sv(my_visitor_for_symbol, modules, None, num_cycles, driver, compilation)
-            #symbol_visitor.visit(modules)
-            #print(f"symbol_visitor.branch_points: {symbol_visitor.branch_points}")
-            #print(f"symbol_visitor.paths: {symbol_visitor.paths}")
-            
-        end = time.process_time()
-        print(f"Elapsed time {end - start}")
+    try:
+        # Create engine and run
+        engine = ExecutionEngine()
+        engine.run(input_file, config)
+    finally:
         if timer:
             timer.cancel()
-        exit()
+
 
 if __name__ == '__main__':
     main()

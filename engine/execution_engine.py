@@ -9,7 +9,7 @@ import re
 import os
 import json
 from optparse import OptionParser
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, List, Tuple, TYPE_CHECKING
 import random, string
 import time
 import gc
@@ -24,6 +24,7 @@ from helpers.slang_helpers import get_module_name, init_state
 
 if TYPE_CHECKING:
     from .strategies import ExplorationStrategy
+    from .config import EngineConfig
 
 # Tuple of PySlang AST node types that represent conditional/loop statements
 CONDITIONALS = (
@@ -37,11 +38,19 @@ CONDITIONALS = (
 
 
 class ExecutionEngine:
-    # Drives the entire symbolic execution process
-    module_depth: int = 0 # Tracks current module nesting depth during execution
-    debug: bool = True # Boolean flag to enable debug output
-    done: bool = False # Boolean flag indicating if execution is complete
-    cache = None # Optional Redis cache for Z3 solver results TODO
+    """Drives the entire symbolic execution process.
+
+    This class is the main orchestrator that handles:
+    - Design compilation (PySlang)
+    - Visitor setup (SymbolicDFS, SlangSymbolVisitor)
+    - Strategy selection and execution
+    - Auto-plan milestone generation (optional)
+    """
+
+    module_depth: int = 0  # Tracks current module nesting depth during execution
+    debug: bool = False  # Boolean flag to enable debug output
+    done: bool = False  # Boolean flag indicating if execution is complete
+    cache = None  # Optional Redis cache for Z3 solver results TODO
     strategy: Optional['ExplorationStrategy'] = None  # Pluggable exploration strategy
 
     # Auto-plan configuration
@@ -50,6 +59,251 @@ class ExecutionEngine:
     llm_provider: str = "auto"  # LLM provider: openai, anthropic, deepseek, or auto
     llm_mock: bool = False  # Use mock LLM responses for testing
     llm_base_url: Optional[str] = None  # Custom base URL for LLM API
+
+    # Internal state set by _compile_design
+    _driver = None
+    _compilation = None
+    _visitor = None
+    _symbol_visitor = None
+
+    def __init__(self):
+        """Initialize the execution engine."""
+        self.module_depth = 0
+        self.debug = False
+        self.done = False
+        self.cache = None
+        self.strategy = None
+        self.auto_plan_enabled = False
+        self.llm_api_key = None
+        self.llm_provider = "auto"
+        self.llm_mock = False
+        self.llm_base_url = None
+        self._driver = None
+        self._compilation = None
+        self._visitor = None
+        self._symbol_visitor = None
+
+    def _compile_design(self, file_path: str, config: "EngineConfig") -> Tuple[any, any, List]:
+        """Compile the design using PySlang.
+
+        Args:
+            file_path: Path to the Verilog/SystemVerilog file or .F filelist
+            config: Engine configuration
+
+        Returns:
+            Tuple of (driver, compilation, modules)
+
+        Raises:
+            SystemExit: If compilation fails with errors
+        """
+        driver = ps.Driver()
+        driver.addStandardArgs()
+
+        # Set include paths
+        for inc_path in config.include_paths:
+            driver.sourceLoader.addSearchDirectories(inc_path)
+
+        # Check file exists
+        if not os.path.exists(file_path):
+            print(f"[Error] File not found: {file_path}")
+            sys.exit(1)
+
+        # Load source files
+        if file_path.endswith('.F') or file_path.endswith('.f'):
+            driver.processCommandFiles(file_path, True, False)
+        else:
+            driver.sourceLoader.addFiles(file_path)
+
+        driver.processOptions()
+        driver.parseAllSources()
+
+        # Create Compilation
+        compilation = driver.createCompilation()
+
+        # Get diagnostics
+        diags = compilation.getAllDiagnostics()
+        diag_engine = ps.DiagnosticEngine(driver.sourceManager)
+        client = ps.TextDiagnosticClient()
+        diag_engine.addClient(client)
+
+        for d in diags:
+            diag_engine.issue(d)
+
+        report = client.getString()
+        has_errors = any(d.isError() for d in diags)
+
+        if report:
+            print("\n" + "=" * 40)
+            print("COMPILATION DIAGNOSTICS:")
+            print("=" * 40)
+            print(report)
+            print("=" * 40 + "\n")
+
+        if has_errors:
+            print("[Fatal] Compilation failed with errors. See above.")
+            sys.exit(1)
+
+        # Discover modules
+        modules = self._discover_modules(compilation, config.top_module)
+
+        if not modules:
+            print("[Error] No modules found in the design!")
+            sys.exit(1)
+
+        print(f"[Info] Found {len(modules)} top-level module instance(s):")
+        for mod in modules:
+            print(f"  - {mod.name}")
+
+        self._driver = driver
+        self._compilation = compilation
+        return driver, compilation, modules
+
+    def _discover_modules(self, compilation, top_module: Optional[str]) -> List:
+        """Discover modules from compilation.
+
+        Args:
+            compilation: PySlang compilation object
+            top_module: Name of top module to analyze (None = auto-detect)
+
+        Returns:
+            List of module instances
+        """
+        modules = list(compilation.getRoot().topInstances)
+
+        def collect_all_instances(symbol, collected):
+            """Recursively collect all module instances including nested ones."""
+            if symbol.kind == ps.SymbolKind.Instance:
+                collected.append(symbol)
+                for child in symbol.body:
+                    collect_all_instances(child, collected)
+
+        # If user specified a top module, find and use only that module
+        selected_module = None
+        if top_module:
+            # First check top instances
+            for module in modules:
+                if module.name == top_module or \
+                   (hasattr(module.body, 'definition') and module.body.definition.name == top_module):
+                    selected_module = module
+                    break
+
+            # If not found in top instances, search nested instances
+            if not selected_module:
+                for module in modules:
+                    for child in module.body:
+                        if child.kind == ps.SymbolKind.Instance:
+                            if child.name == top_module or \
+                               (hasattr(child.body, 'definition') and child.body.definition.name == top_module):
+                                selected_module = child
+                                break
+                    if selected_module:
+                        break
+
+            if not selected_module:
+                print(f"[Error] Specified top module '{top_module}' not found")
+                print(f"Available modules: {[m.name for m in modules]}")
+                sys.exit(1)
+        else:
+            selected_module = modules[0] if modules else None
+
+        # Collect all instances from selected module
+        all_instances = []
+        if selected_module:
+            collect_all_instances(selected_module, all_instances)
+            return all_instances
+
+        # Fallback: search syntax trees for definitions
+        if not modules:
+            print("No top instances found, searching syntax trees for definitions...")
+            syntax_trees = compilation.getSyntaxTrees()
+            for tree in syntax_trees:
+                for member in tree.root.members:
+                    if hasattr(member, 'kind') and 'ModuleDeclaration' in str(member.kind):
+                        modules.append(member)
+
+        return modules
+
+    def _setup_visitors(self, num_cycles: int):
+        """Set up the AST visitors for symbolic execution.
+
+        Args:
+            num_cycles: Number of clock cycles to simulate
+
+        Returns:
+            Tuple of (symbolic_visitor, symbol_visitor)
+        """
+        from helpers.slang_helpers import SymbolicDFS, SlangSymbolVisitor
+        from helpers.rvalue_to_z3 import parse_expr_to_Z3
+
+        symbolic_visitor = SymbolicDFS(num_cycles)
+        # Bind the Z3 parser helper
+        symbolic_visitor.expr_to_z3 = lambda m, s, e: parse_expr_to_Z3(e, s, m)
+
+        symbol_visitor = SlangSymbolVisitor()
+
+        self._visitor = symbolic_visitor
+        self._symbol_visitor = symbol_visitor
+        return symbolic_visitor, symbol_visitor
+
+    def _configure_from_config(self, config: "EngineConfig") -> None:
+        """Configure engine from EngineConfig.
+
+        Args:
+            config: Engine configuration
+        """
+        self.debug = config.debug
+        self.auto_plan_enabled = config.auto_plan
+        self.llm_api_key = config.llm_api_key
+        self.llm_provider = config.llm_provider
+        self.llm_mock = config.llm_mock
+        self.llm_base_url = config.llm_base_url
+
+        if config.debug:
+            from helpers.debug import set_debug
+            set_debug(True)
+
+        if config.use_cache:
+            import redis
+            self.cache = redis.Redis(host='localhost', port=6379, db=0)
+
+        if config.auto_plan:
+            print(f"[ExecutionEngine] Auto-plan enabled (provider={config.llm_provider}, mock={config.llm_mock})")
+
+    def run(self, file_path: str, config: "EngineConfig") -> None:
+        """Main entry point for symbolic execution.
+
+        This is the clean public API that orchestrates:
+        1. Design compilation
+        2. Visitor setup
+        3. Strategy creation
+        4. Execution
+
+        Args:
+            file_path: Path to the Verilog/SystemVerilog file or .F filelist
+            config: Engine configuration
+        """
+        start_time = time.process_time()
+
+        # Configure engine from config
+        self._configure_from_config(config)
+
+        # Step 1: Compile design
+        driver, compilation, modules = self._compile_design(file_path, config)
+
+        # Step 2: Setup visitors
+        visitor, symbol_visitor = self._setup_visitors(config.num_cycles)
+
+        # Step 3: Create strategy
+        from .strategy_factory import StrategyFactory
+        strategy = StrategyFactory.create(config)
+        self.set_strategy(strategy)
+        print(f"[ExecutionEngine] Using {config.strategy} search strategy")
+
+        # Step 4: Execute
+        self.execute_sv(visitor, modules, None, config.num_cycles, driver, compilation)
+
+        end_time = time.process_time()
+        print(f"Elapsed time {end_time - start_time}")
 
     def set_strategy(self, strategy: 'ExplorationStrategy') -> None:
         """Set the exploration strategy to use."""
