@@ -399,11 +399,12 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
     Returns:
         Z3 expression (BitVecRef, BoolRef, etc.)
     """
-    #print(f"[DEBUG parse_expr_to_Z3] expr: {e}, type: {type(e)}, class: {e.__class__.__name__}")
+    from helpers.debug import debug_print
+    #debug_print("parse_expr_to_Z3", f"expr: {e}, type: {type(e)}, class: {e.__class__.__name__}")
     if hasattr(e, 'kind'):
-        print(f"[DEBUG parse_expr_to_Z3] kind: {e.kind}")
+        debug_print("parse_expr_to_Z3", f"kind: {e.kind}")
     if hasattr(e, 'op'):
-        print(f"[DEBUG parse_expr_to_Z3] op: {e.op}")
+        debug_print("parse_expr_to_Z3", f"op: {e.op}")
 
     # Handle PySlang semantic expressions FIRST (ExpressionKind)
     if hasattr(e, 'kind'):
@@ -414,7 +415,7 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
             lhs = parse_expr_to_Z3(e.left, s, m)
             rhs = parse_expr_to_Z3(e.right, s, m)
             op = str(e.op) if hasattr(e, 'op') else ""
-            print(f"[DEBUG BinaryOp] lhs={lhs}, rhs={rhs}, op={op}")
+            debug_print("BinaryOp", f"lhs={lhs}, rhs={rhs}, op={op}")
 
             # Map PySlang binary operators to Z3
             if "LessThanEqual" in op or "LessEq" in op:
@@ -469,7 +470,7 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
             if symbol is not None:
                 var_name = symbol.name
                 module_name = m.curr_module
-                print(f"[DEBUG NamedValue] var_name={var_name}, module={module_name}, store keys={list(s.store.get(module_name, {}).keys())}")
+                debug_print("NamedValue", f"var_name={var_name}, module={module_name}, store keys={list(s.store.get(module_name, {}).keys())}")
                 if module_name in s.store and var_name in s.store[module_name]:
                     sym_val = s.store[module_name][var_name]
                     if isinstance(sym_val, str):
@@ -491,7 +492,7 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
             val = getattr(e, 'value', 0)
             if hasattr(val, 'value'):
                 val = val.value
-            print(f"[DEBUG IntegerLiteral] val={val}")
+            debug_print("IntegerLiteral", f"val={val}")
             return BitVecVal(int(val), 32)
 
         # Handle Conversion expressions (type casts)
@@ -526,7 +527,7 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
     if class_name == "ParenthesizedExpressionSyntax":
         inner_expr = getattr(e, 'expression', None)
         if inner_expr is not None:
-            print(f"[DEBUG ParenthesizedExpressionSyntax] unwrapping to: {inner_expr}")
+            debug_print("ParenthesizedExpressionSyntax", f"unwrapping to: {inner_expr}")
             return parse_expr_to_Z3(inner_expr, s, m)
         return BitVecVal(0, 32)
 
@@ -535,7 +536,7 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
         lhs = parse_expr_to_Z3(e.left, s, m)
         rhs = parse_expr_to_Z3(e.right, s, m)
         op_token = str(getattr(e, 'operatorToken', ''))
-        print(f"[DEBUG BinaryExpressionSyntax] lhs={lhs}, rhs={rhs}, op_token={op_token}")
+        debug_print("BinaryExpressionSyntax", f"lhs={lhs}, rhs={rhs}, op_token={op_token}")
 
         if "<=" in op_token:
             return z3.ULE(lhs, rhs)

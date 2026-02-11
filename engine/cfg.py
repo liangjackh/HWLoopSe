@@ -464,13 +464,14 @@ class CFG:
 
     def build_cfg(self, m: ExecutionManager, s: SymbolicState):
         """Build networkx digraph."""
-        print(f"[DEBUG build_cfg] all_nodes count: {len(self.all_nodes)}, edgelist count: {len(self.edgelist)}")
-        print(f"[DEBUG build_cfg] partition_points: {sorted(self.partition_points)}")
-        print(f"[DEBUG build_cfg] edgelist: {self.edgelist}")
+        from helpers.debug import debug_print
+        debug_print("build_cfg", f"all_nodes count: {len(self.all_nodes)}, edgelist count: {len(self.edgelist)}")
+        debug_print("build_cfg", f"partition_points: {sorted(self.partition_points)}")
+        debug_print("build_cfg", f"edgelist: {self.edgelist}")
         self.make_paths()
-        print(f"[DEBUG build_cfg] cfg_edges: {self.cfg_edges}")
-        print(f"[DEBUG build_cfg] basic_block_list count: {len(self.basic_block_list)}")
-        print(f"[DEBUG build_cfg] basic_block_list: {self.basic_block_list}")
+        debug_print("build_cfg", f"cfg_edges: {self.cfg_edges}")
+        debug_print("build_cfg", f"basic_block_list count: {len(self.basic_block_list)}")
+        debug_print("build_cfg", f"basic_block_list: {self.basic_block_list}")
         # print(self.cfg_edges)
 
         G = nx.DiGraph()
@@ -504,8 +505,8 @@ class CFG:
 
         #traversed = nx.edge_dfs(G, source=-1)
         self.paths = list(nx.all_simple_paths(G, source=-1, target=-2))
-        print(f"[DEBUG build_cfg] paths computed: {len(self.paths)} paths")
+        debug_print("build_cfg", f"paths computed: {len(self.paths)} paths")
         if len(self.paths) <= 5:
-            print(f"[DEBUG build_cfg] paths: {self.paths}")
+            debug_print("build_cfg", f"paths: {self.paths}")
         #print(list(traversed))
         #print(list(self.paths))

@@ -113,6 +113,8 @@ def main():
 
     if options.showdebug:
         engine.debug = True
+        from helpers.debug import set_debug
+        set_debug(True)
 
     # Configure auto-plan if enabled
     if options.auto_plan:
