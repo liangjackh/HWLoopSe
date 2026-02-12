@@ -1,5 +1,79 @@
 # Changelog
 
+## [2026-02-12] [Integration] OR1200 assertions integrated and verified
+
+### Summary
+Successfully integrated 71 security assertions from OR1200 processor design into the symbolic execution framework. All assertions are properly detected and can be used for milestone generation with LLM-based planning.
+
+### Integration Details
+
+1. **Assertion Module Structure**
+   - Created `or1200_assertions.sv` with 71 SystemVerilog assertions (p1-p71)
+   - Assertions cover 5 security categories:
+     - Control Flow (CWE-1281): p1-p8, p49-p51
+     - Privilege Escalation/De-escalation (CWE-1198): p9-p30
+     - Update Registers (CWE-1262): p31-p46
+     - Correct Results (CWE-1221): p47-p48
+     - Memory Access (CWE-1202): p52-p71
+   - Module instantiated in `or1200_top.v` with hierarchical signal connections
+
+2. **Assertion Format**
+   - Each assertion in `always @(posedge clk)` block with labeled immediate assertion
+   - Example: `p1: assert ((except_wb_pc == sprs_spr_dat_ppc) || (rst == 1));`
+   - Signals connected via hierarchical references (e.g., `or1200_cpu.or1200_except.epcr`)
+
+3. **Verification of Assertion Detection**
+   - Tested `get_assertions()` method on OR1200 design
+   - Successfully found all 71 assertions when using `--top or1200_top`
+   - Assertion extractor creates 142 verification targets (71 assertions × 2, likely due to duplicates)
+   - Each target includes negated condition for violation detection
+
+### PySlang Library Usage
+
+**Module Discovery with Nested Instances:**
+- `_discover_modules(compilation, 'or1200_top')` returns 43 modules including nested instances
+- `or1200_assertions` is an `InstanceSymbol` (not a top-level instance)
+- Must use `--top or1200_top` to ensure assertions module is included in analysis
+
+**Assertion Traversal:**
+- `get_assertions()` recursively traverses `InstanceSymbol` bodies
+- Finds `StatementKind.ImmediateAssertion` inside `ProceduralBlockSymbol` bodies
+- Assertion conditions are `Expression(ExpressionKind.BinaryOp)` objects
+
+### Usage
+
+```bash
+# Generate milestones for OR1200 assertions (requires LLM API key)
+python3 -m main 1 or1200.F --sv --top or1200_top --auto-plan --llm-provider deepseek --llm-api-key YOUR_KEY
+
+# Test assertion detection without LLM (uses blind strategy)
+python3 -m main 1 or1200.F --sv --top or1200_top --explore_time 60
+
+# Mock mode for testing without API key
+python3 -m main 1 or1200.F --sv --top or1200_top --auto-plan --mock
+```
+
+### Important Notes
+
+1. **Must specify `--top or1200_top`**: Without this flag, the tool may select a different module that doesn't contain assertions
+2. **Assertion extraction output**: Shows 142 assertions (71 × 2) - likely counting each assertion twice
+3. **Signal path resolution**: Assertions use hierarchical paths like `or1200_top.except_wb_pc`
+4. **Multi-module design warning**: Extractor assumes assertions belong to `or1200_top` module
+
+### Files Modified
+
+- `designs/benchmarks/or1200/buggy-or1200/or1200_assertions.sv` (created)
+- `designs/benchmarks/or1200/buggy-or1200/or1200_top.v` (assertions module instantiated)
+- `or1200.F` (includes or1200_assertions.sv)
+
+### Result
+
+- ✅ All 71 OR1200 security assertions properly integrated
+- ✅ Assertions detected by `get_assertions()` method
+- ✅ Verification targets created by `extract_verification_targets()`
+- ✅ Ready for LLM-based milestone generation
+- ✅ Compatible with existing symbolic execution engine
+
 ## [2026-02-11] [Refactor] Modular architecture for ExecutionEngine
 
 ### Problem

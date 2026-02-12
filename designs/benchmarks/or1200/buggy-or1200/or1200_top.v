@@ -1029,9 +1029,66 @@ or1200_pm or1200_pm(
 	.pm_wakeup(pm_wakeup_o),
 	.pm_lvolt(pm_lvolt_o)
 );
-//always @(posedge clk_i) begin
-//    assert ((~(((or1200_ctrl.ex_insn & 'hC0000000) >> 30 == 2) )) || (or1200_ctrl.ex_pc == or1200_sprs.spr_dat_npc) || (rst_i == 1));
-//	assert (or1200_except.wb_pc == or1200_sprs.spr_dat_ppc) || (rst == 1);
-//end
+//
+// Instantiation of Security Assertions Module
+//
+or1200_assertions or1200_assertions(
+    .clk(clk_i),
+    .rst(rst_i),
+
+    // From or1200_except (directly via or1200_cpu)
+    .except_wb_pc(wb_pc),
+    .except_epcr(or1200_cpu.or1200_except.epcr),
+    .except_eear(or1200_cpu.or1200_except.eear),
+    .except_esr(or1200_cpu.or1200_except.esr),
+    .except_lsu_addr(or1200_cpu.or1200_except.lsu_addr),
+    .except_spr_dat_npc(spr_dat_npc),
+
+    // From or1200_sprs (via or1200_cpu)
+    .sprs_spr_dat_ppc(or1200_cpu.or1200_sprs.spr_dat_ppc),
+    .sprs_spr_dat_npc(or1200_cpu.or1200_sprs.spr_dat_npc),
+    .sprs_sr(or1200_cpu.or1200_sprs.sr),
+    .sprs_to_sr(or1200_cpu.or1200_sprs.to_sr),
+    .sprs_spr_dat_o(or1200_cpu.or1200_sprs.spr_dat_o),
+
+    // From or1200_ctrl (via or1200_cpu)
+    .ctrl_ex_insn(ex_insn),
+    .ctrl_wb_insn(wb_insn),
+    .ctrl_ex_pc(ex_pc),
+
+    // From or1200_rf (via or1200_cpu)
+    .rf_rf_addrw(or1200_cpu.or1200_rf.rf_addrw),
+    .rf_addrw(or1200_cpu.or1200_rf.addrw),
+    .rf_rf_dataw(or1200_cpu.or1200_rf.rf_dataw),
+    .rf_we(or1200_cpu.or1200_rf.rf_we),
+
+    // From or1200_genpc (via or1200_cpu)
+    .genpc_pc(or1200_cpu.or1200_genpc.pc),
+
+    // From or1200_cpu (operand muxes)
+    .operand_a(or1200_cpu.operand_a),
+    .operand_b(or1200_cpu.operand_b),
+    .ex_simm(or1200_cpu.or1200_ctrl.ex_simm),
+
+    // From or1200_if (via or1200_cpu)
+    .if_insn(or1200_cpu.or1200_if.if_insn),
+    .if_insn_saved(or1200_cpu.or1200_if.insn_saved),
+
+    // From or1200_lsu (via or1200_cpu)
+    .lsu_dcpu_dat_i(or1200_cpu.or1200_lsu.dcpu_dat_i),
+    .mem2reg_regdata(or1200_cpu.or1200_lsu.or1200_mem2reg.regdata),
+    .mem2reg_memdata(or1200_cpu.or1200_lsu.or1200_mem2reg.memdata),
+    .reg2mem_memdata(or1200_cpu.or1200_lsu.or1200_reg2mem.memdata),
+    .reg2mem_regdata(or1200_cpu.or1200_lsu.or1200_reg2mem.regdata),
+
+    // External interfaces
+    .icpu_dat_i(icpu_dat_qmem),
+    .dcpu_adr_o(dcpu_adr_cpu),
+    .dcpu_dat_o(dcpu_dat_cpu),
+
+    // ID stage
+    .id_insn(id_insn),
+    .id_freeze(or1200_cpu.or1200_freeze.id_freeze)
+);
 
 endmodule

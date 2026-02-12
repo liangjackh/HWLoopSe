@@ -29,22 +29,17 @@
     },
     {
       "step": 5,
-      "description": "Release Reset and allow first increment",
-      "condition": "RST == 0"
+      "description": "Reset released, first clock edge increments out to 1",
+      "condition": "RST == 0 && out == 1"
     },
     {
       "step": 6,
-      "description": "First increment after reset, out becomes 1",
-      "condition": "out == 1"
+      "description": "Second clock edge increments out to 2",
+      "condition": "RST == 0 && out == 2"
     },
     {
       "step": 7,
-      "description": "Second increment, out becomes 2",
-      "condition": "out == 2"
-    },
-    {
-      "step": 8,
-      "description": "Third increment, target reached (out > 2)",
+      "description": "Third clock edge increments out to 3, satisfying target",
       "condition": "out > 2"
     }
   ]

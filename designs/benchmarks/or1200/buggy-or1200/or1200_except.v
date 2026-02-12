@@ -62,6 +62,7 @@
 
 //
 // Exception recognition and sequencing
+//or1200_except.wb_pc == or1200_sprs.spr_dat_ppc) || (rst == 1)
 //
 
 module or1200_except
