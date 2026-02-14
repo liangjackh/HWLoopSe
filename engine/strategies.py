@@ -53,7 +53,7 @@ class ExplorationStrategy(ABC):
         """
         pass
 
-
+'''
 class BlindSearchStrategy(ExplorationStrategy):
     """
     Blind search strategy using Cartesian product of all paths.
@@ -75,6 +75,8 @@ class BlindSearchStrategy(ExplorationStrategy):
     ) -> None:
         """Execute blind exhaustive search."""
 
+        
+        # old version
         # Build mapped_paths: module_name -> cfg_idx -> paths
         mapped_paths = {}
         for name in manager.names_list:
@@ -244,7 +246,201 @@ class BlindSearchStrategy(ExplorationStrategy):
             print(counterexample)
         else:
             print("UNSAT")
+'''
+class BlindSearchStrategy(ExplorationStrategy):
+    """
+    Blind search strategy using Cartesian product of all paths.
 
+    This strategy uses a generator-based approach to avoid memory explosion
+    when dealing with a large number of paths (e.g., in complex RTL designs).
+    It explores all possible combinations of paths across modules and cycles.
+    """
+
+    def run(
+        self,
+        engine: 'ExecutionEngine',
+        visitor: Any,
+        modules: List[Any],
+        modules_dict: Dict[str, Any],
+        cfgs_by_module: Dict[str, List[Any]],
+        manager: ExecutionManager,
+        state: SymbolicState,
+        num_cycles: int
+    ) -> None:
+        """Execute blind exhaustive search with memory optimization."""
+
+        # Build mapped_paths: module_name -> cfg_idx -> paths
+        mapped_paths = {}
+        for name in manager.names_list:
+            mapped_paths[name] = {}
+
+        for module_name, cfg_list in cfgs_by_module.items():
+            for i, cfg in enumerate(cfg_list):
+                mapped_paths[module_name][i] = cfg.paths
+
+        keys = list(cfgs_by_module.keys())
+        
+        # 1. Flatten all decision points to build the generator
+        all_decision_lists = []
+        decision_map = []  # Maps each decision to (cycle, module_name, cfg_idx)
+        
+        for cycle in range(int(num_cycles)):
+            for module_name in keys:
+                for cfg_idx, paths in enumerate(mapped_paths[module_name].values()):
+                    # Provide a fallback if a CFG has no paths
+                    path_list_to_add = paths if paths else [[]]
+                    all_decision_lists.append(path_list_to_add)
+                    decision_map.append((cycle, module_name, cfg_idx))
+                    
+        # 2. Build the super-generator (extremely low memory footprint)
+        total_paths_generator = product(*all_decision_lists)
+
+        # Reset branch tracking and path count
+        manager.branch_count = 0
+        manager.branch_points_seen = set()
+        manager.path_count = 0
+
+        print("[BlindSearchStrategy] Starting exhaustive search via generator...")
+
+        # 3. Main exploration loop directly consuming the generator
+        for path_tuple in total_paths_generator:
+            # Reconstruct the curr_path dictionary structure expected by the engine
+            curr_path = {k: [ [] for _ in range(int(num_cycles)) ] for k in keys}
+            for val, (cycle, module_name, cfg_idx) in zip(path_tuple, decision_map):
+                curr_path[module_name][cycle].append(val)
+                
+            manager.prev_store = state.store
+            # Use the first module for init_state
+            first_module = modules[0] if modules else None
+            if first_module:
+                init_state(state, manager.prev_store, first_module, visitor)
+
+            # Initialize inputs with symbols for all submodules
+            for module_name in manager.names_list:
+                manager.curr_module = module_name
+                visitor.symbolic_store.clear()
+                visitor.visited.clear()
+                visitor.dfs(modules_dict[module_name])
+                for var_name in visitor.symbolic_store:
+                    if var_name not in state.store[module_name]:
+                        state.store[module_name][var_name] = init_symbol()
+
+            # Process declarations and combinational logic
+            for c in cfgs_by_module[manager.curr_module]:
+                for node in c.decls:
+                    visitor.dfs(node)
+                for node in c.comb:
+                    visitor.dfs(node)
+
+            manager.curr_module = manager.names_list[0]
+
+            print(f"Executing path {manager.path_count + 1} (Total paths unknown due to generator)")
+            engine.check_state(manager, state)
+
+            modules_seen = 0
+            for module_name in curr_path:
+                manager.curr_module = manager.names_list[modules_seen]
+                manager.cycle = 0
+                for complete_single_cycle_path in curr_path[module_name]:
+                    if manager.cycle > 0:
+                        state.apply_pending_nba()
+
+                    for cfg_idx, cfg_path in enumerate(complete_single_cycle_path):
+                        # Handle empty paths generated as fallbacks
+                        if not cfg_path:
+                            continue
+                            
+                        directions = cfgs_by_module[module_name][cfg_idx].compute_direction(cfg_path)
+                        if engine.debug:
+                            print(f"DEBUG: cfg_path={cfg_path}, directions={directions}")
+                            print(f"DEBUG: basic_block_list has {len(cfgs_by_module[module_name][cfg_idx].basic_block_list)} blocks")
+
+                        k = 0
+                        for basic_block_idx in cfg_path:
+                            if basic_block_idx < 0:
+                                print("Skipping dummy node in path")
+                                continue
+                            else:
+                                direction = directions[k] if k < len(directions) else 0
+                                k += 1
+                                basic_block = cfgs_by_module[module_name][cfg_idx].basic_block_list[basic_block_idx]
+                                print(f"visiting basic_block: {[str(s)[:50] if s else 'None' for s in basic_block]}")
+                                for stmt in basic_block:
+                                    visitor.visit_stmt(manager, state, stmt, modules_dict, direction)
+
+                    manager.cycle += 1
+                modules_seen += 1
+
+            manager.cycle = 0
+            engine.done = True
+            print(f"Checking path {manager.path_count + 1}")
+            engine.check_state(manager, state)
+            engine.done = False
+
+            manager.curr_level = 0
+            for module_name in manager.instances_seen:
+                manager.instances_seen[module_name] = 0
+                manager.instances_loc[module_name] = ""
+
+            if engine.debug:
+                print("------------------------")
+
+            if manager.assertion_violation:
+                self._handle_assertion_violation(engine, manager, state)
+                return
+
+            state.pc.reset()
+            for module in manager.dependencies:
+                module = {}
+
+            manager.ignore = False
+            manager.abandon = False
+            manager.reg_writes.clear()
+            for name in manager.names_list:
+                state.store[name] = {}
+            manager.path_count += 1
+
+        print(f"Branch points explored: {manager.branch_count}")
+        print(f"Paths explored: {manager.path_count}")
+
+    def _handle_assertion_violation(
+        self,
+        engine: 'ExecutionEngine',
+        manager: ExecutionManager,
+        state: SymbolicState
+    ) -> None:
+        """Handle assertion violation: print details and generate counterexample."""
+        print("Assertion violation")
+        if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+            print("Violated assertion details:")
+            for va in manager.violated_assertions:
+                print(f"  - condition: {va.get('condition', 'N/A')}")
+                print(f"    z3_condition: {va.get('z3_condition', 'N/A')}")
+                print(f"    path condition: {va.get('path condition', 'N/A')}")
+                print(f"    kind: {va.get('kind', 'N/A')}")
+
+        counterexample = {}
+        symbols_to_values = {}
+        solver_start = time.process_time()
+
+        if engine.solve_pc(state.pc):
+            solver_end = time.process_time()
+            manager.solver_time += solver_end - solver_start
+            solved_model = state.pc.model()
+            decls = solved_model.decls()
+            for item in decls:
+                symbols_to_values[item.name()] = solved_model[item]
+
+            for module in state.store:
+                for signal in state.store[module]:
+                    for symbol in symbols_to_values:
+                        if state.store[module][signal] == symbol:
+                            counterexample[signal] = symbols_to_values[symbol]
+
+            print(counterexample)
+        else:
+            print("UNSAT")
+            
 
 class WorkItem:
     """
