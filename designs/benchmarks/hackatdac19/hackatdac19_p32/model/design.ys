@@ -1,9 +1,0 @@
-# running in hackatdac19_p32/src/
-read_verilog -formal -DFORMAL -DFORMAL_P32 design_formal.v
-
-prep -top formal_top
-
-hierarchy -smtcheck
-rename -witness
-write_jny -no-connections ../model/design.json
-write_rtlil ../model/design.il

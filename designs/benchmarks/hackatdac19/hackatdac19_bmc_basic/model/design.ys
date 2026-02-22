@@ -1,8 +1,0 @@
-# running in hackatdac19_bmc_basic/src/
-read_verilog -formal -DFORMAL design_formal.v
-prep -top formal_top
-
-hierarchy -smtcheck
-rename -witness
-write_jny -no-connections ../model/design.json
-write_rtlil ../model/design.il

@@ -1,6 +1,0 @@
-Elapsed clock time [H:MM:SS (secs)]: 0:01:27 (87)
-Elapsed process time [H:MM:SS (secs)]: 0:01:29 (89)
-engine_0 (smtbmc) returned FAIL
-counterexample trace: engine_0/trace.vcd
-counterexample trace: engine_0/trace.yw
-  failed assertion formal_top.\dut.ariane_i .controller_i.HACK_DAC19_p32 at design_formal.v:2604.4-2604.52 step 1
