@@ -757,3 +757,45 @@ The original implementation manually parsed .F file lists line-by-line (lines 14
 - Fixed include path handling (-I flag now works correctly)
 - Cleaner separation: Driver handles I/O, Compilation handles semantics
 - Same `Compilation` object output, fully compatible with existing symbolic execution engine
+
+## [2026-02-22] [Feature] HACK@DAC 2019 SymbiYosys formal verification setup
+
+### Task Summary
+
+Set up a complete open-source formal verification pipeline for the HACK@DAC 2019 SoC design (Ariane/CVA6 RISC-V + AXI interconnect) using SymbiYosys (sby) + Yosys + yices.
+
+### Problem
+
+The design uses advanced SystemVerilog features (packages with functions, interfaces, structs) that Yosys's built-in SV parser cannot handle. The original properties were written for JasperGold using TCL `assert` syntax with `bind` and hierarchical references — neither of which Yosys supports.
+
+### Solution
+
+1. **sv2v conversion**: Used `sv2v --siloed --top=formal_top -DVERILATOR` to convert the entire design to plain Verilog. Key exclusions: UVM tracer files, PITON wrappers, serpent cache subsystem (design uses std_cache path). Created `formal_top.sv` wrapper to resolve AXI_BUS interface ports for sv2v.
+
+2. **Simulation code removal**: Stripped `string`/`$fwrite`/`$fclose` Verilator tracer block from sv2v output (lines 7811-7844 in ariane module).
+
+3. **Assertion injection**: Translated 10 JasperGold SVA properties (p5, p9, p21-p26, p29, p32) from TCL format to Verilog `assert` statements, injected directly into the relevant modules (`csr_regfile`, `commit_stage`, `ariane`, `controller`) using Python. Each assertion guarded by `ifdef FORMAL_Pxx` for per-property isolation.
+
+4. **Per-property sby tasks**: Configured `hackatdac19.sby` with 10 independent tasks, each passing `-DFORMAL_Pxx` to enable only the target assertion.
+
+### Results
+
+- Pipeline fully functional: Yosys parses ~16K line converted design in ~27s
+- p32 (Bug 32: exception signal not set at halt) confirmed FAIL at BMC step 1
+- Counterexample VCD traces generated automatically
+
+### PySlang / Tool Usage Notes
+
+- `sv2v v0.0.13` used for SV→Verilog conversion
+- Key sv2v flags: `--siloed` (independent macro scoping per file), `--top=<module>` (prune unused modules), `-DVERILATOR` (skip simulation-only code paths)
+- Yosys `read_verilog -formal -DFORMAL` enables SVA assert cell generation
+- `chformal` does not support name-based filtering; use `ifdef` guards instead
+
+### Files Created/Modified
+
+- `designs/benchmarks/hackatdac19/formal_top.sv` — wrapper for sv2v
+- `designs/benchmarks/hackatdac19/sv2v_out/design.v` — sv2v output
+- `designs/benchmarks/hackatdac19/sv2v_out/design_formal.v` — with injected assertions
+- `designs/benchmarks/hackatdac19/hackatdac19.sby` — sby configuration (10 tasks)
+- `designs/benchmarks/hackatdac19/hackatdac19_assertions.sv` — original SVA bind file (JasperGold reference)
+- `designs/benchmarks/hackatdac19/FORMAL_VERIFICATION_SETUP.md` — detailed setup notes

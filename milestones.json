@@ -9,7 +9,7 @@
     },
     {
       "step": 1,
-      "description": "Reset released, first clock edge increments out to 1",
+      "description": "Reset deasserted, first clock edge increments out to 1",
       "condition": "RST == 0 && out == 1"
     },
     {
@@ -29,7 +29,7 @@
     },
     {
       "step": 5,
-      "description": "Reset released, first clock edge increments out to 1",
+      "description": "Reset deasserted, first clock edge increments out to 1",
       "condition": "RST == 0 && out == 1"
     },
     {

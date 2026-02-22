@@ -1,0 +1,35 @@
+[tasks]
+p5
+p9
+p21
+p22
+p23
+p24
+p25
+p26
+p29
+p32
+
+[options]
+mode bmc
+depth 20
+
+[engines]
+smtbmc
+
+[script]
+p5:  read_verilog -formal -DFORMAL -DFORMAL_P5  design_formal.v
+p9:  read_verilog -formal -DFORMAL -DFORMAL_P9  design_formal.v
+p21: read_verilog -formal -DFORMAL -DFORMAL_P21 design_formal.v
+p22: read_verilog -formal -DFORMAL -DFORMAL_P22 design_formal.v
+p23: read_verilog -formal -DFORMAL -DFORMAL_P23 design_formal.v
+p24: read_verilog -formal -DFORMAL -DFORMAL_P24 design_formal.v
+p25: read_verilog -formal -DFORMAL -DFORMAL_P25 design_formal.v
+p26: read_verilog -formal -DFORMAL -DFORMAL_P26 design_formal.v
+p29: read_verilog -formal -DFORMAL -DFORMAL_P29 design_formal.v
+p32: read_verilog -formal -DFORMAL -DFORMAL_P32 design_formal.v
+
+prep -top formal_top
+
+[files]
+sv2v_out/design_formal.v
