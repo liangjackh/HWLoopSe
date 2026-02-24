@@ -409,9 +409,13 @@ class ExecutionManager:
 
         return None
 
-    def get_assertions(self, m: "ExecutionManager", items) -> None:
+    def get_assertions(self, m: "ExecutionManager", items, instance_path: str = "") -> None:
         """Traverse the AST and get the assertion conditions.
-        PySlang version - looks for ImmediateAssertion and ConcurrentAssertion statements."""
+        PySlang version - looks for ImmediateAssertion and ConcurrentAssertion statements.
+
+        Each assertion is stored as a tuple (condition, instance_name) so that
+        the caller knows which instance the assertion belongs to.
+        """
         if items is None:
             return
 
@@ -419,12 +423,14 @@ class ExecutionManager:
         if hasattr(items, '__iter__') and not isinstance(items, str):
             for item in items:
                 if type(item) == ps.ProceduralBlockSymbol:
-                    self.get_assertions(m, item.body)
+                    self.get_assertions(m, item.body, instance_path)
                 elif type(item) == ps.InstanceSymbol:
                     if hasattr(item, 'body'):
-                        self.get_assertions(m, item.body)
+                        # Use the instance name (e.g., "test_1") as the path
+                        child_path = item.name if not instance_path else f"{instance_path}.{item.name}"
+                        self.get_assertions(m, item.body, child_path)
                 else:
-                    self.get_assertions(m, item)
+                    self.get_assertions(m, item, instance_path)
             return
 
         # Handle Statement objects (compiled AST)
@@ -436,62 +442,50 @@ class ExecutionManager:
                     body = items.body
                     if hasattr(body, '__iter__') and not isinstance(body, str):
                         for substmt in body:
-                            self.get_assertions(m, substmt)
+                            self.get_assertions(m, substmt, instance_path)
                     else:
-                        self.get_assertions(m, body)
+                        self.get_assertions(m, body, instance_path)
 
             elif kind == ps.StatementKind.List:
                 if hasattr(items, 'list'):
                     for substmt in items.list:
-                        self.get_assertions(m, substmt)
+                        self.get_assertions(m, substmt, instance_path)
 
             elif kind == ps.StatementKind.Timed:
                 if hasattr(items, 'stmt'):
-                    self.get_assertions(m, items.stmt)
+                    self.get_assertions(m, items.stmt, instance_path)
 
             elif kind == ps.StatementKind.Conditional:
                 if hasattr(items, 'ifTrue'):
-                    self.get_assertions(m, items.ifTrue)
+                    self.get_assertions(m, items.ifTrue, instance_path)
                 if hasattr(items, 'ifFalse') and items.ifFalse is not None:
-                    self.get_assertions(m, items.ifFalse)
+                    self.get_assertions(m, items.ifFalse, instance_path)
 
             elif kind == ps.StatementKind.Case:
                 if hasattr(items, 'items'):
                     for case in items.items:
                         if hasattr(case, 'stmt'):
-                            self.get_assertions(m, case.stmt)
+                            self.get_assertions(m, case.stmt, instance_path)
 
             elif kind in [ps.StatementKind.ForLoop, ps.StatementKind.WhileLoop,
                          ps.StatementKind.DoWhileLoop, ps.StatementKind.RepeatLoop]:
                 if hasattr(items, 'body'):
-                    self.get_assertions(m, items.body)
+                    self.get_assertions(m, items.body, instance_path)
 
             elif kind == ps.StatementKind.ImmediateAssertion:
                 # Found an immediate assertion - extract the condition
                 if hasattr(items, 'cond'):
-                    m.assertions.append(items.cond)
-                    print(f"[get_assertions] Found ImmediateAssertion: {items.cond}")
+                    m.assertions.append((items.cond, instance_path))
+                    print(f"[get_assertions] Found ImmediateAssertion in '{instance_path or 'top'}': {items.cond}")
                 elif hasattr(items, 'expr'):
-                    m.assertions.append(items.expr)
-                    print(f"[get_assertions] Found ImmediateAssertion (expr): {items.expr}")
+                    m.assertions.append((items.expr, instance_path))
+                    print(f"[get_assertions] Found ImmediateAssertion (expr) in '{instance_path or 'top'}': {items.expr}")
 
             elif kind == ps.StatementKind.ConcurrentAssertion:
                 # Found a concurrent assertion
                 if hasattr(items, 'propertySpec'):
-                    m.assertions.append(items.propertySpec)
-                    print(f"[get_assertions] Found ConcurrentAssertion: {items.propertySpec}")
-
-        # Also check for syntax-based assertions
-        if hasattr(items, '__class__'):
-            class_name = items.__class__.__name__
-            if 'ImmediateAssertionStatement' in class_name:
-                if hasattr(items, 'expr'):
-                    m.assertions.append(items.expr)
-                    print(f"[get_assertions] Found ImmediateAssertionStatementSyntax: {items.expr}")
-            elif 'AssertPropertyStatement' in class_name:
-                if hasattr(items, 'propertySpec'):
-                    m.assertions.append(items.propertySpec)
-                    print(f"[get_assertions] Found AssertPropertyStatementSyntax")
+                    m.assertions.append((items.propertySpec, instance_path))
+                    print(f"[get_assertions] Found ConcurrentAssertion in '{instance_path or 'top'}': {items.propertySpec}")
 
     def count_conditionals_2(self, m:ExecutionManager, items) -> int:
         """(Alternative conditional counter) Rewrite to actually return an int"""

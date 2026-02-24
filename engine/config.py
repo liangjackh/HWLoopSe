@@ -21,6 +21,7 @@ class EngineConfig:
         llm_base_url: Custom base URL for LLM API
         llm_mock: Use mock LLM responses for testing
         explore_time: Time limit for exploration in seconds (None = no limit)
+        coi: Enable Cone of Influence pruning
     """
     num_cycles: int = 1
     include_paths: List[str] = field(default_factory=list)
@@ -35,6 +36,7 @@ class EngineConfig:
     llm_base_url: Optional[str] = None
     llm_mock: bool = False
     explore_time: Optional[int] = None
+    coi: bool = False
 
     @classmethod
     def from_options(cls, options, num_cycles: int) -> "EngineConfig":
@@ -61,4 +63,5 @@ class EngineConfig:
             llm_base_url=options.llm_base_url,
             llm_mock=options.mock or False,
             explore_time=int(options.explore_time) if options.explore_time else None,
+            coi=options.coi or False,
         )

@@ -1,6 +1,6 @@
 {
-  "target": "Violate assertion 'out <= 2' in place_holder",
-  "target_expr": "place_holder.out > 2",
+  "target": "Violate assertion 'out <= 2' in test_1",
+  "target_expr": "test_1.out > 2",
   "milestones": [
     {
       "step": 0,
@@ -9,38 +9,23 @@
     },
     {
       "step": 1,
-      "description": "Reset deasserted, first clock edge increments out to 1",
-      "condition": "RST == 0 && out == 1"
+      "description": "Release reset and allow counter to increment",
+      "condition": "RST == 0 && out == 0"
     },
     {
       "step": 2,
-      "description": "Second clock edge increments out to 2",
-      "condition": "RST == 0 && out == 2"
-    },
-    {
-      "step": 3,
-      "description": "Third clock edge increments out to 3, satisfying target",
-      "condition": "out > 2"
-    },
-    {
-      "step": 4,
-      "description": "System Reset",
-      "condition": "RST == 1"
-    },
-    {
-      "step": 5,
-      "description": "Reset deasserted, first clock edge increments out to 1",
+      "description": "Counter increments to 1",
       "condition": "RST == 0 && out == 1"
     },
     {
-      "step": 6,
-      "description": "Second clock edge increments out to 2",
+      "step": 3,
+      "description": "Counter increments to 2",
       "condition": "RST == 0 && out == 2"
     },
     {
-      "step": 7,
-      "description": "Third clock edge increments out to 3, satisfying target",
-      "condition": "out > 2"
+      "step": 4,
+      "description": "Counter increments to 3, violating the assertion and reaching the target",
+      "condition": "test_1.out > 2"
     }
   ]
 }

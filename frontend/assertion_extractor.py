@@ -103,28 +103,40 @@ def extract_verification_targets(modules, manager) -> List[VerificationTarget]:
     targets = []
 
     # First, collect all assertions using the existing method
+    # Only traverse from the top-level module since get_assertions
+    # already recurses into sub-instances. Traversing all modules
+    # would find the same assertion multiple times.
     manager.assertions = []
-
-    for module in modules:
-        manager.get_assertions(manager, module.body)
+    top_module = modules[0]
+    manager.get_assertions(manager, top_module.body)
 
     if not manager.assertions:
         print("[assertion_extractor] No assertions found in design")
         return targets
 
-    print(f"[assertion_extractor] Found {len(manager.assertions)} assertion(s)")
+    # Assertions are now tuples of (condition, instance_path)
+    # Deduplicate by (string representation, instance_path)
+    seen_assertions = set()
+    unique_assertions = []
+    for assertion, instance_path in manager.assertions:
+        key = (str(assertion), instance_path)
+        if key not in seen_assertions:
+            seen_assertions.add(key)
+            unique_assertions.append((assertion, instance_path))
+
+    manager.assertions = unique_assertions
+    print(f"[assertion_extractor] Found {len(manager.assertions)} unique assertion(s) (after deduplication):")
+    for assertion, instance_path in manager.assertions:
+        print(f"[assertion_extractor]   {assertion} in '{instance_path or 'top'}'")
 
     # Convert each assertion to a verification target
-    for idx, assertion in enumerate(manager.assertions):
+    for idx, (assertion, instance_path) in enumerate(manager.assertions):
         # Get the assertion condition as a string
         assertion_str = str(assertion)
 
         # Try to extract the condition expression
-        # PySlang assertions have different formats, try to handle them
         condition_str = assertion_str
 
-        # For simple cases like "out <= 2", extract the condition
-        # This is a heuristic - may need refinement based on actual PySlang output
         if hasattr(assertion, 'syntax'):
             condition_str = str(assertion.syntax)
 
@@ -133,19 +145,13 @@ def extract_verification_targets(modules, manager) -> List[VerificationTarget]:
         # Negate the condition to find violations
         negated = negate_condition(condition_str)
 
-        # Determine which module this assertion belongs to
-        # For now, assume single module or use first module
-        # TODO: Improve module detection by tracking assertion location
-        if len(modules) == 1:
-            module_instance = modules[0]
-            from helpers.slang_helpers import get_module_name
-            instance_name = get_module_name(module_instance)
+        # Use the instance path tracked during get_assertions
+        if instance_path:
+            instance_name = instance_path
         else:
-            # For multi-module designs, try to infer from assertion context
-            # Default to first module for now
+            # Assertion is in the top-level module
             from helpers.slang_helpers import get_module_name
             instance_name = get_module_name(modules[0])
-            print(f"[assertion_extractor] Warning: Multi-module design, assuming assertion in {instance_name}")
 
         # Extract signal names and resolve paths
         signals = extract_signals_from_condition(condition_str)
@@ -161,7 +167,6 @@ def extract_verification_targets(modules, manager) -> List[VerificationTarget]:
             hierarchical = resolve_signal_path(signal, instance_name)
 
             # Replace in target expression
-            # Use word boundaries to avoid partial replacements
             target_expr = re.sub(r'\b' + signal + r'\b', hierarchical, target_expr)
 
         # Create verification target

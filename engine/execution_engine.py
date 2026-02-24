@@ -60,6 +60,10 @@ class ExecutionEngine:
     llm_mock: bool = False  # Use mock LLM responses for testing
     llm_base_url: Optional[str] = None  # Custom base URL for LLM API
 
+    # COI configuration
+    coi_enabled: bool = False  # Enable Cone of Influence pruning
+    coi_result = None  # Stores COIResult after analysis
+
     # Internal state set by _compile_design
     _driver = None
     _compilation = None
@@ -82,6 +86,8 @@ class ExecutionEngine:
         self._compilation = None
         self._visitor = None
         self._symbol_visitor = None
+        self.coi_enabled = False
+        self.coi_result = None
 
     def _compile_design(self, file_path: str, config: "EngineConfig") -> Tuple[any, any, List]:
         """Compile the design using PySlang.
@@ -268,6 +274,10 @@ class ExecutionEngine:
 
         if config.auto_plan:
             print(f"[ExecutionEngine] Auto-plan enabled (provider={config.llm_provider}, mock={config.llm_mock})")
+
+        if config.coi:
+            self.coi_enabled = True
+            print("[ExecutionEngine] Cone of Influence (COI) pruning enabled")
 
     def run(self, file_path: str, config: "EngineConfig") -> None:
         """Main entry point for symbolic execution.
@@ -564,6 +574,55 @@ class ExecutionEngine:
             manager.modules = modules_dict
 
 
+        # Step 3.5: COI pruning (if enabled)
+        if self.coi_enabled:
+            print("[ExecutionEngine] Running Cone of Influence analysis...")
+            if driver is None or compilation is None:
+                print("[ExecutionEngine] Warning: COI requires driver and compilation objects, skipping")
+            else:
+                from frontend.assertion_extractor import extract_verification_targets, extract_signals_from_condition
+                from frontend.coi_analyzer import COIAnalyzer
+
+                # Extract seed signals from assertions
+                coi_targets = extract_verification_targets(modules, manager)
+                seed_signals = []
+                if coi_targets:
+                    for target in coi_targets:
+                        # Extract signal names from the assertion condition
+                        signals = extract_signals_from_condition(target.assertion_source)
+                        for sig in signals:
+                            if sig.isdigit() or sig in ('if', 'else', 'begin', 'end'):
+                                continue
+                            seed_signals.append((target.module_name, sig))
+
+                if seed_signals:
+                    analyzer = COIAnalyzer(modules_dict, cfgs_by_module, modules)
+                    coi_result = analyzer.analyze(seed_signals)
+                    self.coi_result = coi_result
+
+                    # Filter cfgs_by_module: remove non-relevant instances entirely,
+                    # prune non-relevant CFGs within relevant instances
+                    for instance_name in list(cfgs_by_module.keys()):
+                        if instance_name not in coi_result.relevant_instances:
+                            del cfgs_by_module[instance_name]
+                            print(f"[COI] Pruned all CFGs for instance: {instance_name}")
+                        else:
+                            # Only keep relevant CFGs within this instance
+                            for cfg_idx, cfg in enumerate(cfgs_by_module[instance_name]):
+                                if (instance_name, cfg_idx) not in coi_result.relevant_cfgs:
+                                    cfg.paths = []
+                                    print(f"[COI] Pruned CFG {cfg_idx} for instance: {instance_name}")
+
+                    # Filter names_list to only relevant instances
+                    original_names = list(manager.names_list)
+                    manager.names_list = [n for n in manager.names_list if n in coi_result.relevant_instances]
+                    pruned = set(original_names) - set(manager.names_list)
+                    if pruned:
+                        print(f"[COI] Removed instances from exploration: {pruned}")
+                    print(f"[COI] Remaining instances: {manager.names_list}")
+                else:
+                    print("[ExecutionEngine] No seed signals found for COI, skipping pruning")
+
         # Step 4: Auto-plan milestone generation (if enabled)
         if self.auto_plan_enabled:
             print("[ExecutionEngine] Auto-plan mode enabled")
@@ -594,7 +653,7 @@ class ExecutionEngine:
 
                         # Extract RTL context
                         slicer = ContextSlicer(driver, compilation, modules)
-                        context = slicer.get_context(target.target_expr)
+                        context = slicer.get_context(target.target_expr, coi_result=self.coi_result)
                         print(f"[ExecutionEngine] Extracted {len(context)} chars of RTL context")
 
                         # Get valid signal names (reuse SymbolicDFS)

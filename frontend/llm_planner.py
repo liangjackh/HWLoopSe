@@ -314,7 +314,7 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
                 errors = self._validate_signals(milestones, known_signals)
 
                 if not errors:
-                    print(f"[LLMPlanner] Generated {len(milestones)} milestones (attempt {attempt + 1})")
+                    print(f"[LLMPlanner ]Successfully generated {len(milestones)} milestones (attempt {attempt + 1})")
                     time.sleep(5)
                     return milestones
 

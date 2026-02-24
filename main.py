@@ -88,6 +88,8 @@ def create_option_parser() -> OptionParser:
                       help="Custom base URL for LLM API (e.g., https://api.deepseek.com)")
     parser.add_option("--mock", action="store_true", dest="mock",
                       default=False, help="Use mock LLM responses for testing")
+    parser.add_option("--coi", action="store_true", dest="coi",
+                      default=False, help="Enable Cone of Influence pruning to reduce explored paths")
     return parser
 
 

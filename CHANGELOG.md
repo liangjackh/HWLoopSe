@@ -1,5 +1,61 @@
 # Changelog
 
+## [2026-02-24] [Feature] Cone of Influence (COI) pruning for symbolic execution
+
+### Summary
+Implemented `--coi` flag that traces backward from assertion signals to identify only the always blocks and module instances that can influence those signals, pruning everything else from exploration. On `test_2.v`, this reduced exploration from both `place_holder` and `test_1` instances down to just `test_1` (2 paths instead of the full Cartesian product).
+
+### Changes
+
+1. **`main.py`**: Added `--coi` CLI option (store_true)
+2. **`engine/config.py`**: Added `coi: bool = False` field to `EngineConfig`, wired into `from_options()`
+3. **`engine/execution_engine.py`**:
+   - Added `coi_enabled` and `coi_result` attributes
+   - `_configure_from_config()` reads `config.coi`
+   - Inserted COI filtering step (Step 3.5) after CFG construction: extracts seed signals from assertions, runs `COIAnalyzer.analyze()`, removes pruned instances from `cfgs_by_module` and `manager.names_list`
+   - Passes `coi_result` to `ContextSlicer.get_context()` in auto-plan section
+4. **`frontend/coi_analyzer.py`** (new):
+   - `COIResult` dataclass: `relevant_cfgs`, `relevant_instances`, `cone_signals`
+   - `COIAnalyzer` class with:
+     - `_build_signal_maps()`: Extracts per-block write/read sets from CFG basic blocks and continuous assignments using syntax node traversal
+     - `_extract_port_connections()`: Builds bidirectional port mapping between parent/child instances by walking `InstanceSymbol` syntax nodes for `NamedPortConnectionSyntax`
+     - `analyze(seed_signals)`: Backward fixpoint worklist algorithm — traces from seed signals through always block writes, continuous assignments, and port connections until no new signals are found
+5. **`frontend/context_slicer.py`**: `get_context()` accepts optional `coi_result` parameter; when provided, only extracts source for COI-relevant instances
+6. **`frontend/__init__.py`**: Exports `COIAnalyzer` and `COIResult`
+
+### PySlang Usage
+- Syntax node traversal for signal extraction: `ExpressionStatementSyntax`, `ConditionalStatementSyntax`, `CaseStatementSyntax`, `BlockStatementSyntax`, `ContinuousAssignSyntax`
+- Assignment LHS extraction via `identifier.valueText` on syntax nodes
+- RHS signal collection by recursing into `left`, `right`, `operand`, `value`, `operands`, `elements` attributes
+- Port connection extraction: `InstanceSymbol.syntax` → walk children for `NamedPortConnectionSyntax` → `.name.valueText` (port name), `.expr` (parent signal)
+
+### Result
+```
+[COI] Relevant instances: {'test_1'}
+[COI] Pruned all CFGs for instance: place_holder
+[COI] Remaining instances: ['test_1']
+Branch points explored: 1, Paths explored: 2
+Elapsed time 0.02s
+```
+
+## [2026-02-24] [Bugfix] Fix duplicate LLM API calls for assertion extraction
+
+### Problem
+Running `--auto-plan` on multi-module designs (e.g., `test_2.v`) caused the LLM API to be called twice for the same assertion. The assertion `out <= 2` in `place_holder_2` (instance `test_1`) was extracted twice and incorrectly attributed to the top-level module `place_holder`.
+
+### Root Cause
+Two issues:
+1. `extract_verification_targets()` iterated over **all** modules (including sub-instances) and called `get_assertions()` on each. Since `get_assertions()` already recurses into `InstanceSymbol` children, the same assertion was found twice — once via the top module's instance traversal, once via the submodule directly.
+2. `get_assertions()` did not track which instance an assertion belonged to. The extractor defaulted to the first module (top-level), producing wrong hierarchical signal paths (e.g., `place_holder.out` instead of `test_1.out`).
+
+### Fix
+- **`engine/execution_manager.py`**: `get_assertions()` now accepts an `instance_path` parameter, propagated during recursion. Assertions are stored as `(condition, instance_path)` tuples. When entering an `InstanceSymbol`, the instance name is appended to the path.
+- **`frontend/assertion_extractor.py`**: Only traverses from the top-level module (no more iterating all modules). Uses the tracked `instance_path` from tuples to resolve signal hierarchical paths correctly. Deduplication updated to work with the new tuple format.
+
+### PySlang Usage
+- `InstanceSymbol.name`: Used to get the instance name (e.g., `test_1`) when recursing into sub-instances during assertion extraction.
+- `InstanceSymbol.body`: Iterated to recurse into sub-instance AST bodies.
+
 ## [2026-02-12] [Integration] OR1200 assertions integrated and verified
 
 ### Summary

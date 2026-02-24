@@ -134,19 +134,40 @@ class ContextSlicer:
 
         return instances
 
-    def get_context(self, target_expr: str, include_top: bool = True) -> str:
+    def get_context(self, target_expr: str, include_top: bool = True, coi_result=None) -> str:
         """
         Get the relevant RTL context for a verification target.
 
         Args:
             target_expr: The verification target (e.g., "test_1.out > 3")
             include_top: Whether to include the top module source
+            coi_result: Optional COIResult to restrict context to COI-relevant instances
 
         Returns:
             Combined Verilog source code of relevant modules
         """
         sources = []
         seen_definitions = set()
+
+        # If COI result is provided, use it to determine relevant instances
+        if coi_result is not None:
+            print(f"[ContextSlicer] Using COI result: {coi_result.relevant_instances}")
+            for instance_name in coi_result.relevant_instances:
+                if instance_name in self._instance_map:
+                    module = self._instance_map[instance_name]
+                    def_name = module.definition.name if hasattr(module, 'definition') and module.definition else module.name
+
+                    if def_name not in seen_definitions:
+                        source = self._extract_source(module)
+                        if source:
+                            sources.append(f"// Module: {def_name} (instance: {instance_name})")
+                            sources.append(source)
+                            sources.append("")
+                            seen_definitions.add(def_name)
+
+            if sources:
+                return "\n".join(sources)
+            # Fall through to default behavior if COI produced no sources
 
         # Parse target to find referenced instances
         target_instances = self._parse_target_instances(target_expr)
