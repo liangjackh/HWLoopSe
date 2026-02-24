@@ -1,3 +1,0 @@
-// Flist for dmbr testbench environment
-+incdir+$DV_ROOT/design/include
-test_dmbr.v
