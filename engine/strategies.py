@@ -5,13 +5,13 @@ from the execution mechanism.
 """
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, List, Any, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Any, Optional, Tuple, Union
 from itertools import product
 from copy import deepcopy
 import heapq
 import time
 
-from z3 import Solver
+from z3 import Solver, sat
 
 from .symbolic_state import SymbolicState
 from .execution_manager import ExecutionManager
@@ -568,6 +568,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 continue
 
             self.paths_explored += 1
+            print(f"[DirectedStrategy] Exploring path {self.paths_explored} with score {item.score}, cycle {item.cycle}, milestones completed {item.milestones_completed}")
             if self.paths_explored % 100 == 0:
                 print(f"[DirectedStrategy] Explored {self.paths_explored} paths, queue size: {len(worklist)}")
 
@@ -636,6 +637,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         return new_state
 
+# engine/strategies.py (截取 MilestoneDirectedStrategy 的修改部分)
     def _execute_cycle(
         self,
         engine: 'ExecutionEngine',
@@ -646,22 +648,15 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         item: WorkItem,
         worklist: List[WorkItem]
     ) -> Optional[str]:
-        """
-        Execute one clock cycle for all modules.
-
-        Returns:
-            "VIOLATION" if assertion violated
-            "ALL_MILESTONES" if all milestones reached
-            None otherwise
-        """
-        state = item.state
+        """执行一个完整的时钟周期"""
         cycle = item.cycle
 
-        # Apply pending non-blocking assignments from previous cycle
         if cycle > 0:
-            state.apply_pending_nba()
+            item.state.apply_pending_nba()
 
-        # Execute all modules for this cycle
+        # 1. 局部状态列表：保存本周期内的所有平行宇宙（最初只有一个）
+        active_states = [item.state]
+
         for module_name in manager.names_list:
             manager.curr_module = module_name
             manager.cycle = cycle
@@ -669,39 +664,54 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             if module_name not in cfgs_by_module:
                 continue
 
-            # Execute each CFG (always block) in the module
             for cfg_idx, cfg in enumerate(cfgs_by_module[module_name]):
-                # For directed search, we explore all paths through the CFG
-                # by creating child states at branch points
-                result = self._execute_cfg_step_by_step(
-                    engine, visitor, modules_dict, cfg, cfg_idx,
-                    module_name, manager, state, worklist, item
-                )
+                next_active_states = []
+                for state in active_states:
+                    # 分支裂变：传入1个状态，可能返回1个或多个存活状态
+                    result = self._execute_cfg_step_by_step(
+                        engine, visitor, modules_dict, cfg, cfg_idx,
+                        module_name, manager, state
+                    )
+                    if result == "VIOLATION":
+                        return "VIOLATION"
+                    # 将该 CFG 分支出的所有有效状态收集起来
+                    next_active_states.extend(result)
+                active_states = next_active_states
 
-                if result == "VIOLATION":
-                    return "VIOLATION"
+        # 2. 周期结束：处理所有存活的平行宇宙，检查里程碑，然后推入全局队列
+        for state in active_states:
+            current_progress = item.milestones_completed
+            
+            # 连续检查并固化里程碑 (注意这里换成了无状态方法，下文会解释)
+            while current_progress < len(self.milestone_manager.milestones):
+                success, new_progress = self.milestone_manager.check_and_lock_stateless(state, current_progress)
+                if success:
+                    current_progress = new_progress
+                else:
+                    break
 
-        # After all modules executed, check milestones
-        if self.milestone_manager.check_milestone(state, state.pc):
-            if self.milestone_manager.all_milestones_reached():
+            if current_progress >= len(self.milestone_manager.milestones):
                 return "ALL_MILESTONES"
 
-        # Check for assertion violations
-        if manager.assertion_violation:
-            return "VIOLATION"
+            # 3. 检查断言违例
+            if manager.assertion_violation:
+                return "VIOLATION"
 
-        # Create work item for next cycle
-        next_cycle = cycle + 1
-        if next_cycle < self.max_cycles:
-            new_score = self.milestone_manager.compute_score(next_cycle)
-            new_item = WorkItem(
-                score=new_score,
-                cycle=next_cycle,
-                milestones_completed=len(self.milestone_manager.milestones) - self.milestone_manager.milestones_remaining(),
-                state=self._clone_state(state),
-                execution_context=item.execution_context.copy()
-            )
-            heapq.heappush(worklist, new_item)
+            # 4. 生成下一周期的任务并入队
+            if state.pc.check() == z3.sat:
+                next_cycle = cycle + 1
+                if next_cycle < self.max_cycles:
+                    new_score = self.milestone_manager.compute_score_stateless(current_progress, next_cycle)
+                    new_item = WorkItem(
+                        score=new_score,
+                        cycle=next_cycle,
+                        milestones_completed=current_progress,
+                        # 此时每个 state 已经是独立的平行宇宙，直接推入，准备下一个周期的运算
+                        state=state, 
+                        execution_context=item.execution_context.copy()
+                    )
+                    import heapq
+                    heapq.heappush(worklist, new_item)
 
         return None
 
@@ -714,50 +724,43 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         cfg_idx: int,
         module_name: str,
         manager: ExecutionManager,
-        state: SymbolicState,
-        worklist: List[WorkItem],
-        parent_item: WorkItem
-    ) -> Optional[str]:
-        """
-        Execute a CFG step by step, branching at conditionals.
-
-        For simplicity in this initial implementation, we execute all paths
-        through the CFG but create separate states for each branch.
-        """
-        # Get all paths through this CFG
+        state: SymbolicState
+    ) -> Union[List[SymbolicState], str]:
+        """粗粒度分支处理：返回所有存活的子状态列表"""
         paths = cfg.paths
-
         if not paths:
-            return None
+            return [state]
 
-        # For the first path, execute directly on current state
-        # For additional paths, clone state and add to worklist
+        valid_states = []
+        
+        # ⚠️ 修复状态污染 Bug：在执行任何分支前，先保存一个干净的父状态副本
+        if len(paths) > 1:
+            clean_base_state = self._clone_state(state)
+        
         for path_idx, cfg_path in enumerate(paths):
             if path_idx == 0:
-                # Execute on current state
-                result = self._execute_path(
-                    engine, visitor, modules_dict, cfg, cfg_path,
-                    module_name, manager, state
-                )
-                if result == "VIOLATION":
-                    return "VIOLATION"
+                curr_state = state  # 优化：主分支直接复用传进来的状态对象
             else:
-                # Clone state and add to worklist for later exploration
-                cloned_state = self._clone_state(state)
-                new_score = self.milestone_manager.compute_score(parent_item.cycle)
-                new_item = WorkItem(
-                    score=new_score + path_idx,  # Slight penalty for alternative paths
-                    cycle=parent_item.cycle,
-                    milestones_completed=parent_item.milestones_completed,
-                    state=cloned_state,
-                    execution_context={
-                        'pending_path': (module_name, cfg_idx, cfg_path),
-                        **parent_item.execution_context
-                    }
-                )
-                heapq.heappush(worklist, new_item)
+                curr_state = self._clone_state(clean_base_state) # 从干净的副本克隆
+                
+            result = self._execute_path(
+                engine, visitor, modules_dict, cfg, cfg_path,
+                module_name, manager, curr_state
+            )
+            
+            if result == "VIOLATION":
+                return "VIOLATION"
 
-        return None
+            # 🔪 提前剪枝 (Early Pruning)
+            import z3
+            if curr_state.pc.check() == z3.sat:
+                valid_states.append(curr_state)
+
+        return valid_states
+    
+
+
+
 
     def _execute_path(
         self,

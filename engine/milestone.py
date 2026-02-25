@@ -274,3 +274,75 @@ class MilestoneManager:
             Priority score
         """
         return (self.milestones_remaining() * 1000) + cycle
+
+    def check_and_lock(self, state: SymbolicState) -> bool:
+            """
+            核心机制：试探性求解与约束固化 (Probe and Lock)
+
+            Args:
+                state: Current symbolic state (包含了 state.pc 即 solver)
+
+            Returns:
+                True if milestone is reached (and advances to next), False otherwise
+            """
+            milestone = self.current_milestone()
+            if milestone is None:
+                return False  # 所有里程碑已达成
+
+            condition = self.build_z3_condition(milestone, state)
+            if condition is None:
+                # 有些信号在前期可能还未被定义，直接视为未达成
+                return False
+
+            solver = state.pc
+
+            # 1. 试探性检查 (Speculative Check)
+            solver.push()
+            solver.add(condition)
+            result = solver.check()
+            solver.pop()  # 恢复现场
+
+            # 2. 如果可达 -> 约束固化 (Locking)
+            if result == sat:
+                # 【核心杀招】：把条件永久刻入这条路径的基因里！
+                solver.add(condition)
+
+                print(f"🎉 [MilestoneManager] Milestone Reached (Step {self.current_milestone_index}): {milestone.description}")
+                self.current_milestone_index += 1
+                return True
+
+            return False
+    
+    def check_and_lock_stateless(self, state: SymbolicState, current_progress: int) -> Tuple[bool, int]:
+        """
+        无状态的试探与固化 (专为多分支 A* 搜索设计)
+        依赖于传入的 current_progress，而不是修改类全局变量
+        """
+        if current_progress >= len(self.milestones):
+            return False, current_progress
+            
+        milestone = self.milestones[current_progress]
+        condition = self.build_z3_condition(milestone, state)
+        if condition is None:
+            return False, current_progress
+
+        solver = state.pc
+
+        # 1. 试探性检查
+        solver.push()
+        solver.add(condition)
+        result = solver.check()
+        solver.pop()
+
+        # 2. 如果可达 -> 约束固化
+        if result == sat:
+            solver.add(condition)
+            print(f"🎉 [Milestone] Path reached Step {current_progress}: {milestone.description}")
+            return True, current_progress + 1
+            
+        return False, current_progress
+
+    def compute_score_stateless(self, current_progress: int, cycle: int) -> int:
+        """无状态的评分计算"""
+        remaining = len(self.milestones) - current_progress
+        return (remaining * 1000) + cycle

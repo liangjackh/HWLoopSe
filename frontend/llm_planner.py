@@ -257,6 +257,8 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
         Returns:
             List of milestone dictionaries with 'step', 'description', 'condition'
         """
+        print(f"[LLMPlanner] context: {rtl_context[:200]}... (truncated), target: {target}, known_signals: {known_signals[:10]}... (truncated)")
+
         if self.mock:
             print(f"[LLMPlanner] Mock mode: returning hardcoded milestones for '{target}'")
 
