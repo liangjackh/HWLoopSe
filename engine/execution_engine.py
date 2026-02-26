@@ -679,7 +679,7 @@ class ExecutionEngine:
                             mock=self.llm_mock,
                             base_url=self.llm_base_url
                         )
-                        milestone_dicts = planner.generate_plan(context, target.target_expr, all_signals)
+                        milestone_dicts = planner.generate_plan(context, target.target_expr, all_signals, num_cycles=int(num_cycles))
                         print(f"[ExecutionEngine] Generated {len(milestone_dicts)} milestones for this target")
 
                         # Convert to Milestone objects

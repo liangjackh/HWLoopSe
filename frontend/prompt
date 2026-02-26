@@ -14,6 +14,8 @@ The Symbolic Execution Engine will use your milestones to steer the search. If t
 3.  **Logical Sequence**: The milestones must represent a feasible execution trace.
     * Step 0 is usually Reset or Initialization.
     * Intermediate steps should bridge the gap (e.g., incrementing a counter, finite state machine transitions).
+    * Micro-steps: Keep the logical distance between milestones as small as possible (ideally 1 to 3 clock cycles). Do not make massive leaps in state. If a counter goes from 0 to 10, provide waypoints like count == 1, count == 5, etc., to guide the solver.
+    * Avoid complex nested parentheses. If multiple conditions must be met, simply chain them with &&
     * The Final step MUST be the Verification Target itself.
 4.  **JSON Output Only**: Return a raw JSON list of objects. Do not wrap in markdown code blocks.
 

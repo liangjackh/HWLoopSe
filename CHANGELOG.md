@@ -1,5 +1,33 @@
 # Changelog
 
+## [2026-02-26] [Bugfix] Fix initial block re-execution and directed strategy issues
+
+### Summary
+Fixed multiple issues in the directed strategy (`MilestoneDirectedStrategy`) and blind strategy:
+
+1. **Initial blocks re-executing every cycle**: `initial begin` blocks were being symbolically executed on every clock cycle, resetting register values (e.g., `out = 0` every cycle). Added `is_initial` flag to CFG class, tagged during CFG construction by checking `SyntaxKind.InitialBlock`, and both blind and directed strategies now skip initial CFGs for cycles > 0.
+
+2. **Directed strategy path explosion (1000 paths)**: Branch clones were pushed back to the worklist at the same cycle, causing `_execute_cycle` to re-execute all CFGs including the one that already branched. Fixed by tracking `completed_cfgs` in execution context (original fix), then replaced with the user's cleaner `active_states` approach that collects all parallel universe states within a single cycle.
+
+3. **Milestones not wired to directed strategy**: LLM-generated milestones were created but never passed to `MilestoneDirectedStrategy` (line 715 was commented out). Fixed by updating `strategy.milestone_manager` when milestones are generated and the strategy already exists.
+
+4. **`z3.sat` NameError**: Multiple references to `z3.sat` in `strategies.py` but only `sat` was imported. Fixed all occurrences to use `sat` directly.
+
+5. **`parse_infix_expr_to_z3()` missing argument**: Milestone checker called with 2 args instead of 3. Added fallback in `rvalue_to_z3.py` to handle flat store dicts when `m` is `None`.
+
+6. **LLM cycle budget**: LLM planner had no knowledge of `num_cycles`, generating more milestones than achievable. Added `num_cycles` parameter to `generate_plan()`, `_call_openai()`, and `_call_anthropic()`, injecting cycle budget constraint into the user prompt.
+
+### Files modified
+- `engine/cfg.py`: Added `is_initial` flag to CFG class
+- `engine/execution_engine.py`: Tag initial blocks during CFG construction, wire milestones to strategy
+- `engine/strategies.py`: Skip initial CFGs for cycle > 0 in both blind and directed strategies, fix `z3.sat` references
+- `engine/milestone.py`: Pass `None` for manager arg in `parse_infix_expr_to_z3` call
+- `helpers/rvalue_to_z3.py`: Handle flat store dict when `m` is `None`
+- `frontend/llm_planner.py`: Add `num_cycles` to `generate_plan()` and LLM prompts
+
+### PySlang Usage
+- `ProceduralBlockSyntax.kind` == `SyntaxKind.InitialBlock` vs `SyntaxKind.AlwaysBlock` to distinguish initial from always blocks
+
 ## [2026-02-24] [Feature] Cone of Influence (COI) pruning for symbolic execution
 
 ### Summary

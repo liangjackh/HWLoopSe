@@ -5,7 +5,7 @@
   - test_1
 [ExecutionEngine] Strategy set to: MilestoneDirectedStrategy
 [ExecutionEngine] Using directed search strategy
-Executing for 5 clock cycles
+Executing for 10 clock cycles
 -----------------------------------
 Processing instance: place_holder, definition: place_holder
 -----------------------------------
@@ -21,9 +21,9 @@ Setting up instance: test_1 (definition: place_holder_2)
 [get_assertions] Found ImmediateAssertion in 'test_1': Expression(ExpressionKind.BinaryOp)
 [assertion_extractor] Found 1 unique assertion(s) (after deduplication):
 [assertion_extractor]   Expression(ExpressionKind.BinaryOp) in 'test_1'
-[assertion_extractor] Processing assertion 0: out <= 2
-[assertion_extractor] Created target: Violate assertion 'out <= 2' in test_1
-[assertion_extractor]   Expression: test_1.out > 2
+[assertion_extractor] Processing assertion 0: out <= 8
+[assertion_extractor] Created target: Violate assertion 'out <= 8' in test_1
+[assertion_extractor]   Expression: test_1.out > 8
 [COI] Starting analysis with 1 seed signal(s)
 [COI]   seed: test_1.out
 [COI] Analysis complete:
@@ -37,11 +37,11 @@ Setting up instance: test_1 (definition: place_holder_2)
 [get_assertions] Found ImmediateAssertion in 'test_1': Expression(ExpressionKind.BinaryOp)
 [assertion_extractor] Found 1 unique assertion(s) (after deduplication):
 [assertion_extractor]   Expression(ExpressionKind.BinaryOp) in 'test_1'
-[assertion_extractor] Processing assertion 0: out <= 2
-[assertion_extractor] Created target: Violate assertion 'out <= 2' in test_1
-[assertion_extractor]   Expression: test_1.out > 2
+[assertion_extractor] Processing assertion 0: out <= 8
+[assertion_extractor] Created target: Violate assertion 'out <= 8' in test_1
+[assertion_extractor]   Expression: test_1.out > 8
 [ExecutionEngine] Found 1 verification target(s) from assertions
-[ExecutionEngine] Planning for: Violate assertion 'out <= 2' in test_1
+[ExecutionEngine] Planning for: Violate assertion 'out <= 8' in test_1
 [ContextSlicer] Using COI result: {'test_1'}
 [ExecutionEngine] Extracted 424 chars of RTL context
 [ExecutionEngine] Found 4 signals
@@ -57,7 +57,7 @@ module place_holder_2 (
   end
   
   always @(posedge CLK) begin
-    if ... (truncated), target: test_1.out > 2, known_signals: ['RST', 'out_wire', 'CLK', 'out']... (truncated)
+    if ... (truncated), target: test_1.out > 8, known_signals: ['RST', 'CLK', 'out_wire', 'out']... (truncated)
 [LLMPlanner] LLM response: [
   {
     "step": 0,
@@ -66,7 +66,7 @@ module place_holder_2 (
   },
   {
     "step": 1,
-    "description": "Release reset and allow counter to increment",
+    "description": "Release reset, counter starts incrementing from 0",
     "condition": "RST == 0 && test_1.out == 0"
   },
   {
@@ -81,27 +81,63 @@ module place_holder_2 (
   },
   {
     "step": 4,
-    "description": "Counter increments to 3, violating the assertion",
-    "condition": "test_1.out > 2"
+    "description": "Counter increments to 3",
+    "condition": "test_1.out == 3"
+  },
+  {
+    "step": 5,
+    "description": "Counter increments to 4",
+    "condition": "test_1.out == 4"
+  },
+  {
+    "step": 6,
+    "description": "Counter increments to 5",
+    "condition": "test_1.out == 5"
+  },
+  {
+    "step": 7,
+    "description": "Counter increments to 6",
+    "condition": "test_1.out == 6"
+  },
+  {
+    "step": 8,
+    "description": "Counter increments to 7",
+    "condition": "test_1.out == 7"
+  },
+  {
+    "step": 9,
+    "description": "Counter increments to 8",
+    "condition": "test_1.out == 8"
+  },
+  {
+    "step": 10,
+    "description": "Counter increments to 9, violating the assertion (target reached)",
+    "condition": "test_1.out > 8"
   }
 ]... (truncated)
-[LLMPlanner] known signals: ['RST', 'out_wire', 'CLK', 'out']
-[LLMPlanner ]Successfully generated 5 milestones (attempt 1)
-[ExecutionEngine] Generated 5 milestones for this target
+[LLMPlanner] known signals: ['RST', 'CLK', 'out_wire', 'out']
+[LLMPlanner ]Successfully generated 11 milestones (attempt 1)
+[ExecutionEngine] Generated 11 milestones for this target
 [ExecutionEngine]   Step 0: System Reset (RST == 1)
-[ExecutionEngine]   Step 1: Release reset and allow counter to increment (RST == 0 && test_1.out == 0)
+[ExecutionEngine]   Step 1: Release reset, counter starts incrementing from 0 (RST == 0 && test_1.out == 0)
 [ExecutionEngine]   Step 2: Counter increments to 1 (test_1.out == 1)
 [ExecutionEngine]   Step 3: Counter increments to 2 (test_1.out == 2)
-[ExecutionEngine]   Step 4: Counter increments to 3, violating the assertion (test_1.out > 2)
-[ExecutionEngine] Generated 5 milestone(s)
+[ExecutionEngine]   Step 4: Counter increments to 3 (test_1.out == 3)
+[ExecutionEngine]   Step 5: Counter increments to 4 (test_1.out == 4)
+[ExecutionEngine]   Step 6: Counter increments to 5 (test_1.out == 5)
+[ExecutionEngine]   Step 7: Counter increments to 6 (test_1.out == 6)
+[ExecutionEngine]   Step 8: Counter increments to 7 (test_1.out == 7)
+[ExecutionEngine]   Step 9: Counter increments to 8 (test_1.out == 8)
+[ExecutionEngine]   Step 10: Counter increments to 9, violating the assertion (target reached) (test_1.out > 8)
+[ExecutionEngine] Generated 11 milestone(s)
 [ExecutionEngine] Milestones written to milestones.json
-[ExecutionEngine] Updated directed strategy with 5 milestones
+[ExecutionEngine] Updated directed strategy with 11 milestones
 Starting exploration...
 Branch points explored: 0
 [DirectedStrategy] Starting milestone-directed search
-[DirectedStrategy] Milestones: [Milestone(System Reset: RST == 1), Milestone(Release reset and allow counter to increment: RST == 0 && test_1.out == 0), Milestone(Counter increments to 1: test_1.out == 1), Milestone(Counter increments to 2: test_1.out == 2), Milestone(Counter increments to 3, violating the assertion: test_1.out > 2)]
-[DirectedStrategy] Max cycles: 5
-[DirectedStrategy] Exploring path 1 with score 5000, cycle 0, milestones completed 0
+[DirectedStrategy] Milestones: [Milestone(System Reset: RST == 1), Milestone(Release reset, counter starts incrementing from 0: RST == 0 && test_1.out == 0), Milestone(Counter increments to 1: test_1.out == 1), Milestone(Counter increments to 2: test_1.out == 2), Milestone(Counter increments to 3: test_1.out == 3), Milestone(Counter increments to 4: test_1.out == 4), Milestone(Counter increments to 5: test_1.out == 5), Milestone(Counter increments to 6: test_1.out == 6), Milestone(Counter increments to 7: test_1.out == 7), Milestone(Counter increments to 8: test_1.out == 8), Milestone(Counter increments to 9, violating the assertion (target reached): test_1.out > 8)]
+[DirectedStrategy] Max cycles: 10
+[DirectedStrategy] Exploring path 1 with score 11000, cycle 0, milestones completed 0
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
 [slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
@@ -109,45 +145,3198 @@ Branch points explored: 0
 [visiting statement: Conditional]
 [slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
 []
-[DirectedStrategy] Exploring path 2 with score 5001, cycle 1, milestones completed 0
+[DirectedStrategy] Exploring path 2 with score 11001, cycle 1, milestones completed 0
 [visiting statement: Conditional]
 [slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
 [slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
 []
-[DirectedStrategy] Exploring path 3 with score 5001, cycle 1, milestones completed 0
+[DirectedStrategy] Exploring path 3 with score 11001, cycle 1, milestones completed 0
 [visiting statement: Conditional]
 [slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
 [slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1 + 1, 2))], unsat core: []
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
 []
-[DirectedStrategy] Exploring path 4 with score 5002, cycle 2, milestones completed 0
+[DirectedStrategy] Exploring path 4 with score 11002, cycle 2, milestones completed 0
 [visiting statement: Conditional]
 [slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
 [slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1 + 1, 2))], unsat core: []
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
 []
-[DirectedStrategy] Exploring path 5 with score 5002, cycle 2, milestones completed 0
+[DirectedStrategy] Exploring path 5 with score 11002, cycle 2, milestones completed 0
 [visiting statement: Conditional]
 [slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
 [slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
 []
-[DirectedStrategy] Exploring path 6 with score 5002, cycle 2, milestones completed 0
+[DirectedStrategy] Exploring path 6 with score 11002, cycle 2, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 7 with score 11002, cycle 2, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 8 with score 11003, cycle 3, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 9 with score 11003, cycle 3, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 10 with score 11003, cycle 3, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 11 with score 11003, cycle 3, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 12 with score 11003, cycle 3, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 13 with score 11003, cycle 3, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 14 with score 11003, cycle 3, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 15 with score 11003, cycle 3, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 16 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 17 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 18 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 19 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 20 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 21 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 22 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 23 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 24 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 25 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 26 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 27 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 28 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 29 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 30 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 31 with score 11004, cycle 4, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 32 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 33 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 34 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 35 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 36 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 37 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 38 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 39 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 40 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 41 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 42 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 43 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 44 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 45 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 46 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 47 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 48 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 49 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 50 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 51 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 52 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 53 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 54 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 55 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 56 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 57 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 58 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 59 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 60 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 61 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 62 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 63 with score 11005, cycle 5, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 64 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 65 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 66 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 67 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 68 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 69 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 70 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 71 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 72 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 73 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 74 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 75 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 76 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 77 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 78 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 79 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 80 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 81 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 82 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 83 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 84 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 85 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 86 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 87 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 88 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 89 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 90 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 91 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 92 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 93 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 94 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 95 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 96 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 97 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 98 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 99 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 100 with score 11006, cycle 6, milestones completed 0
+[DirectedStrategy] Explored 100 paths, queue size: 99
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 101 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 102 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 103 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 104 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 105 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 106 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 107 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 108 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 109 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 110 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 111 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 112 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 113 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 114 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 115 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 116 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 117 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 118 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 119 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 120 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 121 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 122 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 123 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 124 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 125 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 126 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 127 with score 11006, cycle 6, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 128 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 129 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 130 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 131 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 132 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 133 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 134 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 135 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 136 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 137 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 138 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 139 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 140 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 141 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 142 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 143 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 144 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 145 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 146 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 147 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 148 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 149 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 150 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 151 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 152 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 153 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 154 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 155 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 156 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 157 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 158 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 159 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 160 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 161 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 162 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 163 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 164 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 165 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 166 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 167 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 168 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 169 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 170 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 171 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 172 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 173 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 174 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 175 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 176 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 177 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 178 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 179 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 180 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 181 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 182 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 183 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 184 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 185 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 186 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 187 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 188 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 189 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 190 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 191 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 192 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 193 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 194 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 195 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 196 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 197 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 198 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 199 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 200 with score 11007, cycle 7, milestones completed 0
+[DirectedStrategy] Explored 200 paths, queue size: 199
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 201 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 202 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 203 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 204 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 205 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 206 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 207 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 208 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 209 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 210 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 211 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 212 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 213 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 214 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 215 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 216 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 217 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 218 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 219 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 220 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 221 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 222 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 223 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 224 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 225 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 226 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 227 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 228 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 229 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 230 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 231 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 232 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 233 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 234 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 235 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 236 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 237 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 238 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 239 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 240 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 241 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 242 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 243 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 244 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 245 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 246 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 247 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 248 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 249 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 250 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 251 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 252 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 253 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 254 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 255 with score 11007, cycle 7, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 256 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 257 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 258 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 259 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 260 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 261 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 262 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 263 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 264 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 265 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 266 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 267 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 268 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 269 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 270 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 271 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 272 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 273 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 274 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 275 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 276 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 277 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 278 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 279 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 280 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 281 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 282 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 283 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 284 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 285 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 286 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 287 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 288 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 289 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 290 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 291 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 292 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 293 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 294 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 295 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 296 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 297 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 298 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 299 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 300 with score 11008, cycle 8, milestones completed 0
+[DirectedStrategy] Explored 300 paths, queue size: 299
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 301 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 302 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 303 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 304 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 305 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 306 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 307 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 308 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 309 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 310 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 311 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 312 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 313 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 314 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 315 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 316 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 317 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 318 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 319 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 320 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 321 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 322 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 323 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 324 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 325 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 326 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 327 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 328 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 329 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 330 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 331 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 332 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 333 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 334 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 335 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 336 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 337 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 338 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 339 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 340 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 341 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 342 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 343 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 344 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 345 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 346 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 347 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 348 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 349 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 350 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 351 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 352 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 353 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 354 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 355 with score 11008, cycle 8, milestones completed 0
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1, 8))], unsat core: []
+[]
+[DirectedStrategy] Exploring path 356 with score 11008, cycle 8, milestones completed 0
 [visiting statement: Conditional]
 [slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
@@ -157,12 +3346,12 @@ unsat: [Not(ULE(0 + 1, 2))], unsat core: []
 [DirectedStrategy] Assertion violation found!
 Assertion violation detected!
 Violated assertion details:
-  - condition:  (out <= 2)
-    z3_condition: ULE(0 + 1 + 1 + 1, 2)
-    path condition: [Not(ULE(0 + 1 + 1 + 1, 2))]
+  - condition:  (out <= 8)
+    z3_condition: ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 8)
+    path condition: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 8))]
     kind: 
     assert
 Counterexample: {}
-Execution time 0.3037784819999998
-Frontend time 0.0026303530000002517
-Total time 0.30640883500000005
+Execution time 0.7414701950000002
+Frontend time 0.0026460529999998705
+Total time 0.7441162480000001

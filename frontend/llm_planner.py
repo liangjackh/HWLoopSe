@@ -132,14 +132,18 @@ The Symbolic Execution Engine will use your milestones to steer the search. If t
             print(f"[LLMPlanner] Warning: Could not import {provider} library: {e}")
             print("[LLMPlanner] Install with: pip install openai anthropic")
 
-    def _call_openai(self, rtl_context: str, target: str) -> str:
+    def _call_openai(self, rtl_context: str, target: str, num_cycles: int = 0) -> str:
         """Call OpenAI API (or OpenAI-compatible APIs like DeepSeek)."""
+        cycle_constraint = ""
+        if num_cycles > 0:
+            cycle_constraint = f"\n\nCycle Budget: The engine will run for at most {num_cycles} clock cycles. The entire milestone sequence (including reset) must be reachable within this budget. Do NOT generate more milestones than can be achieved in {num_cycles} cycles."
+
         user_prompt = f"""RTL Code:
 ```verilog
 {rtl_context}
 ```
 
-Verification Target: {target}
+Verification Target: {target}{cycle_constraint}
 
 Generate milestones to reach this target. Return ONLY the JSON array."""
 
@@ -159,14 +163,18 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
         )
         return response.choices[0].message.content
 
-    def _call_anthropic(self, rtl_context: str, target: str) -> str:
+    def _call_anthropic(self, rtl_context: str, target: str, num_cycles: int = 0) -> str:
         """Call Anthropic API."""
+        cycle_constraint = ""
+        if num_cycles > 0:
+            cycle_constraint = f"\n\nCycle Budget: The engine will run for at most {num_cycles} clock cycles. The entire milestone sequence (including reset) must be reachable within this budget. Do NOT generate more milestones than can be achieved in {num_cycles} cycles."
+
         user_prompt = f"""RTL Code:
 ```verilog
 {rtl_context}
 ```
 
-Verification Target: {target}
+Verification Target: {target}{cycle_constraint}
 
 Generate milestones to reach this target. Return ONLY the JSON array."""
 
@@ -243,7 +251,8 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
         rtl_context: str,
         target: str,
         known_signals: List[str],
-        max_retries: int = 3
+        max_retries: int = 3,
+        num_cycles: int = 0
     ) -> List[Dict[str, Any]]:
         """
         Generate milestones for a verification target.
@@ -253,9 +262,7 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
             target: The verification target expression
             known_signals: List of valid signal names for validation
             max_retries: Maximum retry attempts for self-correction
-
-        Returns:
-            List of milestone dictionaries with 'step', 'description', 'condition'
+            num_cycles: Maximum clock cycles the engine will run
         """
         print(f"[LLMPlanner] context: {rtl_context[:200]}... (truncated), target: {target}, known_signals: {known_signals[:10]}... (truncated)")
 
@@ -303,9 +310,9 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
             try:
                 # Call appropriate API
                 if self.provider in ["openai", "deepseek"]:
-                    response = self._call_openai(rtl_context, target)
+                    response = self._call_openai(rtl_context, target, num_cycles)
                 else:
-                    response = self._call_anthropic(rtl_context, target)
+                    response = self._call_anthropic(rtl_context, target, num_cycles)
 
                 # Parse response
                 print(f"[LLMPlanner] LLM response: {response}... (truncated)")

@@ -1,6 +1,6 @@
 {
-  "target": "Violate assertion 'out <= 2' in test_1",
-  "target_expr": "test_1.out > 2",
+  "target": "Violate assertion 'out <= 8' in test_1",
+  "target_expr": "test_1.out > 8",
   "milestones": [
     {
       "step": 0,
@@ -9,7 +9,7 @@
     },
     {
       "step": 1,
-      "description": "Release reset and allow counter to increment",
+      "description": "Release reset, counter starts incrementing from 0",
       "condition": "RST == 0 && test_1.out == 0"
     },
     {
@@ -24,8 +24,38 @@
     },
     {
       "step": 4,
-      "description": "Counter increments to 3, violating the assertion",
-      "condition": "test_1.out > 2"
+      "description": "Counter increments to 3",
+      "condition": "test_1.out == 3"
+    },
+    {
+      "step": 5,
+      "description": "Counter increments to 4",
+      "condition": "test_1.out == 4"
+    },
+    {
+      "step": 6,
+      "description": "Counter increments to 5",
+      "condition": "test_1.out == 5"
+    },
+    {
+      "step": 7,
+      "description": "Counter increments to 6",
+      "condition": "test_1.out == 6"
+    },
+    {
+      "step": 8,
+      "description": "Counter increments to 7",
+      "condition": "test_1.out == 7"
+    },
+    {
+      "step": 9,
+      "description": "Counter increments to 8",
+      "condition": "test_1.out == 8"
+    },
+    {
+      "step": 10,
+      "description": "Counter increments to 9, violating the assertion (target reached)",
+      "condition": "test_1.out > 8"
     }
   ]
 }
