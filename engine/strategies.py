@@ -156,6 +156,9 @@ class BlindSearchStrategy(ExplorationStrategy):
                         state.apply_pending_nba()
 
                     for cfg_idx, cfg_path in enumerate(complete_single_cycle_path):
+                        # Skip initial blocks after cycle 0
+                        if manager.cycle > 0 and getattr(cfgs_by_module[module_name][cfg_idx], 'is_initial', False):
+                            continue
                         directions = cfgs_by_module[module_name][cfg_idx].compute_direction(cfg_path)
                         if engine.debug:
                             print(f"DEBUG: cfg_path={cfg_path}, directions={directions}")
@@ -349,7 +352,9 @@ class BlindSearchStrategy(ExplorationStrategy):
                         # Handle empty paths generated as fallbacks
                         if not cfg_path:
                             continue
-                            
+                        # Skip initial blocks after cycle 0
+                        if manager.cycle > 0 and getattr(cfgs_by_module[module_name][cfg_idx], 'is_initial', False):
+                            continue
                         directions = cfgs_by_module[module_name][cfg_idx].compute_direction(cfg_path)
                         if engine.debug:
                             print(f"DEBUG: cfg_path={cfg_path}, directions={directions}")
@@ -665,6 +670,9 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 continue
 
             for cfg_idx, cfg in enumerate(cfgs_by_module[module_name]):
+                # Skip initial blocks after cycle 0
+                if cycle > 0 and getattr(cfg, 'is_initial', False):
+                    continue
                 next_active_states = []
                 for state in active_states:
                     # 分支裂变：传入1个状态，可能返回1个或多个存活状态
@@ -698,7 +706,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 return "VIOLATION"
 
             # 4. 生成下一周期的任务并入队
-            if state.pc.check() == z3.sat:
+            if state.pc.check() == sat:
                 next_cycle = cycle + 1
                 if next_cycle < self.max_cycles:
                     new_score = self.milestone_manager.compute_score_stateless(current_progress, next_cycle)
@@ -710,7 +718,6 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         state=state, 
                         execution_context=item.execution_context.copy()
                     )
-                    import heapq
                     heapq.heappush(worklist, new_item)
 
         return None
@@ -751,9 +758,8 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             if result == "VIOLATION":
                 return "VIOLATION"
 
-            # 🔪 提前剪枝 (Early Pruning)
-            import z3
-            if curr_state.pc.check() == z3.sat:
+            # Early Pruning
+            if curr_state.pc.check() == sat:
                 valid_states.append(curr_state)
 
         return valid_states

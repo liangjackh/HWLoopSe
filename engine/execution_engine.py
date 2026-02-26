@@ -309,11 +309,14 @@ class ExecutionEngine:
         self.set_strategy(strategy)
         print(f"[ExecutionEngine] Using {config.strategy} search strategy")
 
+        explore_time = time.process_time()
         # Step 4: Execute
         self.execute_sv(visitor, modules, None, config.num_cycles, driver, compilation)
 
         end_time = time.process_time()
-        print(f"Elapsed time {end_time - start_time}")
+        print(f"Execution time {end_time - explore_time}")
+        print(f"Frontend time {explore_time - start_time}")
+        print(f"Total time {end_time - start_time}")
 
     def set_strategy(self, strategy: 'ExplorationStrategy') -> None:
         """Set the exploration strategy to use."""
@@ -528,6 +531,9 @@ class ExecutionEngine:
                     ab_body = getattr(ab, "statement", getattr(ab, "members", ab))
                     c = CFG()
                     c.module_name = definition_name
+                    # Tag initial blocks so they only execute on cycle 0
+                    if hasattr(ab, 'kind') and str(ab.kind) == 'SyntaxKind.InitialBlock':
+                        c.is_initial = True
                     c.basic_blocks_sv(manager, state, ab_body)
                     c.partition()
                     c.build_cfg(manager, state)
@@ -688,11 +694,7 @@ class ExecutionEngine:
                     # 4.3: Create directed strategy with milestones
                     if all_milestones:
                         milestone_manager = MilestoneManager(all_milestones)
-                        # Note: Using BlindSearchStrategy for now due to path explosion issues
-                        # in MilestoneDirectedStrategy. The milestones are still generated and
-                        # can be used for analysis or future directed search improvements.
                         print(f"[ExecutionEngine] Generated {len(all_milestones)} milestone(s)")
-                        print(f"[ExecutionEngine] Note: Using blind strategy (directed strategy has scalability issues)")
 
                         # Write milestones to file
                         milestone_output = {
@@ -711,8 +713,15 @@ class ExecutionEngine:
                         with open(milestone_file, "w") as f:
                             json.dump(milestone_output, f, indent=2)
                         print(f"[ExecutionEngine] Milestones written to {milestone_file}")
-                        # TODO: Fix MilestoneDirectedStrategy path explosion before enabling
-                        # self.strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles))
+
+                        # If strategy is already MilestoneDirectedStrategy, update its milestones
+                        if self.strategy is not None and hasattr(self.strategy, 'milestone_manager'):
+                            self.strategy.milestone_manager = milestone_manager
+                            print(f"[ExecutionEngine] Updated directed strategy with {len(all_milestones)} milestones")
+                        else:
+                            # Create a new directed strategy with milestones
+                            self.strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles))
+                            print(f"[ExecutionEngine] Created directed strategy with {len(all_milestones)} milestones")
                     else:
                         print("[ExecutionEngine] No valid milestones generated, using blind strategy")
 

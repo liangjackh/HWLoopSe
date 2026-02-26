@@ -9,18 +9,18 @@
     },
     {
       "step": 1,
-      "description": "Reset released, counter starts incrementing",
+      "description": "Release reset and allow counter to increment",
       "condition": "RST == 0 && test_1.out == 0"
     },
     {
       "step": 2,
       "description": "Counter increments to 1",
-      "condition": "RST == 0 && test_1.out == 1"
+      "condition": "test_1.out == 1"
     },
     {
       "step": 3,
       "description": "Counter increments to 2",
-      "condition": "RST == 0 && test_1.out == 2"
+      "condition": "test_1.out == 2"
     },
     {
       "step": 4,

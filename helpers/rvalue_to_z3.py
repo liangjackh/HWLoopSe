@@ -153,6 +153,11 @@ def parse_infix_expr_to_z3(expr_str: str, s, m):
             # Avoid infinite recursion - if the stored value is the same, return a BitVec
             if sym_val != expr_str:
                 return parse_infix_expr_to_z3(sym_val, s, m)
+    elif m is None and isinstance(s, dict) and expr_str in s:
+        # Flat store dict passed directly (e.g., from milestone checking)
+        sym_val = s[expr_str]
+        if sym_val != expr_str:
+            return parse_infix_expr_to_z3(sym_val, s, m)
 
     # Return None to indicate we couldn't parse it (caller will create a BitVec)
     return None

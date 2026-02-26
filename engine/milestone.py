@@ -127,7 +127,7 @@ class MilestoneManager:
                         module_name = mod_name
                         break
             if module_name:
-                signal_value = parse_infix_expr_to_z3(signal_value, state.store.get(module_name, {}))
+                signal_value = parse_infix_expr_to_z3(signal_value, state.store.get(module_name, {}), None)
 
         return signal_value
 

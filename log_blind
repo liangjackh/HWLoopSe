@@ -1,0 +1,417 @@
+[ExecutionEngine] Cone of Influence (COI) pruning enabled
+[Info] Found 2 top-level module instance(s):
+  - place_holder
+  - test_1
+[ExecutionEngine] Strategy set to: BlindSearchStrategy
+[ExecutionEngine] Using blind search strategy
+Executing for 5 clock cycles
+-----------------------------------
+Processing instance: place_holder, definition: place_holder
+-----------------------------------
+Processing instance: test_1, definition: place_holder_2
+Building CFGs for module definition: place_holder (1 instance(s))
+  Built 4 CFG(s) for place_holder
+Building CFGs for module definition: place_holder_2 (1 instance(s))
+  Built 2 CFG(s) for place_holder_2
+Setting up instance: place_holder (definition: place_holder)
+Setting up instance: test_1 (definition: place_holder_2)
+[sum] manager.names_list: ['place_holder', 'test_1']
+[ExecutionEngine] Running Cone of Influence analysis...
+[get_assertions] Found ImmediateAssertion in 'test_1': Expression(ExpressionKind.BinaryOp)
+[assertion_extractor] Found 1 unique assertion(s) (after deduplication):
+[assertion_extractor]   Expression(ExpressionKind.BinaryOp) in 'test_1'
+[assertion_extractor] Processing assertion 0: out <= 2
+[assertion_extractor] Created target: Violate assertion 'out <= 2' in test_1
+[assertion_extractor]   Expression: test_1.out > 2
+[COI] Starting analysis with 1 seed signal(s)
+[COI]   seed: test_1.out
+[COI] Analysis complete:
+[COI]   Relevant instances: {'test_1'}
+[COI]   Relevant CFGs: {('test_1', 0), ('test_1', 1)}
+[COI]   Cone signals: 2
+[COI] Pruned all CFGs for instance: place_holder
+[COI] Removed instances from exploration: {'place_holder'}
+[COI] Remaining instances: ['test_1']
+Starting exploration...
+Branch points explored: 0
+[BlindSearchStrategy] Starting exhaustive search via generator...
+Executing path 1 (Total paths unknown due to generator)
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Checking path 1
+- already visited or None, skipping.
+Executing path 2 (Total paths unknown due to generator)
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2);']
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+Checking path 2
+- already visited or None, skipping.
+Executing path 3 (Total paths unknown due to generator)
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2);']
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Checking path 3
+- already visited or None, skipping.
+Executing path 4 (Total paths unknown due to generator)
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2);']
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2);']
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+Checking path 4
+- already visited or None, skipping.
+Executing path 5 (Total paths unknown due to generator)
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2);']
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Checking path 5
+- already visited or None, skipping.
+Executing path 6 (Total paths unknown due to generator)
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2);']
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2);']
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+Checking path 6
+- already visited or None, skipping.
+Executing path 7 (Total paths unknown due to generator)
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2);']
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2);']
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Checking path 7
+- already visited or None, skipping.
+Executing path 8 (Total paths unknown due to generator)
+Skipping dummy node in path
+visiting basic_block: ['None', ' begin', '\n    out = 0;', '\n  end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= 0;', '\n    end']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2);']
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2);']
+[visiting statement: ExpressionStatement]
+unsat: [Not(ULE(0 + 1 + 1, 2))], unsat core: []
+[]
+Skipping dummy node in path
+Skipping dummy node in path
+visiting basic_block: ['None', ' @(posedge CLK)', '\n    if (RST) begin\n      out <= 0;\n    end\n    el']
+[visiting statement: Conditional]
+[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
+visiting basic_block: [' begin', '\n      out <= out + 1;', '\n    end', '\n    assert (out <= 2);']
+[visiting statement: ExpressionStatement]
+Skipping dummy node in path
+Checking path 8
+[cond2]Cycle 0 initial state:
+{}
+[cond2]Cycle 0 final state:
+{'place_holder': {}, 'test_1': {'CLK': 's4yiqgMtjKQwruNH', 'RST': '5tpr8lvitAWLi3cb', 'out': "(((1'b0  +  1)  +  1)  +  1)"}}
+[cond2]Cycle 0 final path condition:
+[]
+[cond2]Violated assertions:
+  - condition:  (out <= 2)
+    z3_condition: ULE(0 + 1 + 1 + 1, 2)
+    path condition: [Not(ULE(0 + 1 + 1 + 1, 2))]
+    kind: 
+    assert
+Assertion violation
+Violated assertion details:
+  - condition:  (out <= 2)
+    z3_condition: ULE(0 + 1 + 1 + 1, 2)
+    path condition: [Not(ULE(0 + 1 + 1 + 1, 2))]
+    kind: 
+    assert
+{}
+Execution time 0.030686068000000066
+strategy execution time 0.0013742269999998946
+Total time 0.03206029499999996

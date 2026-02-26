@@ -67,6 +67,9 @@ class CFG:
         # stack of flags for if we are looking at a block statement
         self.block_smt = [False]
 
+        # Whether this CFG is from an initial block (should only execute once)
+        self.is_initial = False
+
         # how many nested block statements we've seen so far
         self.block_stmt_depth = 0
 
