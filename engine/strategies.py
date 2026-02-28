@@ -53,203 +53,8 @@ class ExplorationStrategy(ABC):
         """
         pass
 
-'''
-class BlindSearchStrategy(ExplorationStrategy):
-    """
-    Blind search strategy using Cartesian product of all paths.
 
-    This replicates the original behavior: pre-compute all path combinations
-    and iterate through them exhaustively.
-    """
 
-    def run(
-        self,
-        engine: 'ExecutionEngine',
-        visitor: Any,
-        modules: List[Any],
-        modules_dict: Dict[str, Any],
-        cfgs_by_module: Dict[str, List[Any]],
-        manager: ExecutionManager,
-        state: SymbolicState,
-        num_cycles: int
-    ) -> None:
-        """Execute blind exhaustive search."""
-
-        
-        # old version
-        # Build mapped_paths: module_name -> cfg_idx -> paths
-        mapped_paths = {}
-        for name in manager.names_list:
-            mapped_paths[name] = {}
-
-        for module_name, cfg_list in cfgs_by_module.items():
-            for i, cfg in enumerate(cfg_list):
-                mapped_paths[module_name][i] = cfg.paths
-
-        # Build total_paths using Cartesian product
-        single_paths_by_module = {}
-        total_paths_by_module = {}
-        for module_name in cfgs_by_module:
-            print(f"Module {module_name} has {len(cfgs_by_module[module_name])} always blocks")
-            single_paths_by_module[module_name] = product(*mapped_paths[module_name].values())
-            total_paths_by_module[module_name] = list(tuple(product(
-                product(*mapped_paths[module_name].values()),
-                repeat=int(num_cycles)
-            )))
-
-        if not total_paths_by_module:
-            total_paths = []
-        else:
-            keys = list(total_paths_by_module.keys())
-            values = []
-            for key in keys:
-                module_paths = total_paths_by_module[key]
-                if not module_paths:
-                    module_paths = [tuple(() for _ in range(int(num_cycles)))]
-                values.append(module_paths)
-
-            total_paths = []
-            for path_combo in product(*values):
-                total_paths.append({k: list(p) for k, p in zip(keys, path_combo)})
-
-        # Reset branch tracking
-        manager.branch_count = 0
-        manager.branch_points_seen = set()
-
-        # Main exploration loop
-        for i in range(len(total_paths)):
-            manager.prev_store = state.store
-            # Use the first module for init_state
-            first_module = modules[0] if modules else None
-            if first_module:
-                init_state(state, manager.prev_store, first_module, visitor)
-
-            # Initialize inputs with symbols for all submodules
-            for module_name in manager.names_list:
-                manager.curr_module = module_name
-                visitor.symbolic_store.clear()
-                visitor.visited.clear()
-                visitor.dfs(modules_dict[module_name])
-                for var_name in visitor.symbolic_store:
-                    if var_name not in state.store[module_name]:
-                        state.store[module_name][var_name] = init_symbol()
-
-            # Process declarations and combinational logic
-            for c in cfgs_by_module[manager.curr_module]:
-                for node in c.decls:
-                    visitor.dfs(node)
-                for node in c.comb:
-                    visitor.dfs(node)
-
-            manager.curr_module = manager.names_list[0]
-
-            print(f"Executing path {i+1} / {len(total_paths)}")
-            engine.check_state(manager, state)
-
-            curr_path = total_paths[i]
-            modules_seen = 0
-            for module_name in curr_path:
-                manager.curr_module = manager.names_list[modules_seen]
-                manager.cycle = 0
-                for complete_single_cycle_path in curr_path[module_name]:
-                    if manager.cycle > 0:
-                        state.apply_pending_nba()
-
-                    for cfg_idx, cfg_path in enumerate(complete_single_cycle_path):
-                        # Skip initial blocks after cycle 0
-                        if manager.cycle > 0 and getattr(cfgs_by_module[module_name][cfg_idx], 'is_initial', False):
-                            continue
-                        directions = cfgs_by_module[module_name][cfg_idx].compute_direction(cfg_path)
-                        if engine.debug:
-                            print(f"DEBUG: cfg_path={cfg_path}, directions={directions}")
-                            print(f"DEBUG: basic_block_list has {len(cfgs_by_module[module_name][cfg_idx].basic_block_list)} blocks")
-
-                        k = 0
-                        for basic_block_idx in cfg_path:
-                            if basic_block_idx < 0:
-                                print("Skipping dummy node in path")
-                                continue
-                            else:
-                                direction = directions[k]
-                                k += 1
-                                basic_block = cfgs_by_module[module_name][cfg_idx].basic_block_list[basic_block_idx]
-                                print(f"visiting basic_block: {[str(s)[:50] if s else 'None' for s in basic_block]}")
-                                for stmt in basic_block:
-                                    visitor.visit_stmt(manager, state, stmt, modules_dict, direction)
-
-                    manager.cycle += 1
-                modules_seen += 1
-
-            manager.cycle = 0
-            engine.done = True
-            print(f"Checking path {i+1} / {len(total_paths)}")
-            engine.check_state(manager, state)
-            engine.done = False
-
-            manager.curr_level = 0
-            for module_name in manager.instances_seen:
-                manager.instances_seen[module_name] = 0
-                manager.instances_loc[module_name] = ""
-
-            if engine.debug:
-                print("------------------------")
-
-            if manager.assertion_violation:
-                self._handle_assertion_violation(engine, manager, state)
-                return
-
-            state.pc.reset()
-            for module in manager.dependencies:
-                module = {}
-
-            manager.ignore = False
-            manager.abandon = False
-            manager.reg_writes.clear()
-            for name in manager.names_list:
-                state.store[name] = {}
-            manager.path_count += 1
-
-        print(f"Branch points explored: {manager.branch_count}")
-        print(f"Paths explored: {manager.path_count}")
-
-    def _handle_assertion_violation(
-        self,
-        engine: 'ExecutionEngine',
-        manager: ExecutionManager,
-        state: SymbolicState
-    ) -> None:
-        """Handle assertion violation: print details and generate counterexample."""
-        print("Assertion violation")
-        if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
-            print("Violated assertion details:")
-            for va in manager.violated_assertions:
-                print(f"  - condition: {va.get('condition', 'N/A')}")
-                print(f"    z3_condition: {va.get('z3_condition', 'N/A')}")
-                print(f"    path condition: {va.get('path condition', 'N/A')}")
-                print(f"    kind: {va.get('kind', 'N/A')}")
-
-        counterexample = {}
-        symbols_to_values = {}
-        solver_start = time.process_time()
-
-        if engine.solve_pc(state.pc):
-            solver_end = time.process_time()
-            manager.solver_time += solver_end - solver_start
-            solved_model = state.pc.model()
-            decls = solved_model.decls()
-            for item in decls:
-                symbols_to_values[item.name()] = solved_model[item]
-
-            for module in state.store:
-                for signal in state.store[module]:
-                    for symbol in symbols_to_values:
-                        if state.store[module][signal] == symbol:
-                            counterexample[signal] = symbols_to_values[symbol]
-
-            print(counterexample)
-        else:
-            print("UNSAT")
-'''
 class BlindSearchStrategy(ExplorationStrategy):
     """
     Blind search strategy using Cartesian product of all paths.
@@ -378,7 +183,6 @@ class BlindSearchStrategy(ExplorationStrategy):
 
             manager.cycle = 0
             engine.done = True
-            print(f"Checking path {manager.path_count + 1}")
             engine.check_state(manager, state)
             engine.done = False
 
@@ -387,12 +191,17 @@ class BlindSearchStrategy(ExplorationStrategy):
                 manager.instances_seen[module_name] = 0
                 manager.instances_loc[module_name] = ""
 
-            if engine.debug:
-                print("------------------------")
-
             if manager.assertion_violation:
+                print(f"[Path {manager.path_count + 1}] cycles={int(num_cycles)}, result=VIOLATION")
                 self._handle_assertion_violation(engine, manager, state)
                 return
+
+            # Path completed without violation
+            pc_result = "SAT" if state.pc.check() == sat else "UNSAT"
+            print(f"[Path {manager.path_count + 1}] cycles={int(num_cycles)}, result={pc_result}")
+
+            if engine.debug:
+                print("------------------------")
 
             state.pc.reset()
             for module in manager.dependencies:
@@ -573,9 +382,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 continue
 
             self.paths_explored += 1
-            print(f"[DirectedStrategy] Exploring path {self.paths_explored} with score {item.score}, cycle {item.cycle}, milestones completed {item.milestones_completed}")
-            if self.paths_explored % 100 == 0:
-                print(f"[DirectedStrategy] Explored {self.paths_explored} paths, queue size: {len(worklist)}")
+            print(f"\n--- [Path {self.paths_explored}] Popped: score={item.score}, cycle={item.cycle}, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}, queue={len(worklist)}")
 
             # Execute one cycle for all modules
             result = self._execute_cycle(
@@ -584,14 +391,22 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             )
 
             if result == "VIOLATION":
+                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=VIOLATION, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}")
                 print(f"[DirectedStrategy] Assertion violation found!")
                 self._handle_assertion_violation(engine, manager, item.state)
                 return
 
             if result == "ALL_MILESTONES":
+                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=ALL_MILESTONES, milestones={len(self.milestone_manager.milestones)}/{len(self.milestone_manager.milestones)}")
                 print(f"[DirectedStrategy] All milestones reached!")
                 print(f"[DirectedStrategy] Final state: {item.state.store}")
                 return
+
+            # Path ended without violation or milestone completion
+            if result is None:
+                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=CONTINUE, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}")
+            elif result == "TIMEOUT":
+                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=TIMEOUT, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}")
 
         print(f"[DirectedStrategy] Search exhausted (UNSAT)")
         print(f"[DirectedStrategy] Paths explored: {self.paths_explored}")
@@ -714,11 +529,13 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         score=new_score,
                         cycle=next_cycle,
                         milestones_completed=current_progress,
-                        # 此时每个 state 已经是独立的平行宇宙，直接推入，准备下一个周期的运算
-                        state=state, 
+                        state=state,
                         execution_context=item.execution_context.copy()
                     )
                     heapq.heappush(worklist, new_item)
+                    print(f"  [Enqueue] score={new_score}, next_cycle={next_cycle}, milestones={current_progress}/{len(self.milestone_manager.milestones)}")
+                else:
+                    print(f"  [MaxCycle] cycle {next_cycle} >= limit {self.max_cycles}, not enqueued")
 
         return None
 
@@ -739,28 +556,33 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             return [state]
 
         valid_states = []
-        
-        # ⚠️ 修复状态污染 Bug：在执行任何分支前，先保存一个干净的父状态副本
+
         if len(paths) > 1:
+            print(f"  [Branch] {module_name}/cfg{cfg_idx}: {len(paths)} paths")
             clean_base_state = self._clone_state(state)
-        
+
         for path_idx, cfg_path in enumerate(paths):
             if path_idx == 0:
-                curr_state = state  # 优化：主分支直接复用传进来的状态对象
+                curr_state = state
             else:
-                curr_state = self._clone_state(clean_base_state) # 从干净的副本克隆
-                
+                curr_state = self._clone_state(clean_base_state)
+
             result = self._execute_path(
                 engine, visitor, modules_dict, cfg, cfg_path,
                 module_name, manager, curr_state
             )
-            
+
             if result == "VIOLATION":
                 return "VIOLATION"
 
             # Early Pruning
             if curr_state.pc.check() == sat:
                 valid_states.append(curr_state)
+            else:
+                print(f"  [Pruned] {module_name}/cfg{cfg_idx}/path{path_idx}: UNSAT")
+
+        if len(paths) > 1:
+            print(f"  [Branch] {module_name}/cfg{cfg_idx}: {len(valid_states)}/{len(paths)} survived")
 
         return valid_states
     

@@ -108,28 +108,38 @@ class MilestoneManager:
             Z3 expression for the signal value
         """
         from helpers.rvalue_to_z3 import parse_infix_expr_to_z3
+        from z3 import BitVec, BitVecVal
 
         signal_value = self.parse_hierarchical_signal(signal_path, state)
         if signal_value is None:
             return None
 
-        # Convert signal value to Z3 if it's a string expression
-        if isinstance(signal_value, str):
-            # Parse the expression string to Z3
-            parts = signal_path.split(".")
-            if len(parts) == 2:
-                module_name = parts[0]
-            else:
-                # Find the module containing this signal
-                module_name = None
-                for mod_name, module_store in state.store.items():
-                    if signal_path in module_store:
-                        module_name = mod_name
-                        break
-            if module_name:
-                signal_value = parse_infix_expr_to_z3(signal_value, state.store.get(module_name, {}), None)
+        # Already a Z3 expression — return as-is
+        if not isinstance(signal_value, str):
+            return signal_value
 
-        return signal_value
+        # It's a string — try to convert to Z3
+        original_str = signal_value
+        parts = signal_path.split(".")
+        if len(parts) == 2:
+            module_name = parts[0]
+        else:
+            module_name = None
+            for mod_name, module_store in state.store.items():
+                if signal_path in module_store:
+                    module_name = mod_name
+                    break
+
+        z3_val = None
+        if module_name:
+            z3_val = parse_infix_expr_to_z3(original_str, state.store.get(module_name, {}), None)
+
+        if z3_val is not None:
+            return z3_val
+
+        # Fallback: treat the string as a free Z3 BitVec variable.
+        # This handles random symbol names for unconstrained inputs (e.g., "QguHPd8pyYDSPKqE" for RST).
+        return BitVec(original_str, 32)
 
     def _build_simple_condition(self, cond: SimpleCondition, state: SymbolicState) -> Optional[ExprRef]:
         """
@@ -277,37 +287,34 @@ class MilestoneManager:
 
     def check_and_lock(self, state: SymbolicState) -> bool:
             """
-            核心机制：试探性求解与约束固化 (Probe and Lock)
+            Observational milestone check (stateful version).
+
+            Checks satisfiability without locking the condition into the solver,
+            to avoid permanent conflicts when milestones involve changing inputs.
 
             Args:
-                state: Current symbolic state (包含了 state.pc 即 solver)
+                state: Current symbolic state
 
             Returns:
                 True if milestone is reached (and advances to next), False otherwise
             """
             milestone = self.current_milestone()
             if milestone is None:
-                return False  # 所有里程碑已达成
+                return False
 
             condition = self.build_z3_condition(milestone, state)
             if condition is None:
-                # 有些信号在前期可能还未被定义，直接视为未达成
                 return False
 
             solver = state.pc
 
-            # 1. 试探性检查 (Speculative Check)
             solver.push()
             solver.add(condition)
             result = solver.check()
-            solver.pop()  # 恢复现场
+            solver.pop()
 
-            # 2. 如果可达 -> 约束固化 (Locking)
             if result == sat:
-                # 【核心杀招】：把条件永久刻入这条路径的基因里！
-                solver.add(condition)
-
-                print(f"🎉 [MilestoneManager] Milestone Reached (Step {self.current_milestone_index}): {milestone.description}")
+                print(f"  [Milestone] Step {self.current_milestone_index} REACHED: {milestone.description}")
                 self.current_milestone_index += 1
                 return True
 
@@ -315,12 +322,19 @@ class MilestoneManager:
     
     def check_and_lock_stateless(self, state: SymbolicState, current_progress: int) -> Tuple[bool, int]:
         """
-        无状态的试探与固化 (专为多分支 A* 搜索设计)
-        依赖于传入的 current_progress，而不是修改类全局变量
+        Observational milestone check for A* directed search.
+
+        Checks if the milestone condition is satisfiable given the current path
+        condition, but does NOT lock (add) the condition into the solver.
+        Locking caused permanent conflicts when milestones involve input signals
+        that the engine keeps as a single symbol across all cycles.
+
+        The priority queue already guides the search — states with more milestones
+        reached get lower scores (higher priority).
         """
         if current_progress >= len(self.milestones):
             return False, current_progress
-            
+
         milestone = self.milestones[current_progress]
         condition = self.build_z3_condition(milestone, state)
         if condition is None:
@@ -328,18 +342,16 @@ class MilestoneManager:
 
         solver = state.pc
 
-        # 1. 试探性检查
+        # Speculative check only — no locking
         solver.push()
         solver.add(condition)
         result = solver.check()
         solver.pop()
 
-        # 2. 如果可达 -> 约束固化
         if result == sat:
-            solver.add(condition)
-            print(f"🎉 [Milestone] Path reached Step {current_progress}: {milestone.description}")
+            print(f"  [Milestone] Step {current_progress} REACHED: {milestone.description}")
             return True, current_progress + 1
-            
+
         return False, current_progress
 
     def compute_score_stateless(self, current_progress: int, cycle: int) -> int:

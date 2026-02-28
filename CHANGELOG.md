@@ -1,5 +1,42 @@
 # Changelog
 
+## [2026-02-28] [Bugfix] Fix milestone checker and add detailed directed strategy logging
+
+### Summary
+Fixed the milestone checker that was stuck at `milestones=0/N` on all paths. Two root causes:
+
+1. **`_get_signal_z3_value` returning None for free variables**: When the symbolic store held a random symbol string (e.g., `"QguHPd8pyYDSPKqE"` for input RST), `parse_infix_expr_to_z3` returned `None` because the string wasn't a literal, parenthesized expression, or store key. Fix: fall back to `BitVec(name, 32)`, treating it as a free Z3 variable.
+
+2. **Constraint locking permanently contradicting milestones**: `check_and_lock_stateless` added milestone conditions to the solver permanently. Since the engine uses a single symbol per input across all cycles, locking `RST == 1` (milestone 0) made `RST == 0` (milestone 1) permanently UNSAT. Fix: removed locking — milestone checking is now observational only (push/check/pop). The priority queue already guides the search via milestone-based scores.
+
+3. **Resilient milestone parsing**: LLM responses sometimes use different key names (`desc` vs `description`). Added `.get()` with fallbacks and `KeyError` handling.
+
+4. **Detailed directed strategy logging**: Added per-path logs showing priority queue decisions (`Popped: score=..., cycle=..., milestones=...`), branch creation/survival counts, enqueue events with scores, and max-cycle limits.
+
+### Results on test_2.v
+- Before fix: `milestones=0/11` on all paths, violation found at path 365
+- After fix: milestones progress 0→1→...→10/11, violation found at **path 10**, execution time **0.38s**
+
+### Files modified
+- `engine/milestone.py` — fixed `_get_signal_z3_value` BitVec fallback, removed locking from `check_and_lock` and `check_and_lock_stateless`
+- `engine/execution_engine.py` — resilient milestone dict parsing with `.get()` fallbacks
+- `engine/strategies.py` — detailed per-path logging (Popped/Branch/Enqueue/MaxCycle)
+
+### PySlang usage
+- No new pyslang usage in this change.
+
+## [2026-02-27] [Feature] Per-path summary logging for both strategies
+
+### Summary
+Added one-line per-path summary output to both `BlindSearchStrategy` and `MilestoneDirectedStrategy`, showing how each path terminated.
+
+- **BlindSearchStrategy**: After each path's assertion check, prints `[Path N] cycles=C, result=VIOLATION|SAT|UNSAT`
+- **MilestoneDirectedStrategy**: After each cycle execution, prints `[Path N] cycle=C, result=VIOLATION|CONTINUE|ALL_MILESTONES|TIMEOUT, milestones=M/T`
+- **UNSAT pruning**: Directed strategy prints `[Pruned] module/cfgN/pathN: UNSAT` when a branch is killed early
+
+### Files modified
+- `engine/strategies.py` — added per-path summary prints in both strategies' main loops and UNSAT pruning log in `_execute_cfg_step_by_step`
+
 ## [2026-02-26] [Bugfix] Fix initial block re-execution and directed strategy issues
 
 ### Summary

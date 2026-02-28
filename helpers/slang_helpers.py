@@ -838,7 +838,7 @@ class SymbolicDFS:
             if branch_id not in m.branch_points_seen:
                 m.branch_points_seen.add(branch_id)
                 m.branch_count += 1
-            print("[slang_helper] branch_count: Conditional Statement:", m.branch_count, "branch_id:", branch_id)  # DEBUG
+            #print("[slang_helper] branch_count: Conditional Statement:", m.branch_count, "branch_id:", branch_id)  # DEBUG
             # PySlang 7.0 uses conditions list, not predicate attribute
             # Pattern matches usage in dfs_stmt() method (line 550)
             cond_expr = stmt.conditions[0].expr if (hasattr(stmt, 'conditions') and stmt.conditions) else None

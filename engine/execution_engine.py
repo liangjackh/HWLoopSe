@@ -685,10 +685,15 @@ class ExecutionEngine:
                         # Convert to Milestone objects
                         for m in milestone_dicts:
                             try:
-                                milestone = Milestone(m['description'], m['condition'])
+                                desc = m.get('description', m.get('desc', f"Step {m.get('step', '?')}"))
+                                cond = m.get('condition', m.get('cond', None))
+                                if cond is None:
+                                    print(f"[ExecutionEngine] Warning: Skipping milestone without condition: {m}")
+                                    continue
+                                milestone = Milestone(desc, cond)
                                 all_milestones.append(milestone)
-                                print(f"[ExecutionEngine]   Step {m['step']}: {m['description']} ({m['condition']})")
-                            except ValueError as e:
+                                print(f"[ExecutionEngine]   Step {m.get('step', '?')}: {desc} ({cond})")
+                            except (ValueError, KeyError) as e:
                                 print(f"[ExecutionEngine] Warning: Skipping invalid milestone: {e}")
 
                     # 4.3: Create directed strategy with milestones
