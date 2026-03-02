@@ -28,7 +28,7 @@ Setting up instance: test_1 (definition: place_holder_2)
 [COI]   seed: test_1.out
 [COI] Analysis complete:
 [COI]   Relevant instances: {'test_1'}
-[COI]   Relevant CFGs: {('test_1', 0), ('test_1', 1)}
+[COI]   Relevant CFGs: {('test_1', 1), ('test_1', 0)}
 [COI]   Cone signals: 2
 [COI] Pruned all CFGs for instance: place_holder
 [COI] Removed instances from exploration: {'place_holder'}
@@ -57,7 +57,7 @@ module place_holder_2 (
   end
   
   always @(posedge CLK) begin
-    if ... (truncated), target: test_1.out > 14, known_signals: ['RST', 'out_wire', 'CLK', 'out']... (truncated)
+    if ... (truncated), target: test_1.out > 14, known_signals: ['RST', 'out_wire', 'out', 'CLK']... (truncated)
 [LLMPlanner] LLM response: [
   {
     "step": 0,
@@ -145,7 +145,7 @@ module place_holder_2 (
     "condition": "test_1.out > 14"
   }
 ]... (truncated)
-[LLMPlanner] known signals: ['RST', 'out_wire', 'CLK', 'out']
+[LLMPlanner] known signals: ['RST', 'out_wire', 'out', 'CLK']
 [LLMPlanner ]Successfully generated 17 milestones (attempt 1)
 [ExecutionEngine] Generated 17 milestones for this target
 [ExecutionEngine]   Step 0: System Reset (RST == 1)
@@ -178,12 +178,11 @@ Branch points explored: 0
 [visiting statement: ExpressionStatement]
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1, 14))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000 #x00000001) #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Milestone] Step 0 REACHED: System Reset
@@ -196,12 +195,11 @@ unsat: [Not(ULE(0 + 1, 14))], unsat core: []
 --- [Path 2] Popped: score=15001, cycle=1, milestones=2/17, queue=1
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1, 14))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000 #x00000001) #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=15002, next_cycle=2, milestones=2/17
@@ -212,12 +210,11 @@ unsat: [Not(ULE(0 + 1, 14))], unsat core: []
 --- [Path 3] Popped: score=14002, cycle=2, milestones=3/17, queue=2
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1 + 1, 14))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000 #x00000001 #x00000001) #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=14003, next_cycle=3, milestones=3/17
@@ -228,12 +225,11 @@ unsat: [Not(ULE(0 + 1 + 1, 14))], unsat core: []
 --- [Path 4] Popped: score=13003, cycle=3, milestones=4/17, queue=3
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1 + 1 + 1, 14))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000 #x00000001 #x00000001 #x00000001) #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=13004, next_cycle=4, milestones=4/17
@@ -244,12 +240,12 @@ unsat: [Not(ULE(0 + 1 + 1 + 1, 14))], unsat core: []
 --- [Path 5] Popped: score=12004, cycle=4, milestones=5/17, queue=4
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 14))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000 #x00000001 #x00000001 #x00000001 #x00000001)
+            #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=12005, next_cycle=5, milestones=5/17
@@ -260,12 +256,17 @@ unsat: [Not(ULE(0 + 1 + 1 + 1 + 1, 14))], unsat core: []
 --- [Path 6] Popped: score=11005, cycle=5, milestones=6/17, queue=5
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1, 14))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=11006, next_cycle=6, milestones=6/17
@@ -276,12 +277,18 @@ unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1, 14))], unsat core: []
 --- [Path 7] Popped: score=10006, cycle=6, milestones=7/17, queue=6
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1, 14))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=10007, next_cycle=7, milestones=7/17
@@ -292,12 +299,19 @@ unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1, 14))], unsat core: []
 --- [Path 8] Popped: score=9007, cycle=7, milestones=8/17, queue=7
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 14))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=9008, next_cycle=8, milestones=8/17
@@ -308,12 +322,20 @@ unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 14))], unsat core: []
 --- [Path 9] Popped: score=8008, cycle=8, milestones=9/17, queue=8
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 14))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=8009, next_cycle=9, milestones=9/17
@@ -324,12 +346,21 @@ unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 14))], unsat core: []
 --- [Path 10] Popped: score=7009, cycle=9, milestones=10/17, queue=9
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 14))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=7010, next_cycle=10, milestones=10/17
@@ -340,12 +371,22 @@ unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 14))], unsat core: []
 --- [Path 11] Popped: score=6010, cycle=10, milestones=11/17, queue=10
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 14))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=6011, next_cycle=11, milestones=11/17
@@ -356,12 +397,23 @@ unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 14))], unsat core: []
 --- [Path 12] Popped: score=5011, cycle=11, milestones=12/17, queue=11
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 14))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=5012, next_cycle=12, milestones=12/17
@@ -372,13 +424,24 @@ unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1, 14))], unsat core
 --- [Path 13] Popped: score=4012, cycle=12, milestones=13/17, queue=12
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1,
-         14))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=4013, next_cycle=13, milestones=13/17
@@ -389,26 +452,25 @@ unsat: [Not(ULE(0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1,
 --- [Path 14] Popped: score=3013, cycle=13, milestones=14/17, queue=13
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ...,
-         ...))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=3014, next_cycle=14, milestones=14/17
@@ -419,27 +481,26 @@ unsat: [Not(ULE(... +
 --- [Path 15] Popped: score=2014, cycle=14, milestones=15/17, queue=14
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
-unsat: [Not(ULE(... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ...,
-         ...))], unsat core: []
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
 []
   [Branch] test_1/cfg1: 2/2 survived
   [Enqueue] score=2015, next_cycle=15, milestones=15/17
@@ -450,53 +511,38 @@ unsat: [Not(ULE(... +
 --- [Path 16] Popped: score=1015, cycle=15, milestones=16/17, queue=15
   [Branch] test_1/cfg1: 2 paths
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [visiting statement: Conditional]
-[slang_helper] branch_count: Conditional Statement: 1 branch_id: ('test_1', 641)
 [visiting statement: ExpressionStatement]
 [Path 16] cycle=15, result=VIOLATION, milestones=16/17
 [DirectedStrategy] Assertion violation found!
 Assertion violation detected!
 Violated assertion details:
   - condition:  (out <= 14)
-    z3_condition: ULE(... +
-    ... +
-    ... +
-    ... +
-    ... +
-    ... +
-    ... +
-    ... +
-    ... +
-    ... +
-    ... +
-    ... +
-    ... +
-    ... +
-    ... +
-    ...,
-    ...)
-    path condition: [Not(ULE(... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ... +
-         ...,
-         ...))]
+    z3_condition: (bvule (bvadd #x00000000
+              #x00000001
+              #x00000001
+              #x00000001
+              #x00000001
+              #x00000001
+              #x00000001
+              #x00000001
+... (truncated)
     kind: 
     assert
-Counterexample: {}
-Execution time 2.204462319
-Frontend time 0.0026553089999996615
-Total time 2.2071176279999998
+
+Counterexample:
+  The assertion violation occurs with concrete values.
+  This means the design has a bug that always triggers,
+  not dependent on specific input values.
+
+  Path condition constraints:
+    [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+... (truncated)
+Execution time 1.289416723
+Frontend time 0.0025699989999998785
+Total time 1.2919867219999999

@@ -1169,13 +1169,18 @@ class SymbolicDFS:
         if solve_pc(s.pc):
             # Assertion can be violated!
             m.assertion_violation = True
+
+            # Get the model for counterexample before popping
+            model = s.pc.model()
+
             # Store the assertion info for reporting
             if not hasattr(m, 'violated_assertions'):
                 m.violated_assertions = []
             m.violated_assertions.append({
                 'condition': str(cond),
-                'path condition': str(s.pc),
-                'z3_condition': str(cond_z3),
+                'path condition': list(s.pc.assertions()),  # Store Z3 expressions directly
+                'z3_condition': cond_z3,
+                'model': model,
                 'kind': str(assertion_kind) if assertion_kind else 'assert'
             })
 
@@ -1232,12 +1237,17 @@ class SymbolicDFS:
         if solve_pc(s.pc):
             # Assertion can be violated!
             m.assertion_violation = True
+
+            # Get the model for counterexample before popping
+            model = s.pc.model()
+
             if not hasattr(m, 'violated_assertions'):
                 m.violated_assertions = []
             m.violated_assertions.append({
                 'condition': str(expr),
-                'path condition': str(s.pc),
-                'z3_condition': str(cond_z3),
+                'path condition': list(s.pc.assertions()),  # Store Z3 expressions directly
+                'z3_condition': cond_z3,
+                'model': model,
                 'kind': assertion_kind
             })
 
@@ -1300,12 +1310,17 @@ class SymbolicDFS:
         # Check if the negated condition is satisfiable
         if solve_pc(s.pc):
             m.assertion_violation = True
+
+            # Get the model for counterexample before popping
+            model = s.pc.model()
+
             if not hasattr(m, 'violated_assertions'):
                 m.violated_assertions = []
             m.violated_assertions.append({
                 'condition': str(expr),
-                'path condition': str(s.pc),
-                'z3_condition': str(cond_z3),
+                'path condition': list(s.pc.assertions()),  # Store Z3 expressions directly
+                'z3_condition': cond_z3,
+                'model': model,
                 'kind': str(assertion_kind) if assertion_kind else 'assert',
                 'type': 'concurrent'
             })
@@ -1356,12 +1371,17 @@ class SymbolicDFS:
 
         if solve_pc(s.pc):
             m.assertion_violation = True
+
+            # Get the model for counterexample before popping
+            model = s.pc.model()
+
             if not hasattr(m, 'violated_assertions'):
                 m.violated_assertions = []
             m.violated_assertions.append({
                 'condition': str(expr),
-                'z3_condition': str(cond_z3),
-                'path condition': str(s.pc),
+                'z3_condition': cond_z3,
+                'path condition': list(s.pc.assertions()),  # Store Z3 expressions directly
+                'model': model,
                 'kind': 'assert property',
                 'type': 'concurrent'
             })
@@ -1441,12 +1461,17 @@ class SymbolicDFS:
 
         if solve_pc(s.pc):
             m.assertion_violation = True
+
+            # Get the model for counterexample before popping
+            model = s.pc.model()
+
             if not hasattr(m, 'violated_assertions'):
                 m.violated_assertions = []
             m.violated_assertions.append({
                 'condition': str(expr),
-                'z3_condition': str(cond_z3),
-                'path condition': str(s.pc),
+                'z3_condition': cond_z3,
+                'path condition': list(s.pc.assertions()),  # Store Z3 expressions directly
+                'model': model,
                 'kind': 'property',
                 'type': 'concurrent'
             })

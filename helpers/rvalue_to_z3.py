@@ -822,7 +822,23 @@ def solve_pc(s: Solver) -> bool:
         model = s.model()
         return True
     else:
-        print(f"unsat: {s}, unsat core: {s.unsat_core()}")
+        # Print unsat constraints with better formatting
+        assertions = s.assertions()
+        print(f"unsat: {len(assertions)} constraint(s), unsat core: {s.unsat_core()}")
+
+        # Print each assertion using sexpr for better readability
+        for i, assertion in enumerate(assertions):
+            try:
+                assertion_str = assertion.sexpr()
+                # Truncate very long expressions (increased limit to 500)
+                if len(assertion_str) > 500:
+                    print(f"  [{i}] {assertion_str[:500]}... (truncated, total length: {len(assertion_str)})")
+                else:
+                    print(f"  [{i}] {assertion_str}")
+            except:
+                # Fallback to str if sexpr fails
+                print(f"  [{i}] {str(assertion)[:500]}")
+
         print(s.unsat_core())
         return False
 

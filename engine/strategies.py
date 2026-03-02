@@ -636,25 +636,90 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             print("Violated assertion details:")
             for va in manager.violated_assertions:
                 print(f"  - condition: {va.get('condition', 'N/A')}")
-                print(f"    z3_condition: {va.get('z3_condition', 'N/A')}")
-                print(f"    path condition: {va.get('path condition', 'N/A')}")
+
+                # Better z3_condition display
+                z3_cond = va.get('z3_condition')
+                if z3_cond is not None:
+                    try:
+                        if hasattr(z3_cond, 'sexpr'):
+                            z3_str = z3_cond.sexpr()
+                            if len(z3_str) > 200:
+                                print(f"    z3_condition: {z3_str[:200]}... (truncated)")
+                            else:
+                                print(f"    z3_condition: {z3_str}")
+                        else:
+                            print(f"    z3_condition: {z3_cond}")
+                    except Exception as e:
+                        print(f"    z3_condition: (error displaying: {e})")
+                else:
+                    print(f"    z3_condition: N/A")
+
                 print(f"    kind: {va.get('kind', 'N/A')}")
 
+        # Extract counterexample from the stored model
         counterexample = {}
-        symbols_to_values = {}
 
-        if engine.solve_pc(state.pc):
-            solved_model = state.pc.model()
-            decls = solved_model.decls()
-            for item in decls:
-                symbols_to_values[item.name()] = solved_model[item]
+        if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+            for va in manager.violated_assertions:
+                model = va.get('model')
 
-            for module in state.store:
-                for signal in state.store[module]:
-                    for symbol in symbols_to_values:
-                        if state.store[module][signal] == symbol:
-                            counterexample[signal] = symbols_to_values[symbol]
+                if model is not None:
+                    # Get all declarations from the model
+                    decls = model.decls()
 
-            print(f"Counterexample: {counterexample}")
+                    if decls:
+                        print(f"\nCounterexample (input values):")
+
+                        # Build a mapping of symbol names to values
+                        symbols_to_values = {}
+                        for item in decls:
+                            symbols_to_values[item.name()] = model[item]
+
+                        # Match signals to their symbolic values
+                        for module in state.store:
+                            for signal in state.store[module]:
+                                signal_expr = state.store[module][signal]
+                                # signal_expr is a string like "RST_0" or "CLK_1"
+                                if isinstance(signal_expr, str):
+                                    # Check if this exact symbol exists in the model
+                                    if signal_expr in symbols_to_values:
+                                        counterexample[f"{module}.{signal}"] = symbols_to_values[signal_expr]
+
+                        # Print counterexample
+                        if counterexample:
+                            for sig, val in counterexample.items():
+                                print(f"  {sig} = {val}")
+                        else:
+                            print("  (no matching signals found in store)")
+
+                        # Also print all symbols for debugging
+                        print(f"\nAll symbols in model:")
+                        for sym, val in symbols_to_values.items():
+                            print(f"  {sym} = {val}")
+                    else:
+                        # Model has no free variables - all values are concrete
+                        print(f"\nCounterexample:")
+                        print(f"  The assertion violation occurs with concrete values.")
+                        print(f"  This means the design has a bug that always triggers,")
+                        print(f"  not dependent on specific input values.")
+                        print(f"\n  Path condition constraints:")
+                        path_cond = va.get('path condition', [])
+                        if path_cond:
+                            for i, constraint in enumerate(path_cond):
+                                # Try to get a better representation
+                                constraint_str = str(constraint)
+                                if len(constraint_str) > 100:
+                                    # Try sexpr if available
+                                    if hasattr(constraint, 'sexpr'):
+                                        constraint_str = constraint.sexpr()
+                                        if len(constraint_str) > 150:
+                                            constraint_str = constraint_str[:150] + "... (truncated)"
+                                    else:
+                                        constraint_str = constraint_str[:100] + "... (truncated)"
+                                print(f"    [{i}] {constraint_str}")
+                        else:
+                            print(f"    (no path constraints)")
+
+                    break  # Only process first violation
         else:
-            print("UNSAT - no counterexample found")
+            print("No violation information available")
