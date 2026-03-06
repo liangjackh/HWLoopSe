@@ -1,0 +1,552 @@
+[ExecutionEngine] Auto-plan enabled (provider=deepseek, mock=False)
+[ExecutionEngine] Cone of Influence (COI) pruning enabled
+[Info] Found 2 top-level module instance(s):
+  - place_holder
+  - test_1
+[ExecutionEngine] Strategy set to: MilestoneDirectedStrategy
+[ExecutionEngine] Using directed search strategy
+Executing for 16 clock cycles
+-----------------------------------
+Processing instance: place_holder, definition: place_holder
+-----------------------------------
+Processing instance: test_1, definition: place_holder_2
+Building CFGs for module definition: place_holder (1 instance(s))
+  Built 4 CFG(s) for place_holder
+Building CFGs for module definition: place_holder_2 (1 instance(s))
+  Built 2 CFG(s) for place_holder_2
+Setting up instance: place_holder (definition: place_holder)
+Setting up instance: test_1 (definition: place_holder_2)
+[sum] manager.names_list: ['place_holder', 'test_1']
+[ExecutionEngine] Running Cone of Influence analysis...
+[assertion_extractor] Searching for assertions starting from top module: place_holder (def: place_holder)
+[get_assertions] Found ImmediateAssertion in 'test_1': Expression(ExpressionKind.BinaryOp)
+[assertion_extractor] Searching all top instances for assertion modules...
+[assertion_extractor] Found 1 unique assertion(s) (after deduplication):
+[assertion_extractor]   Expression(ExpressionKind.BinaryOp) in 'test_1'
+[assertion_extractor] Processing assertion 0: out <= 14
+[assertion_extractor] Created target: Violate assertion 'out <= 14' in test_1
+[assertion_extractor]   Expression: test_1.out > 14
+[COI] Starting analysis with 1 seed signal(s)
+[COI]   seed: test_1.out
+[COI] Analysis complete:
+[COI]   Relevant instances: {'test_1'}
+[COI]   Relevant CFGs: {('test_1', 0), ('test_1', 1)}
+[COI]   Cone signals: 2
+[COI] Pruned all CFGs for instance: place_holder
+[COI] Removed instances from exploration: {'place_holder'}
+[COI] Remaining instances: ['test_1']
+[ExecutionEngine] Auto-plan mode enabled
+[assertion_extractor] Searching for assertions starting from top module: place_holder (def: place_holder)
+[get_assertions] Found ImmediateAssertion in 'test_1': Expression(ExpressionKind.BinaryOp)
+[assertion_extractor] Searching all top instances for assertion modules...
+[assertion_extractor] Found 1 unique assertion(s) (after deduplication):
+[assertion_extractor]   Expression(ExpressionKind.BinaryOp) in 'test_1'
+[assertion_extractor] Processing assertion 0: out <= 14
+[assertion_extractor] Created target: Violate assertion 'out <= 14' in test_1
+[assertion_extractor]   Expression: test_1.out > 14
+[ExecutionEngine] Found 1 verification target(s) from assertions
+[ExecutionEngine] Planning for: Violate assertion 'out <= 14' in test_1
+[ContextSlicer] Using COI result: {'test_1'}
+[ExecutionEngine] Extracted 425 chars of RTL context
+[ExecutionEngine] Found 4 signals
+[LLMPlanner] Using DeepSeek API at https://api.deepseek.com
+[LLMPlanner] context: // Module: place_holder_2 (instance: test_1)
+module place_holder_2 (
+  input  CLK,
+  input  RST,
+  output reg [31:0] out 
+);
+  initial begin
+    out = 0;
+  end
+  
+  always @(posedge CLK) begin
+    if ... (truncated), target: test_1.out > 14, known_signals: ['RST', 'CLK', 'out_wire', 'out']... (truncated)
+[LLMPlanner] LLM response: [
+  {
+    "step": 0,
+    "description": "System Reset",
+    "condition": "RST == 1"
+  },
+  {
+    "step": 1,
+    "description": "Release reset and start counting",
+    "condition": "RST == 0 && test_1.out == 0"
+  },
+  {
+    "step": 2,
+    "description": "Counter increments to 1",
+    "condition": "test_1.out == 1"
+  },
+  {
+    "step": 3,
+    "description": "Counter increments to 2",
+    "condition": "test_1.out == 2"
+  },
+  {
+    "step": 4,
+    "description": "Counter increments to 3",
+    "condition": "test_1.out == 3"
+  },
+  {
+    "step": 5,
+    "description": "Counter increments to 4",
+    "condition": "test_1.out == 4"
+  },
+  {
+    "step": 6,
+    "description": "Counter increments to 5",
+    "condition": "test_1.out == 5"
+  },
+  {
+    "step": 7,
+    "description": "Counter increments to 6",
+    "condition": "test_1.out == 6"
+  },
+  {
+    "step": 8,
+    "description": "Counter increments to 7",
+    "condition": "test_1.out == 7"
+  },
+  {
+    "step": 9,
+    "description": "Counter increments to 8",
+    "condition": "test_1.out == 8"
+  },
+  {
+    "step": 10,
+    "description": "Counter increments to 9",
+    "condition": "test_1.out == 9"
+  },
+  {
+    "step": 11,
+    "description": "Counter increments to 10",
+    "condition": "test_1.out == 10"
+  },
+  {
+    "step": 12,
+    "description": "Counter increments to 11",
+    "condition": "test_1.out == 11"
+  },
+  {
+    "step": 13,
+    "description": "Counter increments to 12",
+    "condition": "test_1.out == 12"
+  },
+  {
+    "step": 14,
+    "description": "Counter increments to 13",
+    "condition": "test_1.out == 13"
+  },
+  {
+    "step": 15,
+    "description": "Counter increments to 14",
+    "condition": "test_1.out == 14"
+  },
+  {
+    "step": 16,
+    "description": "Counter increments to 15, violating the assertion and reaching the target",
+    "condition": "test_1.out > 14"
+  }
+]... (truncated)
+[LLMPlanner] known signals: ['RST', 'CLK', 'out_wire', 'out']
+[LLMPlanner ]Successfully generated 17 milestones (attempt 1)
+[ExecutionEngine] Generated 17 milestones for this target
+[ExecutionEngine]   Step 0: System Reset (RST == 1)
+[ExecutionEngine]   Step 1: Release reset and start counting (RST == 0 && test_1.out == 0)
+[ExecutionEngine]   Step 2: Counter increments to 1 (test_1.out == 1)
+[ExecutionEngine]   Step 3: Counter increments to 2 (test_1.out == 2)
+[ExecutionEngine]   Step 4: Counter increments to 3 (test_1.out == 3)
+[ExecutionEngine]   Step 5: Counter increments to 4 (test_1.out == 4)
+[ExecutionEngine]   Step 6: Counter increments to 5 (test_1.out == 5)
+[ExecutionEngine]   Step 7: Counter increments to 6 (test_1.out == 6)
+[ExecutionEngine]   Step 8: Counter increments to 7 (test_1.out == 7)
+[ExecutionEngine]   Step 9: Counter increments to 8 (test_1.out == 8)
+[ExecutionEngine]   Step 10: Counter increments to 9 (test_1.out == 9)
+[ExecutionEngine]   Step 11: Counter increments to 10 (test_1.out == 10)
+[ExecutionEngine]   Step 12: Counter increments to 11 (test_1.out == 11)
+[ExecutionEngine]   Step 13: Counter increments to 12 (test_1.out == 12)
+[ExecutionEngine]   Step 14: Counter increments to 13 (test_1.out == 13)
+[ExecutionEngine]   Step 15: Counter increments to 14 (test_1.out == 14)
+[ExecutionEngine]   Step 16: Counter increments to 15, violating the assertion and reaching the target (test_1.out > 14)
+[ExecutionEngine] Generated 17 milestone(s)
+[ExecutionEngine] Milestones written to milestones.json
+[ExecutionEngine] Updated directed strategy with 17 milestones
+Starting exploration...
+Branch points explored: 0
+[DirectedStrategy] Starting milestone-directed search
+[DirectedStrategy] Milestones: [Milestone(System Reset: RST == 1), Milestone(Release reset and start counting: RST == 0 && test_1.out == 0), Milestone(Counter increments to 1: test_1.out == 1), Milestone(Counter increments to 2: test_1.out == 2), Milestone(Counter increments to 3: test_1.out == 3), Milestone(Counter increments to 4: test_1.out == 4), Milestone(Counter increments to 5: test_1.out == 5), Milestone(Counter increments to 6: test_1.out == 6), Milestone(Counter increments to 7: test_1.out == 7), Milestone(Counter increments to 8: test_1.out == 8), Milestone(Counter increments to 9: test_1.out == 9), Milestone(Counter increments to 10: test_1.out == 10), Milestone(Counter increments to 11: test_1.out == 11), Milestone(Counter increments to 12: test_1.out == 12), Milestone(Counter increments to 13: test_1.out == 13), Milestone(Counter increments to 14: test_1.out == 14), Milestone(Counter increments to 15, violating the assertion and reaching the target: test_1.out > 14)]
+[DirectedStrategy] Max cycles: 16
+
+--- [Path 1] Popped: score=17000, cycle=0, milestones=0/17, queue=0
+[visiting statement: ExpressionStatement]
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000 #x00000001) #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Milestone] Step 0 REACHED: System Reset
+  [Milestone] Step 1 REACHED: Release reset and start counting
+  [Enqueue] score=15001, next_cycle=1, milestones=2/17
+  [Milestone] Step 0 REACHED: System Reset
+  [Enqueue] score=16001, next_cycle=1, milestones=1/17
+[Path 1] cycle=0, result=CONTINUE, milestones=0/17
+
+--- [Path 2] Popped: score=15001, cycle=1, milestones=2/17, queue=1
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000 #x00000001) #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=15002, next_cycle=2, milestones=2/17
+  [Milestone] Step 2 REACHED: Counter increments to 1
+  [Enqueue] score=14002, next_cycle=2, milestones=3/17
+[Path 2] cycle=1, result=CONTINUE, milestones=2/17
+
+--- [Path 3] Popped: score=14002, cycle=2, milestones=3/17, queue=2
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000 #x00000001 #x00000001) #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=14003, next_cycle=3, milestones=3/17
+  [Milestone] Step 3 REACHED: Counter increments to 2
+  [Enqueue] score=13003, next_cycle=3, milestones=4/17
+[Path 3] cycle=2, result=CONTINUE, milestones=3/17
+
+--- [Path 4] Popped: score=13003, cycle=3, milestones=4/17, queue=3
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000 #x00000001 #x00000001 #x00000001) #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=13004, next_cycle=4, milestones=4/17
+  [Milestone] Step 4 REACHED: Counter increments to 3
+  [Enqueue] score=12004, next_cycle=4, milestones=5/17
+[Path 4] cycle=3, result=CONTINUE, milestones=4/17
+
+--- [Path 5] Popped: score=12004, cycle=4, milestones=5/17, queue=4
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000 #x00000001 #x00000001 #x00000001 #x00000001)
+            #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=12005, next_cycle=5, milestones=5/17
+  [Milestone] Step 5 REACHED: Counter increments to 4
+  [Enqueue] score=11005, next_cycle=5, milestones=6/17
+[Path 5] cycle=4, result=CONTINUE, milestones=5/17
+
+--- [Path 6] Popped: score=11005, cycle=5, milestones=6/17, queue=5
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=11006, next_cycle=6, milestones=6/17
+  [Milestone] Step 6 REACHED: Counter increments to 5
+  [Enqueue] score=10006, next_cycle=6, milestones=7/17
+[Path 6] cycle=5, result=CONTINUE, milestones=6/17
+
+--- [Path 7] Popped: score=10006, cycle=6, milestones=7/17, queue=6
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=10007, next_cycle=7, milestones=7/17
+  [Milestone] Step 7 REACHED: Counter increments to 6
+  [Enqueue] score=9007, next_cycle=7, milestones=8/17
+[Path 7] cycle=6, result=CONTINUE, milestones=7/17
+
+--- [Path 8] Popped: score=9007, cycle=7, milestones=8/17, queue=7
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=9008, next_cycle=8, milestones=8/17
+  [Milestone] Step 8 REACHED: Counter increments to 7
+  [Enqueue] score=8008, next_cycle=8, milestones=9/17
+[Path 8] cycle=7, result=CONTINUE, milestones=8/17
+
+--- [Path 9] Popped: score=8008, cycle=8, milestones=9/17, queue=8
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=8009, next_cycle=9, milestones=9/17
+  [Milestone] Step 9 REACHED: Counter increments to 8
+  [Enqueue] score=7009, next_cycle=9, milestones=10/17
+[Path 9] cycle=8, result=CONTINUE, milestones=9/17
+
+--- [Path 10] Popped: score=7009, cycle=9, milestones=10/17, queue=9
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=7010, next_cycle=10, milestones=10/17
+  [Milestone] Step 10 REACHED: Counter increments to 9
+  [Enqueue] score=6010, next_cycle=10, milestones=11/17
+[Path 10] cycle=9, result=CONTINUE, milestones=10/17
+
+--- [Path 11] Popped: score=6010, cycle=10, milestones=11/17, queue=10
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=6011, next_cycle=11, milestones=11/17
+  [Milestone] Step 11 REACHED: Counter increments to 10
+  [Enqueue] score=5011, next_cycle=11, milestones=12/17
+[Path 11] cycle=10, result=CONTINUE, milestones=11/17
+
+--- [Path 12] Popped: score=5011, cycle=11, milestones=12/17, queue=11
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=5012, next_cycle=12, milestones=12/17
+  [Milestone] Step 12 REACHED: Counter increments to 11
+  [Enqueue] score=4012, next_cycle=12, milestones=13/17
+[Path 12] cycle=11, result=CONTINUE, milestones=12/17
+
+--- [Path 13] Popped: score=4012, cycle=12, milestones=13/17, queue=12
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=4013, next_cycle=13, milestones=13/17
+  [Milestone] Step 13 REACHED: Counter increments to 12
+  [Enqueue] score=3013, next_cycle=13, milestones=14/17
+[Path 13] cycle=12, result=CONTINUE, milestones=13/17
+
+--- [Path 14] Popped: score=3013, cycle=13, milestones=14/17, queue=13
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=3014, next_cycle=14, milestones=14/17
+  [Milestone] Step 14 REACHED: Counter increments to 13
+  [Enqueue] score=2014, next_cycle=14, milestones=15/17
+[Path 14] cycle=13, result=CONTINUE, milestones=14/17
+
+--- [Path 15] Popped: score=2014, cycle=14, milestones=15/17, queue=14
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+unsat: 1 constraint(s), unsat core: []
+  [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001)
+            #x0000000e))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [Enqueue] score=2015, next_cycle=15, milestones=15/17
+  [Milestone] Step 15 REACHED: Counter increments to 14
+  [Enqueue] score=1015, next_cycle=15, milestones=16/17
+[Path 15] cycle=14, result=CONTINUE, milestones=15/17
+
+--- [Path 16] Popped: score=1015, cycle=15, milestones=16/17, queue=15
+  [Branch] test_1/cfg1: 2 paths
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[visiting statement: Conditional]
+[visiting statement: ExpressionStatement]
+[Path 16] cycle=15, result=VIOLATION, milestones=16/17
+[DirectedStrategy] Assertion violation found!
+Assertion violation detected!
+Violated assertion details:
+  - condition:  (out <= 14)
+    z3_condition: (bvule (bvadd #x00000000
+              #x00000001
+              #x00000001
+              #x00000001
+              #x00000001
+              #x00000001
+              #x00000001
+              #x00000001
+... (truncated)
+    kind: 
+    assert
+
+Counterexample:
+  The assertion violation occurs with concrete values.
+  This means the design has a bug that always triggers,
+  not dependent on specific input values.
+
+  Path condition constraints:
+    [0] (not (bvule (bvadd #x00000000
+                   #x00000001
+                   #x00000001
+                   #x00000001
+                   #x00000001
+... (truncated)
+Execution time 1.3714830120000001
+Frontend time 0.002645631000000037
+Total time 1.3741286430000001

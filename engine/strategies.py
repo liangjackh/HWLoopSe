@@ -305,7 +305,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
     at branch points and prioritizing paths that make progress toward milestones.
     """
 
-    def __init__(self, milestone_manager: 'MilestoneManager', max_cycles: int = 100, max_paths: int = 1000):
+    def __init__(self, milestone_manager: 'MilestoneManager', max_cycles: int = 100, max_paths: int = 500000):
         """
         Initialize the directed strategy.
 
@@ -569,7 +569,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
             result = self._execute_path(
                 engine, visitor, modules_dict, cfg, cfg_path,
-                module_name, manager, curr_state
+                module_name, manager, curr_state, cfg_idx, path_idx
             )
 
             if result == "VIOLATION":
@@ -599,7 +599,9 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         cfg_path: List[int],
         module_name: str,
         manager: ExecutionManager,
-        state: SymbolicState
+        state: SymbolicState,
+        cfg_idx: int = -1,
+        path_idx: int = -1
     ) -> Optional[str]:
         """Execute a single path through a CFG."""
         directions = cfg.compute_direction(cfg_path)
@@ -608,6 +610,12 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         for basic_block_idx in cfg_path:
             if basic_block_idx < 0:
                 # Skip dummy nodes
+                continue
+
+            # Safety check: ensure basic_block_idx is valid
+            if basic_block_idx >= len(cfg.basic_block_list):
+                cfg_info = f"{module_name}/cfg{cfg_idx}/path{path_idx}" if cfg_idx >= 0 else module_name
+                print(f"[Warning] Skipping invalid basic_block_idx {basic_block_idx} in {cfg_info} (max: {len(cfg.basic_block_list)-1}, total blocks: {len(cfg.basic_block_list)})")
                 continue
 
             direction = directions[k] if k < len(directions) else 0

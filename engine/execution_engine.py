@@ -590,7 +590,8 @@ class ExecutionEngine:
                 from frontend.coi_analyzer import COIAnalyzer
 
                 # Extract seed signals from assertions
-                coi_targets = extract_verification_targets(modules, manager)
+                # Pass compilation and driver to search all top instances including standalone assertion modules
+                coi_targets = extract_verification_targets(modules, manager, compilation, driver)
                 seed_signals = []
                 if coi_targets:
                     for target in coi_targets:
@@ -599,33 +600,44 @@ class ExecutionEngine:
                         for sig in signals:
                             if sig.isdigit() or sig in ('if', 'else', 'begin', 'end'):
                                 continue
-                            seed_signals.append((target.module_name, sig))
+                            # target.module_name might be hierarchical like "or1200_cpu.u_assertions"
+                            # but modules_dict uses short names like "u_assertions"
+                            # Take the last component of the path
+                            instance_name = target.module_name.split('.')[-1] if '.' in target.module_name else target.module_name
+                            seed_signals.append((instance_name, sig))
 
                 if seed_signals:
                     analyzer = COIAnalyzer(modules_dict, cfgs_by_module, modules)
                     coi_result = analyzer.analyze(seed_signals)
-                    self.coi_result = coi_result
 
-                    # Filter cfgs_by_module: remove non-relevant instances entirely,
-                    # prune non-relevant CFGs within relevant instances
-                    for instance_name in list(cfgs_by_module.keys()):
-                        if instance_name not in coi_result.relevant_instances:
-                            del cfgs_by_module[instance_name]
-                            print(f"[COI] Pruned all CFGs for instance: {instance_name}")
-                        else:
-                            # Only keep relevant CFGs within this instance
-                            for cfg_idx, cfg in enumerate(cfgs_by_module[instance_name]):
-                                if (instance_name, cfg_idx) not in coi_result.relevant_cfgs:
-                                    cfg.paths = []
-                                    print(f"[COI] Pruned CFG {cfg_idx} for instance: {instance_name}")
+                    # If COI found no relevant instances, skip pruning entirely.
+                    # This happens when assertion signals are tied to constants
+                    # in the instantiation, so backward tracing dead-ends.
+                    if not coi_result.relevant_instances:
+                        print("[COI] Warning: No relevant instances found. Skipping pruning to avoid removing all modules.")
+                        self.coi_result = None  # Don't use empty COI result
+                    else:
+                        self.coi_result = coi_result
+                        # Filter cfgs_by_module: remove non-relevant instances entirely,
+                        # prune non-relevant CFGs within relevant instances
+                        for instance_name in list(cfgs_by_module.keys()):
+                            if instance_name not in coi_result.relevant_instances:
+                                del cfgs_by_module[instance_name]
+                                print(f"[COI] Pruned all CFGs for instance: {instance_name}")
+                            else:
+                                # Only keep relevant CFGs within this instance
+                                for cfg_idx, cfg in enumerate(cfgs_by_module[instance_name]):
+                                    if (instance_name, cfg_idx) not in coi_result.relevant_cfgs:
+                                        cfg.paths = []
+                                        print(f"[COI] Pruned CFG {cfg_idx} for instance: {instance_name}")
 
-                    # Filter names_list to only relevant instances
-                    original_names = list(manager.names_list)
-                    manager.names_list = [n for n in manager.names_list if n in coi_result.relevant_instances]
-                    pruned = set(original_names) - set(manager.names_list)
-                    if pruned:
-                        print(f"[COI] Removed instances from exploration: {pruned}")
-                    print(f"[COI] Remaining instances: {manager.names_list}")
+                        # Filter names_list to only relevant instances
+                        original_names = list(manager.names_list)
+                        manager.names_list = [n for n in manager.names_list if n in coi_result.relevant_instances]
+                        pruned = set(original_names) - set(manager.names_list)
+                        if pruned:
+                            print(f"[COI] Removed instances from exploration: {pruned}")
+                        print(f"[COI] Remaining instances: {manager.names_list}")
                 else:
                     print("[ExecutionEngine] No seed signals found for COI, skipping pruning")
 
@@ -645,7 +657,8 @@ class ExecutionEngine:
                 from engine.strategies import MilestoneDirectedStrategy
 
                 # 4.1: Extract verification targets from assertions
-                targets = extract_verification_targets(modules, manager)
+                # Pass compilation and driver to search all top instances including standalone assertion modules
+                targets = extract_verification_targets(modules, manager, compilation, driver)
 
                 if not targets:
                     print("[ExecutionEngine] No assertions found in design, using blind strategy")

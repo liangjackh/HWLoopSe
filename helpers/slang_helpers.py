@@ -811,21 +811,21 @@ class SymbolicDFS:
 
         # Handle PropertySpecSyntax - contains assertion condition
         if kind == ps.SyntaxKind.PropertySpec:
-            print(f"[visiting statement: PropertySpec]")  # DEBUG
+            #print(f"[visiting statement: PropertySpec]")  # DEBUG
             self._handle_property_spec(m, s, stmt, modules, direction)
             return
 
         if kind == ps.SyntaxKind.ExpressionStatement:
-            print(f"[visiting statement: ExpressionStatement]")  # DEBUG
+            #print(f"[visiting statement: ExpressionStatement]")  # DEBUG
             self.visit_expr(m, s, stmt.expr)
 
         elif kind == ps.StatementKind.Block and hasattr(stmt, "body"):
-            print(f"[visiting statement: Block]")  # DEBUG
+            #print(f"[visiting statement: Block]")  # DEBUG
             for substmt in stmt.body:
                 self.visit_stmt(m, s, substmt, modules, direction)
 
         elif kind == ps.StatementKind.Conditional or isinstance(stmt, ps.ConditionalStatementSyntax):
-            print(f"[visiting statement: Conditional]")  # DEBUG
+            #print(f"[visiting statement: Conditional]")  # DEBUG
             # Track unique branch points by syntax source location (start line/column)
             if hasattr(stmt, 'syntax') and stmt.syntax is not None:
                 sr = stmt.syntax.sourceRange()

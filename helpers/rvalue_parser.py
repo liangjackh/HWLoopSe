@@ -51,8 +51,19 @@ def conjunction_with_pointers(rvalue, s: SymbolicState, m: ExecutionManager) -> 
 
     elif isinstance(rvalue, ps.ConditionalExpressionSyntax):
         cond = conjunction_with_pointers(rvalue.predicate, s, m)
-        true_val = conjunction_with_pointers(rvalue.ifTrue, s, m)
-        false_val = conjunction_with_pointers(rvalue.ifFalse, s, m)
+        # PySlang version compatibility: try different attribute names
+        try:
+            true_val = conjunction_with_pointers(rvalue.ifTrue, s, m)
+            false_val = conjunction_with_pointers(rvalue.ifFalse, s, m)
+        except AttributeError:
+            try:
+                # Some PySlang versions use left/right instead of ifTrue/ifFalse
+                true_val = conjunction_with_pointers(rvalue.left, s, m)
+                false_val = conjunction_with_pointers(rvalue.right, s, m)
+            except AttributeError:
+                # Fallback: try to get children
+                print(f"[rvalue_parser] Warning: ConditionalExpressionSyntax has unknown attributes: {dir(rvalue)}")
+                return str(rvalue)
         return f"({cond} ? {true_val} : {false_val})"
 
     elif isinstance(rvalue, ps.BinaryExpressionSyntax):

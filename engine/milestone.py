@@ -82,6 +82,15 @@ class MilestoneManager:
                     return module_store[var_name]
             print(f"[MilestoneManager] Variable not found: {var_name}")
             return None
+        elif len(parts) > 2:
+            # Hierarchical path like "or1200_cpu.u_assertions.operand_b"
+            # Try to find the signal by searching in all modules
+            var_name = parts[-1]  # Last part is the signal name
+            for module_name, module_store in state.store.items():
+                if var_name in module_store:
+                    return module_store[var_name]
+            print(f"[MilestoneManager] Variable not found in any module: {var_name} (from path: {signal_path})")
+            return None
         else:
             print(f"[MilestoneManager] Invalid signal path format: {signal_path}")
             return None
@@ -156,8 +165,16 @@ class MilestoneManager:
         if signal_value is None:
             return None
 
-        # Build the comparison
-        target = BitVecVal(cond.value, 32)
+        # Check if value is a signal path (signal-to-signal comparison) or a constant
+        if isinstance(cond.value, str):
+            # Signal-to-signal comparison
+            target = self._get_signal_z3_value(cond.value, state)
+            if target is None:
+                print(f"[MilestoneManager] Cannot resolve signal: {cond.value}")
+                return None
+        else:
+            # Constant value comparison
+            target = BitVecVal(cond.value, 32)
 
         op = cond.operator
         if op == "==":

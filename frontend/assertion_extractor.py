@@ -89,13 +89,15 @@ def extract_signals_from_condition(condition_str: str) -> List[str]:
     return tokens
 
 
-def extract_verification_targets(modules, manager) -> List[VerificationTarget]:
+def extract_verification_targets(modules, manager, compilation=None, driver=None) -> List[VerificationTarget]:
     """
     Extract all assertions from modules and convert to verification targets.
 
     Args:
-        modules: List of PySlang module symbols
+        modules: List of PySlang module symbols (instances being analyzed)
         manager: ExecutionManager instance
+        compilation: Optional PySlang compilation object to search all top instances
+        driver: Optional PySlang driver object (not currently used)
 
     Returns:
         List of VerificationTarget objects
@@ -103,23 +105,66 @@ def extract_verification_targets(modules, manager) -> List[VerificationTarget]:
     targets = []
 
     # First, collect all assertions using the existing method
-    # Only traverse from the top-level module since get_assertions
-    # already recurses into sub-instances. Traversing all modules
-    # would find the same assertion multiple times.
     manager.assertions = []
-    top_module = modules[0]
-    manager.get_assertions(manager, top_module.body)
+
+    # Strategy: Only search the top-level module in the instance tree
+    # get_assertions will recursively traverse all sub-instances
+    # This avoids duplicate assertions from being found multiple times
+
+    if modules:
+        # Find the actual top-level module (the one without a parent in the modules list)
+        # In the modules list from _discover_modules, the first element is typically the root
+        top_module = modules[0]
+        module_name = top_module.name if hasattr(top_module, 'name') else 'unknown'
+        definition_name = top_module.definition.name if hasattr(top_module, 'definition') else module_name
+
+        print(f"[assertion_extractor] Searching for assertions starting from top module: {module_name} (def: {definition_name})")
+        if hasattr(top_module, 'body'):
+            manager.get_assertions(manager, top_module.body)
+
+    # If compilation is provided, search all top instances for assertion modules
+    if compilation is not None:
+        import pyslang as ps
+
+        print("[assertion_extractor] Searching all top instances for assertion modules...")
+        root = compilation.getRoot()
+        all_top_instances = list(root.topInstances)
+
+        # Get the definition name of the module we already searched
+        searched_def = None
+        if modules:
+            searched_def = modules[0].definition.name if hasattr(modules[0], 'definition') else modules[0].name
+
+        for inst in all_top_instances:
+            inst_name = inst.name if hasattr(inst, 'name') else 'unknown'
+            def_name = inst.definition.name if hasattr(inst, 'definition') else inst_name
+
+            # Skip if this is the same module we already searched
+            if def_name == searched_def:
+                continue
+
+            # Look for assertion modules (typically named *assertion* or *assert*)
+            if 'assert' in inst_name.lower() or 'assert' in def_name.lower():
+                print(f"[assertion_extractor] Found assertion module instance: {inst_name} (def: {def_name})")
+                if hasattr(inst, 'body'):
+                    manager.get_assertions(manager, inst.body, inst_name)
 
     if not manager.assertions:
         print("[assertion_extractor] No assertions found in design")
+        print("[assertion_extractor] Note: If you have a standalone assertion module,")
+        print("[assertion_extractor]       make sure it's instantiated in your design or")
+        print("[assertion_extractor]       add it as a top-level module in your filelist.")
         return targets
 
     # Assertions are now tuples of (condition, instance_path)
-    # Deduplicate by (string representation, instance_path)
+    # Deduplicate by object identity (id) and instance_path
+    # Using str(assertion) is not sufficient as all expressions have the same string representation
     seen_assertions = set()
     unique_assertions = []
     for assertion, instance_path in manager.assertions:
-        key = (str(assertion), instance_path)
+        # Use object id for deduplication (each assertion object is unique)
+        key = (id(assertion), instance_path)
+
         if key not in seen_assertions:
             seen_assertions.add(key)
             unique_assertions.append((assertion, instance_path))

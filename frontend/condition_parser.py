@@ -7,13 +7,17 @@ from dataclasses import dataclass
 
 @dataclass
 class SimpleCondition:
-    """A simple condition: signal op value"""
+    """A simple condition: signal op value or signal op signal"""
     signal_path: str
     operator: str
-    value: int
+    value: Union[int, str]  # int for constant, str for signal path
 
     def __repr__(self):
         return f"{self.signal_path} {self.operator} {self.value}"
+
+    def is_signal_comparison(self) -> bool:
+        """Check if this is a signal-to-signal comparison."""
+        return isinstance(self.value, str)
 
 
 @dataclass
@@ -36,7 +40,10 @@ def parse_value(value_str: str) -> int:
     """
     Parse a value string into an integer.
 
-    Supports: decimal, hex (0x, 'h), binary (0b, 'b)
+    Supports:
+    - decimal: 42
+    - hex: 0x2A, 'h2A, 32'h2A
+    - binary: 0b101010, 'b101010, 6'b101010
     """
     value_str = value_str.strip()
 
@@ -45,13 +52,29 @@ def parse_value(value_str: str) -> int:
     elif value_str.startswith("0b") or value_str.startswith("0B"):
         return int(value_str, 2)
     elif value_str.startswith("'h"):
-        # Verilog hex format
+        # Verilog hex format without width: 'h2A
         return int(value_str[2:], 16)
     elif value_str.startswith("'b"):
-        # Verilog binary format
+        # Verilog binary format without width: 'b101010
         return int(value_str[2:], 2)
-    else:
-        return int(value_str)
+    elif "'" in value_str:
+        # Verilog format with width: 32'h2A or 6'b101010
+        parts = value_str.split("'", 1)
+        if len(parts) == 2:
+            # width = parts[0]  # Not used, but available if needed
+            format_and_value = parts[1]
+            if format_and_value.startswith('h'):
+                return int(format_and_value[1:], 16)
+            elif format_and_value.startswith('b'):
+                return int(format_and_value[1:], 2)
+            elif format_and_value.startswith('d'):
+                return int(format_and_value[1:], 10)
+            else:
+                # Default to decimal if no format specifier
+                return int(format_and_value, 10)
+
+    # Default: try to parse as decimal
+    return int(value_str)
 
 
 def parse_simple_condition(condition: str) -> SimpleCondition:
@@ -61,9 +84,10 @@ def parse_simple_condition(condition: str) -> SimpleCondition:
     Examples:
         "rst == 1" -> SimpleCondition("rst", "==", 1)
         "test_1.out > 3" -> SimpleCondition("test_1.out", ">", 3)
+        "sig_a != sig_b" -> SimpleCondition("sig_a", "!=", "sig_b")
 
     Args:
-        condition: A string like "signal_name op value"
+        condition: A string like "signal_name op value" or "signal_name op signal_name"
 
     Returns:
         SimpleCondition object
@@ -83,14 +107,20 @@ def parse_simple_condition(condition: str) -> SimpleCondition:
                 signal_path = parts[0].strip()
                 value_str = parts[1].strip()
 
+                # Try to parse as a numeric value first
                 try:
                     value = parse_value(value_str)
-                except ValueError:
-                    raise ValueError(f"Cannot parse value '{value_str}' in condition: {condition}")
+                    return SimpleCondition(signal_path, op, value)
+                except (ValueError, AttributeError):
+                    # If parsing as value fails, treat it as a signal path
+                    # This handles signal-to-signal comparisons
+                    # Check if it looks like a signal (contains letters, dots, underscores, brackets)
+                    if re.match(r'^[a-zA-Z_][\w.\[\]:]*$', value_str):
+                        return SimpleCondition(signal_path, op, value_str)
+                    else:
+                        raise ValueError(f"Cannot parse value '{value_str}' in condition: {condition}")
 
-                return SimpleCondition(signal_path, op, value)
-
-    raise ValueError(f"Cannot parse simple condition: {condition}. Expected format: 'signal op value'")
+    raise ValueError(f"Cannot parse simple condition: {condition}. Expected format: 'signal op value' or 'signal op signal'")
 
 
 def tokenize_condition(condition: str) -> List[str]:
@@ -98,6 +128,7 @@ def tokenize_condition(condition: str) -> List[str]:
     Tokenize a condition string into tokens.
 
     Handles: &&, ||, !, (, ), and simple conditions
+    Note: != is part of a comparison operator, not a NOT token
     """
     tokens = []
     i = 0
@@ -121,8 +152,8 @@ def tokenize_condition(condition: str) -> List[str]:
             i += 2
             continue
 
-        # Check for !
-        if condition[i] == '!':
+        # Check for ! (but not !=)
+        if condition[i] == '!' and (i + 1 >= len(condition) or condition[i+1] != '='):
             tokens.append('!')
             i += 1
             continue
@@ -139,9 +170,17 @@ def tokenize_condition(condition: str) -> List[str]:
             continue
 
         # Otherwise, read until we hit &&, ||, !, (, or )
+        # But be careful not to break on != (which is part of a comparison)
         j = i
         while j < len(condition):
-            if condition[j:j+2] in ('&&', '||') or condition[j] in '!()':
+            # Check for logical operators
+            if condition[j:j+2] in ('&&', '||'):
+                break
+            # Check for ! but not !=
+            if condition[j] == '!' and (j + 1 >= len(condition) or condition[j+1] != '='):
+                break
+            # Check for parentheses
+            if condition[j] in '()':
                 break
             j += 1
 
@@ -328,13 +367,20 @@ def extract_signal_name(signal_path: str) -> str:
         "test_1.out" -> "out"
         "u_cpu.u_alu.result" -> "result"
         "rst" -> "rst"
+        "ex_insn[31:26]" -> "ex_insn"
+        "module.signal[7:0]" -> "signal"
 
     Args:
-        signal_path: A potentially hierarchical signal path
+        signal_path: A potentially hierarchical signal path with optional bit-select
 
     Returns:
-        The base signal name (last component)
+        The base signal name (last component, without bit-select)
     """
+    # First, strip any bit-select syntax [...]
+    if '[' in signal_path:
+        signal_path = signal_path.split('[')[0]
+
+    # Then extract the last component if hierarchical
     if '.' in signal_path:
         return signal_path.split('.')[-1]
     return signal_path
