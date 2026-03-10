@@ -396,13 +396,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 self._handle_assertion_violation(engine, manager, item.state)
                 return
 
-            if result == "ALL_MILESTONES":
-                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=ALL_MILESTONES, milestones={len(self.milestone_manager.milestones)}/{len(self.milestone_manager.milestones)}")
-                print(f"[DirectedStrategy] All milestones reached!")
-                print(f"[DirectedStrategy] Final state: {item.state.store}")
-                return
-
-            # Path ended without violation or milestone completion
+            # Path ended without violation
             if result is None:
                 print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=CONTINUE, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}")
             elif result == "TIMEOUT":
@@ -504,19 +498,14 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         # 2. 周期结束：处理所有存活的平行宇宙，检查里程碑，然后推入全局队列
         for state in active_states:
             current_progress = item.milestones_completed
-            
-            # 连续检查并固化里程碑 (注意这里换成了无状态方法，下文会解释)
-            while current_progress < len(self.milestone_manager.milestones):
+
+            # Check only the next milestone (one per cycle for incremental temporal progress)
+            if current_progress < len(self.milestone_manager.milestones):
                 success, new_progress = self.milestone_manager.check_and_lock_stateless(state, current_progress)
                 if success:
                     current_progress = new_progress
-                else:
-                    break
 
-            if current_progress >= len(self.milestone_manager.milestones):
-                return "ALL_MILESTONES"
-
-            # 3. 检查断言违例
+            # Check for assertion violation (milestones are just guidance, not success condition)
             if manager.assertion_violation:
                 return "VIOLATION"
 

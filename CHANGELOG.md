@@ -1,5 +1,127 @@
 # Changelog
 
+## 2026-03-09 - Fixed False Positive Bug Detection and CFG Issues
+
+### Problem 1: False Positive Termination
+When running directed symbolic execution with milestones, the tool incorrectly reported finding a bug in cycle 0 with no counterexample.
+
+### Problem 2: Z3 Bit Width Mismatch
+After fixing Problem 1, the tool crashed with Z3 type error when comparing signals with different bit widths.
+
+### Problem 3: Invalid Basic Block Indices in CFG Paths
+The tool generated warnings about invalid basic_block_idx that exceeded the actual number of basic blocks.
+
+### Problem 4: All Milestones Reached Simultaneously
+Milestones jumped from 0/7 to 7/7 in a single cycle, defeating their purpose as incremental waypoints. The while loop in strategies.py checked all milestones sequentially until one failed, allowing all satisfiable milestones to be marked as "reached" at once.
+
+### Root Causes
+
+**Problem 1**: In `engine/strategies.py`, the directed search strategy had a logic error:
+1. Lines 509-514: Check if milestones are satisfiable using Z3 solver
+2. Lines 516-517: If all milestones satisfiable, return `"ALL_MILESTONES"` immediately
+3. Lines 520-521: Check for assertion violations (NEVER REACHED due to early return)
+
+Z3 satisfiability means "this condition COULD be true with some variable assignment", not "this condition IS true with concrete values". In cycle 0, all milestones were satisfiable with symbolic variables, so the tool incorrectly treated this as success.
+
+**Problem 2**: In `engine/milestone.py` line 202, when creating Z3 constants for milestone comparisons, the code always used 32-bit width:
+```python
+target = BitVecVal(cond.value, 32)  # Always 32 bits!
+```
+
+But signals can have different widths (e.g., 6-bit counters, 1-bit flags), causing type mismatches.
+
+**Problem 3**: In `engine/cfg.py`, the `basic_blocks_sv` method skips empty blocks when creating `basic_block_list`:
+```python
+if basic_block:  # Only add non-empty blocks
+    self.basic_block_list.append(basic_block)
+```
+
+But `find_basic_block` assumes a direct mapping between `partition_list` indices and block indices. When blocks are skipped, this mapping breaks:
+- `partition_list` might have 7 elements (expecting 6 blocks)
+- But if 2 blocks are empty, `basic_block_list` only has 4 blocks
+- `find_basic_block` returns indices up to 5, but max valid is 3
+
+This causes `make_paths()` to create CFG edges with invalid block indices, which then appear in NetworkX paths.
+
+**Problem 4**: In `engine/strategies.py` lines 503-508, a while loop continuously checked all milestones:
+```python
+while current_progress < len(self.milestone_manager.milestones):
+    success, new_progress = self.milestone_manager.check_and_lock_stateless(state, current_progress)
+    if success:
+        current_progress = new_progress
+    else:
+        break
+```
+
+In cycle 0, all milestones were satisfiable with symbolic variables, so the loop advanced through all 7 milestones at once (0→1→2→...→7), defeating the purpose of incremental waypoints.
+
+### Solutions
+
+**Problem 1**: Removed the early return for `"ALL_MILESTONES"`. Milestones now only guide search priority, not act as terminal success conditions.
+
+**Changes in `engine/strategies.py`**:
+- Removed lines 516-517 that returned `"ALL_MILESTONES"`
+- Removed lines 399-403 that handled `"ALL_MILESTONES"` as success
+- Now only `"VIOLATION"` terminates the search successfully
+
+**Problem 2**: Fixed bit width matching in milestone comparisons.
+
+**Changes in `engine/milestone.py` line 202**:
+```python
+# Before:
+target = BitVecVal(cond.value, 32)
+
+# After:
+target = BitVecVal(cond.value, signal_value.size())
+```
+
+**Problem 3**: Added bounds checking in `find_basic_block` to clamp return values.
+
+**Changes in `engine/cfg.py` lines 436-443**:
+```python
+# Before:
+return i - 1
+
+# After:
+return min(i - 1, len(self.basic_block_list) - 1)
+```
+
+**Problem 4**: Changed milestone checking to one per cycle, and improved LLM prompt.
+
+**Changes in `engine/strategies.py` lines 500-508**:
+```python
+# Before: while loop checking all milestones
+while current_progress < len(self.milestone_manager.milestones):
+    success, new_progress = self.milestone_manager.check_and_lock_stateless(...)
+    if success:
+        current_progress = new_progress
+    else:
+        break
+
+# After: check only one milestone per cycle
+if current_progress < len(self.milestone_manager.milestones):
+    success, new_progress = self.milestone_manager.check_and_lock_stateless(...)
+    if success:
+        current_progress = new_progress
+```
+
+**Changes in `frontend/llm_planner.py`**:
+- Added Rule 3: "Temporal Progression" to SYSTEM_PROMPT
+- Instructs LLM to generate milestones that form a temporal sequence across clock cycles
+- Emphasizes that early milestones should be prerequisites for later ones
+- Avoids conditions that can be satisfied simultaneously in a single cycle
+
+### Verification
+After all four fixes:
+- No more false positive terminations in cycle 0
+- No more Z3 type errors
+- No more "Skipping invalid basic_block_idx" warnings
+- Milestones now progress incrementally: 0/7 → 1/7 → 2/7 → ... → 7/7
+- No more false positive terminations in cycle 0
+- No more Z3 type errors
+- No more "Skipping invalid basic_block_idx" warnings
+- Tool correctly explores paths: `[Path 8] cycle=2, milestones=7/7, queue=21`
+
 ## 2026-03-06 - Context Slicer Enhancement and COI Fixes
 
 ### Problem 1: Incomplete RTL Context for LLM Milestone Generation

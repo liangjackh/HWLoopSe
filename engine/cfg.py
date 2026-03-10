@@ -117,13 +117,17 @@ class CFG:
         """Extracts always blocks from PySlang AST"""
         # Handle InstanceSymbol (from topInstances or child instances)
         if ast is not None and ast.__class__.__name__ == "InstanceSymbol":
-            # Iterate over the body to find ProceduralBlockSymbol and child instances
+            # Iterate over the body to find ProceduralBlockSymbol, ContinuousAssign, and child instances
             if hasattr(ast, 'body'):
                 for item in ast.body:
                     if item.__class__.__name__ == "ProceduralBlockSymbol":
                         # Get the syntax node from the symbol
                         if hasattr(item, 'syntax') and item.syntax is not None:
                             self.always_blocks.append(item.syntax)
+                    elif item.__class__.__name__ == "ContinuousAssignSymbol":
+                        # Collect continuous assignments for COI analysis
+                        if hasattr(item, 'syntax') and item.syntax is not None:
+                            self.comb.append(item.syntax)
                     elif item.__class__.__name__ == "InstanceSymbol":
                         # Recursively process child instances (submodules)
                         self.get_always_sv(m, s, item)
@@ -436,11 +440,11 @@ class CFG:
             if i == len(partition_list) - 1:
                 # Last block: from this partition point to the end
                 if node_idx >= block_start:
-                    return i - 1  # Block index is i-1 (since block 0 covers indices 0 and 1)
+                    return min(i - 1, len(self.basic_block_list) - 1)
             else:
                 block_end = partition_list[i + 1] - 1
                 if block_start <= node_idx <= block_end:
-                    return i - 1
+                    return min(i - 1, len(self.basic_block_list) - 1)
 
         # Fallback: return last block
         return len(self.basic_block_list) - 1

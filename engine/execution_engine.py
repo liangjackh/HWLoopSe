@@ -537,6 +537,8 @@ class ExecutionEngine:
                     c.basic_blocks_sv(manager, state, ab_body)
                     c.partition()
                     c.build_cfg(manager, state)
+                    # Share continuous assignments from the probe
+                    c.comb = probe.comb
                     cfgs_by_definition[definition_name].append(c)
 
                 print(f"  Built {len(cfgs_by_definition[definition_name])} CFG(s) for {definition_name}")

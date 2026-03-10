@@ -30,11 +30,16 @@ The Symbolic Execution Engine will use your milestones to steer the search. If t
 2.  **Simple Conditions**: Milestones must be boolean expressions using simple operators:
     * Allowed: `==`, `!=`, `>`, `<`, `>=`, `<=`, `&&`, `||`, `!`.
     * FORBIDDEN: SystemVerilog specific syntax like `@(posedge clk)`, `|->`, `$rose`, `$past`.
-3.  **Logical Sequence**: The milestones must represent a feasible execution trace.
+3.  **Temporal Progression**: Milestones must form a TEMPORAL sequence across clock cycles.
+    * Each milestone should represent a state that can only be reached AFTER the previous milestone.
+    * Early milestones should be PREREQUISITES for later milestones (e.g., a counter must be initialized before it can increment).
+    * Avoid conditions that can all be satisfied simultaneously in a single cycle.
+    * Consider the hardware's sequential behavior: state transitions, register updates, pipeline stages.
+4.  **Logical Sequence**: The milestones must represent a feasible execution trace.
     * Step 0 is usually Reset or Initialization.
     * Intermediate steps should bridge the gap (e.g., incrementing a counter, finite state machine transitions).
     * The Final step MUST be the Verification Target itself.
-4.  **JSON Output Only**: Return a raw JSON list of objects. Do not wrap in markdown code blocks.
+5.  **JSON Output Only**: Return a raw JSON list of objects. Do not wrap in markdown code blocks.
 
 **JSON Format:**
 [
@@ -264,7 +269,9 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
             max_retries: Maximum retry attempts for self-correction
             num_cycles: Maximum clock cycles the engine will run
         """
-        print(f"[LLMPlanner] context: {rtl_context[:200]}... (truncated), target: {target}, known_signals: {known_signals[:10]}... (truncated)")
+        #print(f"[LLMPlanner] context: {rtl_context[:200]}... (truncated), target: {target}, known_signals: {known_signals[:10]}... (truncated)")
+        print(f"[LLMPlanner] context: {rtl_context}")
+        print(f"[LLMPlanner]target: {target}, known_signals: {known_signals[:10]}... (truncated)")
 
         if self.mock:
             print(f"[LLMPlanner] Mock mode: returning hardcoded milestones for '{target}'")
@@ -315,7 +322,8 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
                     response = self._call_anthropic(rtl_context, target, num_cycles)
 
                 # Parse response
-                print(f"[LLMPlanner] LLM response: {response}... (truncated)")
+                #print(f"[LLMPlanner] LLM response: {response}... (truncated)")
+                print(f"[LLMPlanner] LLM response: {response}")
                 milestones = self._parse_json_response(response)
 
                 # Validate signals

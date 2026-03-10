@@ -1,7 +1,8 @@
 """Milestone management for directed symbolic execution."""
 
+import re
 from typing import List, Optional, Tuple, Any, Union
-from z3 import Solver, sat, ExprRef, BitVecVal, ULE, ULT, UGE, UGT, And, Or, Not
+from z3 import Solver, sat, ExprRef, BitVecVal, ULE, ULT, UGE, UGT, And, Or, Not, Extract
 from .symbolic_state import SymbolicState
 from frontend.condition_parser import (
     parse_compound_condition, SimpleCondition, CompoundCondition, Condition
@@ -62,14 +63,22 @@ class MilestoneManager:
     def parse_hierarchical_signal(self, signal_path: str, state: SymbolicState) -> Optional[Any]:
         """
         Parse a hierarchical signal path and look up its value in the state.
+        Handles bit-slice notation like "signal[31:26]" or "module.signal[5]".
 
         Args:
-            signal_path: Hierarchical path like "test_1.out" or just "out"
+            signal_path: Hierarchical path like "test_1.out[7:0]" or just "out"
             state: Current symbolic state
 
         Returns:
             The symbolic value from state.store, or None if not found
         """
+        # Extract bit-slice notation if present
+        bit_slice_match = re.match(r'^(.+)\[(\d+)(?::(\d+))?\]$', signal_path)
+        if bit_slice_match:
+            base_path = bit_slice_match.group(1)
+            # We'll handle the bit extraction in _get_signal_z3_value
+            signal_path = base_path
+
         parts = signal_path.split(".")
 
         if len(parts) == 2:
@@ -107,10 +116,10 @@ class MilestoneManager:
 
     def _get_signal_z3_value(self, signal_path: str, state: SymbolicState) -> Optional[ExprRef]:
         """
-        Get the Z3 value for a signal.
+        Get the Z3 value for a signal, handling bit-slice notation.
 
         Args:
-            signal_path: Signal path
+            signal_path: Signal path (may include bit-slice like "signal[31:26]")
             state: Current symbolic state
 
         Returns:
@@ -119,36 +128,52 @@ class MilestoneManager:
         from helpers.rvalue_to_z3 import parse_infix_expr_to_z3
         from z3 import BitVec, BitVecVal
 
-        signal_value = self.parse_hierarchical_signal(signal_path, state)
+        # Extract bit-slice notation if present
+        bit_slice_match = re.match(r'^(.+)\[(\d+)(?::(\d+))?\]$', signal_path)
+        base_path = signal_path
+        msb = None
+        lsb = None
+
+        if bit_slice_match:
+            base_path = bit_slice_match.group(1)
+            if bit_slice_match.group(3):  # Range like [31:26]
+                msb = int(bit_slice_match.group(2))
+                lsb = int(bit_slice_match.group(3))
+            else:  # Single bit like [5]
+                msb = lsb = int(bit_slice_match.group(2))
+
+        signal_value = self.parse_hierarchical_signal(base_path, state)
         if signal_value is None:
             return None
 
-        # Already a Z3 expression — return as-is
-        if not isinstance(signal_value, str):
-            return signal_value
+        # Convert to Z3 expression if it's a string
+        if isinstance(signal_value, str):
+            original_str = signal_value
+            parts = base_path.split(".")
+            if len(parts) == 2:
+                module_name = parts[0]
+            else:
+                module_name = None
+                for mod_name, module_store in state.store.items():
+                    if base_path in module_store:
+                        module_name = mod_name
+                        break
 
-        # It's a string — try to convert to Z3
-        original_str = signal_value
-        parts = signal_path.split(".")
-        if len(parts) == 2:
-            module_name = parts[0]
-        else:
-            module_name = None
-            for mod_name, module_store in state.store.items():
-                if signal_path in module_store:
-                    module_name = mod_name
-                    break
+            z3_val = None
+            if module_name:
+                z3_val = parse_infix_expr_to_z3(original_str, state.store.get(module_name, {}), None)
 
-        z3_val = None
-        if module_name:
-            z3_val = parse_infix_expr_to_z3(original_str, state.store.get(module_name, {}), None)
+            if z3_val is not None:
+                signal_value = z3_val
+            else:
+                # Fallback: treat as free Z3 BitVec variable
+                signal_value = BitVec(original_str, 32)
 
-        if z3_val is not None:
-            return z3_val
+        # Apply bit extraction if needed
+        if msb is not None and lsb is not None:
+            return Extract(msb, lsb, signal_value)
 
-        # Fallback: treat the string as a free Z3 BitVec variable.
-        # This handles random symbol names for unconstrained inputs (e.g., "QguHPd8pyYDSPKqE" for RST).
-        return BitVec(original_str, 32)
+        return signal_value
 
     def _build_simple_condition(self, cond: SimpleCondition, state: SymbolicState) -> Optional[ExprRef]:
         """
@@ -173,8 +198,8 @@ class MilestoneManager:
                 print(f"[MilestoneManager] Cannot resolve signal: {cond.value}")
                 return None
         else:
-            # Constant value comparison
-            target = BitVecVal(cond.value, 32)
+            # Constant value comparison - match signal's bit width
+            target = BitVecVal(cond.value, signal_value.size())
 
         op = cond.operator
         if op == "==":
