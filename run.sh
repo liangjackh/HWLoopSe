@@ -3,19 +3,19 @@
 #git pull
 rm -f out.txt
 #python3 -m main 2 designs/test-designs/test_2.v --sv -t place_holder_2
-python3 -m main 16 designs/test-designs/test_2.v --sv  --auto-plan --llm-provider deepseek --coi --strategy directed
+#python3 -m main 16 designs/test-designs/test_2.v --sv  --auto-plan --llm-provider deepseek --coi --strategy directed
 
 #python3 -m main 3 or1200.F --sv  --auto-plan --llm-provider deepseek --coi --strategy directed -t or1200_top
 #python3 -m main 10 or1200_subset.F --sv  --auto-plan --llm-provider deepseek --coi --strategy directed -t or1200_top
 
-#python3 -m main 10 designs/test-designs/sub-test/sub.F --sv --auto-plan --llm-provider deepseek --coi --strategy directed -t top
+python3 -m main 5 designs/test-designs/sub-test/sub.F --sv --auto-plan --llm-provider deepseek --coi --strategy directed -t top
 
 
 #python3 -m main 16 designs/test-designs/new_test/top_compat.sv --sv  -I designs/test-designs/new_test/include/ --auto-plan --llm-provider deepseek --coi --strategy directed
 #python3 -m main 10 designs/test-designs/test_2.v --sv   --coi
 #python3 -m main 1 or1200.F --sv --auto-plan --llm-provider deepseek
-#python3 -m main 2 designs/aes/aes.F --sv 
-#python3 -m main 2 designs/test-designs/updowncounter.v --sv 
+#python3 -m main 2 designs/aes/aes.F --sv
+#python3 -m main 2 designs/test-designs/updowncounter.v --sv
 #python3 -m main 1 filelist.F --sv
 #for file in $(ls designs/test-designs/)
 #do

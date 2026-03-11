@@ -85,6 +85,8 @@ def parse_simple_condition(condition: str) -> SimpleCondition:
         "rst == 1" -> SimpleCondition("rst", "==", 1)
         "test_1.out > 3" -> SimpleCondition("test_1.out", ">", 3)
         "sig_a != sig_b" -> SimpleCondition("sig_a", "!=", "sig_b")
+        "out > `THRESHOLD" -> SimpleCondition("out", ">", "`THRESHOLD")
+        "a == (b + 1)" -> SimpleCondition("a", "==", "(b + 1)")
 
     Args:
         condition: A string like "signal_name op value" or "signal_name op signal_name"
@@ -107,15 +109,18 @@ def parse_simple_condition(condition: str) -> SimpleCondition:
                 signal_path = parts[0].strip()
                 value_str = parts[1].strip()
 
+                if not value_str:
+                    continue  # Empty RHS, try next operator
+
                 # Try to parse as a numeric value first
                 try:
                     value = parse_value(value_str)
                     return SimpleCondition(signal_path, op, value)
                 except (ValueError, AttributeError):
-                    # If parsing as value fails, treat it as a signal path
-                    # This handles signal-to-signal comparisons
-                    # Check if it looks like a signal (contains letters, dots, underscores, brackets)
-                    if re.match(r'^[a-zA-Z_][\w.\[\]:]*$', value_str):
+                    # If parsing as value fails, treat as signal path or expression
+                    # Accept: signal names, hierarchical paths, backtick macros, arithmetic expressions
+                    # Includes: +, -, *, /, <<, >>, &, |, ^, ~, parens, backtick
+                    if re.match(r'^[`a-zA-Z_(][\w.\[\]:+\-*/<>&|^~ `()]*$', value_str):
                         return SimpleCondition(signal_path, op, value_str)
                     else:
                         raise ValueError(f"Cannot parse value '{value_str}' in condition: {condition}")
@@ -123,12 +128,29 @@ def parse_simple_condition(condition: str) -> SimpleCondition:
     raise ValueError(f"Cannot parse simple condition: {condition}. Expected format: 'signal op value' or 'signal op signal'")
 
 
+def _has_comparison_operator(text: str) -> bool:
+    """Check if text contains a comparison operator (==, !=, >=, <=, >, <)."""
+    for op in ['==', '!=', '>=', '<=']:
+        if op in text:
+            return True
+    # Check for bare > or < (not part of >= or <=)
+    for i, c in enumerate(text):
+        if c == '>' and (i + 1 >= len(text) or text[i + 1] != '='):
+            return True
+        if c == '<' and (i + 1 >= len(text) or text[i + 1] != '='):
+            return True
+    return False
+
+
 def tokenize_condition(condition: str) -> List[str]:
     """
     Tokenize a condition string into tokens.
 
-    Handles: &&, ||, !, (, ), and simple conditions
-    Note: != is part of a comparison operator, not a NOT token
+    Handles: &&, ||, !, (, ), and simple conditions.
+    Note: != is part of a comparison operator, not a NOT token.
+    Parentheses after a comparison operator are treated as arithmetic
+    grouping (part of the expression), not logical grouping.
+    E.g., "a == (b + 1)" is one token, not "a ==" + "(" + "b + 1" + ")".
     """
     tokens = []
     i = 0
@@ -158,8 +180,14 @@ def tokenize_condition(condition: str) -> List[str]:
             i += 1
             continue
 
-        # Check for parentheses
+        # Check for ( that is logical grouping (not arithmetic)
+        # Logical grouping ( appears at the start of an expression, not after
+        # a comparison operator. We look at whether the accumulated text so far
+        # contains a comparison operator.
         if condition[i] == '(':
+            # Check if there's already a comparison in the current token being built
+            # If so, this ( is part of the RHS expression, not logical grouping
+            # For top-level: ( at position 0 or after a logical operator is grouping
             tokens.append('(')
             i += 1
             continue
@@ -169,18 +197,46 @@ def tokenize_condition(condition: str) -> List[str]:
             i += 1
             continue
 
-        # Otherwise, read until we hit &&, ||, !, (, or )
-        # But be careful not to break on != (which is part of a comparison)
+        # Read a simple condition token, handling balanced parens within it
+        # E.g., "a == (b + 1)" should be one token
         j = i
+        paren_depth = 0
         while j < len(condition):
+            c = condition[j]
+
+            # Track balanced parentheses within the token
+            if c == '(' and paren_depth == 0:
+                # Check if we've already seen a comparison operator in this token
+                token_so_far = condition[i:j].strip()
+                if _has_comparison_operator(token_so_far):
+                    # This ( is arithmetic grouping in the RHS, include it
+                    paren_depth += 1
+                    j += 1
+                    continue
+                else:
+                    # This ( is logical grouping, stop here
+                    break
+            elif c == '(':
+                paren_depth += 1
+                j += 1
+                continue
+            elif c == ')' and paren_depth > 0:
+                paren_depth -= 1
+                j += 1
+                continue
+            elif c == ')' and paren_depth == 0:
+                break
+
+            # Don't break on operators inside balanced parens
+            if paren_depth > 0:
+                j += 1
+                continue
+
             # Check for logical operators
             if condition[j:j+2] in ('&&', '||'):
                 break
             # Check for ! but not !=
-            if condition[j] == '!' and (j + 1 >= len(condition) or condition[j+1] != '='):
-                break
-            # Check for parentheses
-            if condition[j] in '()':
+            if c == '!' and (j + 1 >= len(condition) or condition[j+1] != '='):
                 break
             j += 1
 

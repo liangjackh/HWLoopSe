@@ -683,6 +683,130 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
     elif e.__class__.__name__ == "IntegerLiteralExpressionSyntax":
         int_val = IntVal(e.value)
         return Int2BV(int_val, 32)
+
+    # Handle IdentifierSelectNameSyntax: array[index] (e.g., in_a_history[0])
+    elif e.__class__.__name__ == "IdentifierSelectNameSyntax":
+        module_name = m.curr_module
+        # Extract base name and index from the syntax node
+        # IdentifierSelectNameSyntax has .identifier and a selector list
+        base_name = None
+        if hasattr(e, 'identifier'):
+            base_name = getattr(e.identifier, 'valueText', getattr(e.identifier, 'value', str(e.identifier)))
+
+        # Try to get the index from member_selects or selectors
+        idx_str = None
+        if hasattr(e, 'selectors'):
+            for sel in e.selectors:
+                # ElementSelectSyntax has .selector or .expr
+                inner = getattr(sel, 'selector', getattr(sel, 'expr', getattr(sel, 'expression', None)))
+                if inner is not None:
+                    inner_val = getattr(inner, 'value', getattr(inner, 'valueText', None))
+                    if inner_val is not None:
+                        idx_str = str(inner_val)
+                    else:
+                        # Try to get literal value
+                        lit = getattr(inner, 'literal', None)
+                        if lit is not None:
+                            idx_str = str(getattr(lit, 'value', lit))
+                        else:
+                            idx_str = str(inner)
+
+        if base_name and idx_str is not None:
+            full_name = f"{base_name}[{idx_str}]"
+            if module_name in s.store and full_name in s.store[module_name]:
+                sym_val = s.store[module_name][full_name]
+                if isinstance(sym_val, str):
+                    lit_val, lit_width = parse_verilog_literal(sym_val)
+                    if lit_val is not None:
+                        return BitVecVal(lit_val, 32)
+                    return BitVec(sym_val, 32)
+                return sym_val
+            elif module_name in s.store and base_name in s.store[module_name]:
+                # Fall back to the base variable
+                sym_val = s.store[module_name][base_name]
+                if isinstance(sym_val, str):
+                    lit_val, lit_width = parse_verilog_literal(sym_val)
+                    if lit_val is not None:
+                        return BitVecVal(lit_val, 32)
+                    return BitVec(sym_val, 32)
+                return sym_val
+            else:
+                return BitVec(full_name, 32)
+        return BitVecVal(0, 32)
+
+    # Handle MultipleConcatenationExpressionSyntax: {N{expr}} (e.g., {32{1'b0}})
+    elif e.__class__.__name__ == "MultipleConcatenationExpressionSyntax":
+        # Get the replication count and the expression being replicated
+        # Structure: {count_expr{inner_concat}}
+        count_expr = getattr(e, 'expression', None)
+        concatenation = getattr(e, 'concatenation', None)
+        count_val = 1
+        if count_expr is not None:
+            count_raw = getattr(count_expr, 'value', getattr(count_expr, 'literal', None))
+            if count_raw is not None:
+                count_raw = getattr(count_raw, 'value', count_raw)
+                try:
+                    count_val = int(str(count_raw))
+                except (ValueError, TypeError):
+                    count_val = 32  # default
+
+        # Try to evaluate the inner expression
+        if concatenation is not None:
+            # The inner part is a ConcatenationExpressionSyntax or similar
+            inner_exprs = getattr(concatenation, 'expressions', getattr(concatenation, 'items', None))
+            if inner_exprs:
+                # For {N{1'b0}} pattern, evaluate the inner expression
+                inner_val = 0
+                inner_bits = 1
+                for inner_e in inner_exprs:
+                    if hasattr(inner_e, 'literal'):
+                        lit_str = str(getattr(inner_e.literal, 'value', inner_e.literal))
+                        lit_val, lit_width = parse_verilog_literal(lit_str)
+                        if lit_val is not None:
+                            inner_val = lit_val
+                            inner_bits = lit_width if lit_width else 1
+                # Replicate: repeat the inner_bits-wide value count_val times
+                result_val = 0
+                for i in range(count_val):
+                    result_val = (result_val << inner_bits) | (inner_val & ((1 << inner_bits) - 1))
+                return BitVecVal(result_val, 32)
+        return BitVecVal(0, 32)
+
+    # Handle ConcatenationExpressionSyntax: {expr1, expr2, ...}
+    elif e.__class__.__name__ == "ConcatenationExpressionSyntax":
+        expressions = getattr(e, 'expressions', getattr(e, 'items', []))
+        if not expressions:
+            return BitVecVal(0, 32)
+
+        parts = []
+        for sub_expr in expressions:
+            # Skip Token objects (separators like commas)
+            if sub_expr.__class__.__name__ == "Token":
+                continue
+            part_z3 = parse_expr_to_Z3(sub_expr, s, m)
+            parts.append(part_z3)
+
+        if len(parts) == 0:
+            return BitVecVal(0, 32)
+        if len(parts) == 1:
+            return parts[0]
+
+        # Concatenate all parts using Z3 Concat
+        result = parts[0]
+        for p in parts[1:]:
+            result = z3.Concat(result, p)
+        # Truncate or extend to 32 bits
+        result_size = result.size() if hasattr(result, 'size') else 32
+        if result_size > 32:
+            result = z3.Extract(31, 0, result)
+        elif result_size < 32:
+            result = z3.ZeroExt(32 - result_size, result)
+        return result
+
+    # Handle Token objects (separators, keywords, etc.) - skip them
+    elif e.__class__.__name__ == "Token":
+        return BitVecVal(0, 32)
+
     elif is_eq(e):
         lhs = parse_expr_to_Z3(e.left, s, m)
         rhs = parse_expr_to_Z3(e.right, s, m)

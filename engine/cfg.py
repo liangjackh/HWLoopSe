@@ -128,6 +128,11 @@ class CFG:
                         # Collect continuous assignments for COI analysis
                         if hasattr(item, 'syntax') and item.syntax is not None:
                             self.comb.append(item.syntax)
+                    elif item.__class__.__name__ == "NetSymbol":
+                        # Handle wire declarations with inline assignment:
+                        # wire x = expr; (creates NetSymbol with initializer, not ContinuousAssignSymbol)
+                        if hasattr(item, 'syntax') and item.syntax is not None:
+                            self.comb.append(item.syntax)
                     elif item.__class__.__name__ == "InstanceSymbol":
                         # Recursively process child instances (submodules)
                         self.get_always_sv(m, s, item)
@@ -146,7 +151,7 @@ class CFG:
             if ast.__class__.__name__ == "ProceduralBlockSyntax":
                 self.always_blocks.append(ast)
             elif ast.__class__.__name__ == "ConditionalStatementSyntax":
-                self.get_always_sv(m, s, ast.statement) 
+                self.get_always_sv(m, s, ast.statement)
                 self.get_always_sv(m, s, ast.elseClause)
             elif ast.__class__.__name__ == "CaseStatementSyntax":
                 return self.get_always_sv(m, s, ast.items)
@@ -154,6 +159,33 @@ class CFG:
                 return self.get_always_sv(m, s, ast.statement)
             elif ast.__class__.__name__ == "BlockStatementSyntax":
                 self.get_always_sv(m, s, ast.items)
+            elif ast.__class__.__name__ == "NetDeclarationSyntax":
+                # Wire declarations: collect those with initializers as comb
+                has_init = False
+                declarators = getattr(ast, 'declarators', None)
+                if declarators:
+                    for decl in declarators:
+                        if getattr(decl, 'initializer', None) is not None:
+                            has_init = True
+                            break
+                if has_init:
+                    self.comb.append(ast)
+                else:
+                    self.decls.append(ast)
+            elif ast.__class__.__name__ == "DataDeclarationSyntax":
+                has_init = False
+                declarators = getattr(ast, 'declarators', None)
+                if declarators:
+                    for decl in declarators:
+                        if getattr(decl, 'initializer', None) is not None:
+                            has_init = True
+                            break
+                if has_init:
+                    self.comb.append(ast)
+                else:
+                    self.decls.append(ast)
+            elif ast.__class__.__name__ == "ContinuousAssignSyntax":
+                self.comb.append(ast)
             else:
                 if isinstance(ast, ps.ConditionalStatementSyntax):
                     then_body = getattr(ast, "ifTrue", getattr(ast, "statement", None))
@@ -176,7 +208,22 @@ class CFG:
                         self.decls.append(ast)
                     elif isinstance(ast, ps.ContinuousAssignSyntax):
                         self.comb.append(ast)
-                    ...
+                    elif isinstance(ast, ps.NetDeclarationSyntax):
+                        has_init = False
+                        declarators = getattr(ast, 'declarators', None)
+                        if declarators:
+                            for decl in declarators:
+                                if getattr(decl, 'initializer', None) is not None:
+                                    has_init = True
+                                    break
+                        if has_init:
+                            self.comb.append(ast)
+                        else:
+                            self.decls.append(ast)
+                    else:
+                        # Generic iterable: recurse into children
+                        for child in ast:
+                            self.get_always_sv(m, s, child)
         elif ast != None:
             # print(f"ast ! {ast.definitionKind} {dir(ast)}")
             # print(type(ps.DefinitionSymbol))
@@ -214,11 +261,34 @@ class CFG:
             else:
                 #print("18")
                 if isinstance(ast, ps.DataDeclarationSyntax):
-                    self.decls.append(ast)
+                    # Check if it has an initializer (wire x = expr pattern)
+                    has_init = False
+                    declarators = getattr(ast, 'declarators', None)
+                    if declarators:
+                        for decl in declarators:
+                            if getattr(decl, 'initializer', None) is not None:
+                                has_init = True
+                                break
+                    if has_init:
+                        self.comb.append(ast)
+                    else:
+                        self.decls.append(ast)
                 elif isinstance(ast, ps.ContinuousAssignSyntax):
                     self.comb.append(ast)
-                # elif isinstance(ast, ps.HierarchicalReference):
-                #     print("FOUND SUBModule!")
+                elif isinstance(ast, ps.NetDeclarationSyntax):
+                    # Collect net declarations with initializers as comb
+                    # e.g., wire check_en = valid_pipe[2];
+                    has_init = False
+                    declarators = getattr(ast, 'declarators', None)
+                    if declarators:
+                        for decl in declarators:
+                            if getattr(decl, 'initializer', None) is not None:
+                                has_init = True
+                                break
+                    if has_init:
+                        self.comb.append(ast)
+                    else:
+                        self.decls.append(ast)
                 ...
 
     def _process_conditional_sv(self, m: ExecutionManager, s: SymbolicState, parent_idx: int, node) -> None:

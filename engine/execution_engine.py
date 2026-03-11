@@ -450,6 +450,148 @@ class ExecutionEngine:
 
 
 
+    def _build_port_propagation_map(self, modules_dict: dict) -> list:
+        """Build wire equivalence groups from port connections.
+
+        Walks the module hierarchy to find port connections between instances.
+        Returns a list of wire groups, where each group is a set of
+        (instance_name, signal_name) tuples that should share the same value.
+        """
+        # Map: (instance, signal) -> group_id
+        signal_to_group = {}
+        groups = []  # list of sets
+
+        def get_or_create_group(inst, sig):
+            key = (inst, sig)
+            if key in signal_to_group:
+                return signal_to_group[key]
+            gid = len(groups)
+            groups.append({key})
+            signal_to_group[key] = gid
+            return gid
+
+        def merge_groups(gid1, gid2):
+            if gid1 == gid2:
+                return
+            # Merge smaller into larger
+            if len(groups[gid1]) < len(groups[gid2]):
+                gid1, gid2 = gid2, gid1
+            groups[gid1].update(groups[gid2])
+            for member in groups[gid2]:
+                signal_to_group[member] = gid1
+            groups[gid2] = set()  # empty the merged group
+
+        def connect(inst1, sig1, inst2, sig2):
+            g1 = get_or_create_group(inst1, sig1)
+            g2 = get_or_create_group(inst2, sig2)
+            merge_groups(g1, g2)
+
+        # Walk each module looking for child instances with port connections
+        for parent_inst, parent_module in modules_dict.items():
+            if not hasattr(parent_module, 'body'):
+                continue
+            for child in parent_module.body:
+                if child.kind != ps.SymbolKind.Instance:
+                    continue
+                child_name = child.name
+                if child_name not in modules_dict:
+                    continue
+                # Extract port connections from syntax
+                syntax = getattr(child, 'syntax', None)
+                if syntax is None:
+                    continue
+                self._extract_port_connections_from_syntax(
+                    parent_inst, child_name, syntax, connect
+                )
+
+        # Filter out empty groups
+        result = [g for g in groups if len(g) > 1]
+        if result:
+            print(f"[PortPropagation] Built {len(result)} wire equivalence group(s):")
+            for i, g in enumerate(result):
+                print(f"  group {i}: {g}")
+        return result
+
+    def _extract_port_connections_from_syntax(self, parent_inst, child_inst, syntax, connect_fn):
+        """Extract named port connections from an instance syntax node."""
+        connections = getattr(syntax, 'connections', None)
+        if connections is None:
+            connections = getattr(syntax, 'portConnections', None)
+        if connections is None:
+            connections = []
+            self._find_port_connections_syntax(syntax, connections)
+
+        for conn in connections:
+            cname = conn.__class__.__name__
+            if 'NamedPortConnection' in cname:
+                self._process_named_port_connection(parent_inst, child_inst, conn, connect_fn)
+            elif hasattr(conn, '__iter__'):
+                for item in conn:
+                    if 'NamedPortConnection' in item.__class__.__name__:
+                        self._process_named_port_connection(parent_inst, child_inst, item, connect_fn)
+
+    def _process_named_port_connection(self, parent_inst, child_inst, conn, connect_fn):
+        """Process a single named port connection and call connect_fn."""
+        port_name_node = getattr(conn, 'name', None)
+        if port_name_node is None:
+            return
+        port_name = getattr(port_name_node, 'valueText', str(port_name_node))
+
+        expr = getattr(conn, 'expr', getattr(conn, 'expression', None))
+        if expr is None:
+            parent_signal = port_name
+        else:
+            parent_signal = self._get_signal_name_from_syntax(expr)
+            if parent_signal is None:
+                parent_signal = port_name
+
+        connect_fn(parent_inst, parent_signal, child_inst, port_name)
+
+    def _get_signal_name_from_syntax(self, expr):
+        """Extract signal name from a syntax expression node."""
+        if expr is None:
+            return None
+        if hasattr(expr, 'identifier'):
+            ident = expr.identifier
+            if hasattr(ident, 'valueText') and ident.valueText:
+                return ident.valueText
+            if hasattr(ident, 'value') and ident.value:
+                return ident.value
+        if hasattr(expr, 'name'):
+            name = expr.name
+            if isinstance(name, str):
+                return name
+            if hasattr(name, 'valueText'):
+                return name.valueText
+        if hasattr(expr, 'value'):
+            return self._get_signal_name_from_syntax(expr.value)
+        text = str(expr).strip()
+        if text and text[0].isalpha():
+            for delim in ('[', '(', ' ', '.'):
+                if delim in text:
+                    text = text[:text.index(delim)]
+            if text.isidentifier():
+                return text
+        return None
+
+    def _find_port_connections_syntax(self, node, result):
+        """Recursively find NamedPortConnectionSyntax nodes."""
+        if node is None:
+            return
+        cname = node.__class__.__name__
+        if 'NamedPortConnection' in cname:
+            result.append(node)
+            return
+        if hasattr(node, '__iter__') and not isinstance(node, str):
+            for child in node:
+                self._find_port_connections_syntax(child, result)
+        else:
+            for attr in ('connections', 'portConnections', 'items', 'members', 'arguments'):
+                child = getattr(node, attr, None)
+                if child is not None and hasattr(child, '__iter__'):
+                    for item in child:
+                        self._find_port_connections_syntax(item, result)
+
     def populate_child_paths(self, manager: ExecutionManager) -> None:
         """Populates child path codes based on number of paths."""
         for child in manager.child_num_paths:
@@ -581,6 +723,30 @@ class ExecutionEngine:
                 manager.opt_1 = False
             manager.modules = modules_dict
 
+        # Save comb nodes BEFORE COI pruning so they remain available
+        # even for instances that get pruned from cfgs_by_module
+        comb_by_module = {}
+        for inst, cfg_list in cfgs_by_module.items():
+            if cfg_list and hasattr(cfg_list[0], 'comb') and cfg_list[0].comb:
+                comb_by_module[inst] = cfg_list[0].comb
+            else:
+                comb_by_module[inst] = []
+        # Also collect comb for definitions that have 0 always blocks
+        # but do have comb nodes (e.g., module_c with only assign statements)
+        try:
+            for definition_name, instances in definitions_to_instances.items():
+                _, representative_module = instances[0]
+                probe = CFG()
+                probe.get_always_sv(manager, state, representative_module)
+                if not probe.always_blocks and probe.comb:
+                    for instance_name, _ in instances:
+                        if instance_name not in comb_by_module or not comb_by_module[instance_name]:
+                            comb_by_module[instance_name] = probe.comb
+        except NameError:
+            pass  # definitions_to_instances not available (manager was passed in)
+
+        # Build port propagation map (wire equivalence groups)
+        wire_groups = self._build_port_propagation_map(modules_dict)
 
         # Step 3.5: COI pruning (if enabled)
         if self.coi_enabled:
@@ -611,6 +777,20 @@ class ExecutionEngine:
                 if seed_signals:
                     analyzer = COIAnalyzer(modules_dict, cfgs_by_module, modules)
                     coi_result = analyzer.analyze(seed_signals)
+
+                    # Always keep assertion-containing instances in the COI.
+                    # Their signals (e.g., past_10_in_a) are referenced by milestones
+                    # and must be populated in the symbolic store.
+                    if coi_targets:
+                        for target in coi_targets:
+                            inst = target.module_name.split('.')[-1] if '.' in target.module_name else target.module_name
+                            if inst in modules_dict and inst not in coi_result.relevant_instances:
+                                print(f"[COI] Keeping assertion instance '{inst}' (contains verification target)")
+                                coi_result.relevant_instances.add(inst)
+                                # Also keep all its CFGs
+                                if inst in cfgs_by_module:
+                                    for idx in range(len(cfgs_by_module[inst])):
+                                        coi_result.relevant_cfgs.add((inst, idx))
 
                     # If COI found no relevant instances, skip pruning entirely.
                     # This happens when assertion signals are tied to constants
@@ -747,8 +927,7 @@ class ExecutionEngine:
 
         # Delegate exploration to the strategy
 
-        
-        time.sleep(20)  # brief pause before starting exploration
+
         print("Starting exploration...")
         print(f"Branch points explored: {manager.branch_count}")
 
@@ -781,7 +960,9 @@ class ExecutionEngine:
             cfgs_by_module=cfgs_by_module,
             manager=manager,
             state=state,
-            num_cycles=num_cycles
+            num_cycles=num_cycles,
+            comb_by_module=comb_by_module,
+            wire_groups=wire_groups
         )
 
         self.module_depth -= 1

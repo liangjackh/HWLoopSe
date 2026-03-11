@@ -282,6 +282,21 @@ class COIAnalyzer:
                 # BinaryExpressionSyntax from ContinuousAssignSymbol.syntax
                 # (e.g., "memdata = {memdata_hh, ...}")
                 assigns = [comb_node]
+            elif getattr(comb_node, 'declarators', None) is not None:
+                # NetDeclarationSyntax from "wire x = expr" (NetSymbol with initializer)
+                # Process declarators directly
+                for decl in comb_node.declarators:
+                    name_node = getattr(decl, 'name', None)
+                    init = getattr(decl, 'initializer', None)
+                    if name_node:
+                        name = getattr(name_node, 'valueText', str(name_node))
+                        write_reads = set()
+                        if init:
+                            init_expr = getattr(init, 'expr', getattr(init, 'expression', init))
+                            self._collect_read_signals(init_expr, write_reads)
+                        self.comb_writes[instance_name][name] = write_reads
+                        self.comb_reads[instance_name].update(write_reads)
+                return
             else:
                 return
 

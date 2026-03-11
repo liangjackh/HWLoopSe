@@ -36,7 +36,9 @@ class ExplorationStrategy(ABC):
         cfgs_by_module: Dict[str, List[Any]],
         manager: ExecutionManager,
         state: SymbolicState,
-        num_cycles: int
+        num_cycles: int,
+        comb_by_module: Optional[Dict[str, List[Any]]] = None,
+        wire_groups: Optional[List[Any]] = None
     ) -> None:
         """
         Execute the exploration strategy.
@@ -73,7 +75,9 @@ class BlindSearchStrategy(ExplorationStrategy):
         cfgs_by_module: Dict[str, List[Any]],
         manager: ExecutionManager,
         state: SymbolicState,
-        num_cycles: int
+        num_cycles: int,
+        comb_by_module: Optional[Dict[str, List[Any]]] = None,
+        wire_groups: Optional[List[Any]] = None
     ) -> None:
         """Execute blind exhaustive search with memory optimization."""
 
@@ -328,7 +332,9 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         cfgs_by_module: Dict[str, List[Any]],
         manager: ExecutionManager,
         state: SymbolicState,
-        num_cycles: int
+        num_cycles: int,
+        comb_by_module: Optional[Dict[str, List[Any]]] = None,
+        wire_groups: Optional[List[Any]] = None
     ) -> None:
         """Execute milestone-directed search with priority queue."""
 
@@ -336,6 +342,10 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         print(f"[DirectedStrategy] Milestones: {self.milestone_manager.milestones}")
         num_cycles_int = int(num_cycles)
         print(f"[DirectedStrategy] Max cycles: {min(self.max_cycles, num_cycles_int)}")
+
+        # Store comb_by_module and wire_groups for use in _execute_cycle
+        self._comb_by_module = comb_by_module or {}
+        self._wire_groups = wire_groups or []
 
         # Reset milestone progress
         self.milestone_manager.reset()
@@ -384,6 +394,13 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             self.paths_explored += 1
             print(f"\n--- [Path {self.paths_explored}] Popped: score={item.score}, cycle={item.cycle}, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}, queue={len(worklist)}")
 
+            # Reset manager flags for this work item
+            manager.ignore = False
+            manager.abandon = False
+            manager.assertion_violation = False
+            if hasattr(manager, 'violated_assertions'):
+                manager.violated_assertions = []
+
             # Execute one cycle for all modules
             result = self._execute_cycle(
                 engine, visitor, modules_dict, cfgs_by_module,
@@ -414,24 +431,56 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         manager: ExecutionManager,
         state: SymbolicState
     ) -> None:
-        """Initialize symbolic state for all modules."""
+        """Initialize symbolic state for all modules.
+
+        Registers (Variable symbols) are initialized to BitVecVal(0, 32) per
+        Verilog semantics.  Input ports and nets get fresh symbolic values so
+        the solver can explore all possible input combinations.
+        """
+        import pyslang as ps
+        from z3 import BitVecVal
+
         for module_name in manager.names_list:
             manager.curr_module = module_name
             visitor.symbolic_store.clear()
             visitor.visited.clear()
             visitor.dfs(modules_dict[module_name])
-            for var_name in visitor.symbolic_store:
+            for var_name, sym in visitor.symbolic_store.items():
                 if var_name not in state.store[module_name]:
-                    state.store[module_name][var_name] = init_symbol()
+                    # Registers / variables → 0 (Verilog default)
+                    # Input ports / nets    → fresh symbolic value
+                    if sym.kind == ps.SymbolKind.Variable:
+                        state.store[module_name][var_name] = BitVecVal(0, 32)
+                    elif sym.kind == ps.SymbolKind.Port:
+                        direction = getattr(sym, 'direction', None)
+                        if direction is not None and str(direction) in (
+                            'ArgumentDirection.In', 'In'
+                        ):
+                            state.store[module_name][var_name] = init_symbol()
+                        else:
+                            # output ports start at 0
+                            state.store[module_name][var_name] = BitVecVal(0, 32)
+                    else:
+                        state.store[module_name][var_name] = init_symbol()
 
-        # Process declarations and combinational logic
+        # Process declarations using visitor.dfs (these are Symbol/Syntax nodes)
         for module_name in manager.names_list:
+            manager.curr_module = module_name
             if module_name in cfgs_by_module:
                 for c in cfgs_by_module[module_name]:
                     for node in c.decls:
                         visitor.dfs(node)
-                    for node in c.comb:
-                        visitor.dfs(node)
+
+        # Evaluate combinational logic using evaluate_comb (handles syntax nodes)
+        for module_name in manager.names_list:
+            manager.curr_module = module_name
+            for node in self._comb_by_module.get(module_name, []):
+                visitor.evaluate_comb(manager, state, node)
+
+        # Unify port symbols so connected signals share the same value
+        self._unify_port_symbols(state)
+        # Propagate initial values through port connections
+        self._propagate_ports(state)
 
     def _clone_state(self, state: SymbolicState) -> SymbolicState:
         """
@@ -451,6 +500,61 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         return new_state
 
+    def _propagate_ports(self, state: SymbolicState, module_name: str = None):
+        """Propagate values through wire equivalence groups.
+
+        If module_name is given, propagate FROM that module's signals TO other
+        members of each group. Otherwise propagate all groups (pick any source).
+        """
+        if not self._wire_groups:
+            return
+
+        for group in self._wire_groups:
+            if module_name is not None:
+                # Find this module's signal in the group as the source
+                source_value = None
+                for inst, sig in group:
+                    if inst == module_name and inst in state.store and sig in state.store[inst]:
+                        source_value = state.store[inst][sig]
+                        break
+                if source_value is None:
+                    continue  # This module has no signal in this group
+            else:
+                # No specific source module — pick any member that has a value
+                source_value = None
+                for inst, sig in group:
+                    if inst in state.store and sig in state.store[inst]:
+                        source_value = state.store[inst][sig]
+                        break
+                if source_value is None:
+                    continue
+
+            # Propagate to all other members
+            for inst, sig in group:
+                if inst in state.store:
+                    state.store[inst][sig] = source_value
+
+    def _unify_port_symbols(self, state: SymbolicState):
+        """During initialization, assign the same symbol to all signals in each wire group."""
+        if not self._wire_groups:
+            return
+
+        for group in self._wire_groups:
+            # Find the first member that has a symbol, or create one
+            shared_symbol = None
+            for inst, sig in group:
+                if inst in state.store and sig in state.store[inst]:
+                    shared_symbol = state.store[inst][sig]
+                    break
+
+            if shared_symbol is None:
+                shared_symbol = init_symbol()
+
+            # Assign to all members
+            for inst, sig in group:
+                if inst in state.store:
+                    state.store[inst][sig] = shared_symbol
+
 # engine/strategies.py (截取 MilestoneDirectedStrategy 的修改部分)
     def _execute_cycle(
         self,
@@ -467,6 +571,13 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         if cycle > 0:
             item.state.apply_pending_nba()
+            # Re-evaluate combinational logic after register updates
+            for module_name in manager.names_list:
+                manager.curr_module = module_name
+                for node in self._comb_by_module.get(module_name, []):
+                    visitor.evaluate_comb(manager, item.state, node)
+            # Propagate updated values through port connections
+            self._propagate_ports(item.state)
 
         # 1. 局部状态列表：保存本周期内的所有平行宇宙（最初只有一个）
         active_states = [item.state]
@@ -476,6 +587,14 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             manager.cycle = cycle
 
             if module_name not in cfgs_by_module:
+                # Even if no CFGs, re-evaluate comb for this module
+                next_active_states = []
+                for state in active_states:
+                    for node in self._comb_by_module.get(module_name, []):
+                        visitor.evaluate_comb(manager, state, node)
+                    self._propagate_ports(state, module_name)
+                    next_active_states.append(state)
+                active_states = next_active_states
                 continue
 
             for cfg_idx, cfg in enumerate(cfgs_by_module[module_name]):
@@ -495,15 +614,32 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                     next_active_states.extend(result)
                 active_states = next_active_states
 
+            # After all CFGs for this module, propagate via port connections
+            # and re-evaluate comb for dependent modules
+            for state in active_states:
+                self._propagate_ports(state, module_name)
+                # Re-evaluate comb for all modules that might depend on propagated values
+                for dep_module in manager.names_list:
+                    if dep_module != module_name and self._comb_by_module.get(dep_module, []):
+                        saved_module = manager.curr_module
+                        manager.curr_module = dep_module
+                        for node in self._comb_by_module[dep_module]:
+                            visitor.evaluate_comb(manager, state, node)
+                        # Propagate any updates from comb evaluation
+                        self._propagate_ports(state, dep_module)
+                        manager.curr_module = saved_module
+
         # 2. 周期结束：处理所有存活的平行宇宙，检查里程碑，然后推入全局队列
         for state in active_states:
             current_progress = item.milestones_completed
 
-            # Check only the next milestone (one per cycle for incremental temporal progress)
-            if current_progress < len(self.milestone_manager.milestones):
+            # Check consecutive milestones (a single cycle may satisfy multiple)
+            while current_progress < len(self.milestone_manager.milestones):
                 success, new_progress = self.milestone_manager.check_and_lock_stateless(state, current_progress)
                 if success:
                     current_progress = new_progress
+                else:
+                    break
 
             # Check for assertion violation (milestones are just guidance, not success condition)
             if manager.assertion_violation:
@@ -551,6 +687,10 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             clean_base_state = self._clone_state(state)
 
         for path_idx, cfg_path in enumerate(paths):
+            # Reset abandon/ignore flags for each new path
+            manager.ignore = False
+            manager.abandon = False
+
             if path_idx == 0:
                 curr_state = state
             else:
@@ -564,7 +704,10 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             if result == "VIOLATION":
                 return "VIOLATION"
 
-            # Early Pruning
+            # Early Pruning: skip abandoned paths and UNSAT states
+            if manager.abandon or manager.ignore:
+                print(f"  [Pruned] {module_name}/cfg{cfg_idx}/path{path_idx}: abandoned/ignore")
+                continue
             if curr_state.pc.check() == sat:
                 valid_states.append(curr_state)
             else:

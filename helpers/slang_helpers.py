@@ -687,54 +687,53 @@ class SymbolicDFS:
             self.visit_expr(m, s, expr.right)
 
         elif kind == ps.SyntaxKind.AssignmentExpression:
+            # Get LHS variable name (handle array element selects)
+            lhs_var = None
             if hasattr(expr.left, "identifier"):
                 lhs_var = expr.left.identifier.value
-                # Check for simple var-to-var assignment first
-                if hasattr(expr.right, "identifier") and expr.right.identifier.value in s.store[m.curr_module]:
-                    s.store[m.curr_module][lhs_var] = s.store[m.curr_module][expr.right.identifier.value]
-                elif expr.right.kind == ps.SyntaxKind.ConcatenationExpression:
-                    # Handle concatenation on RHS
-                    parts = [str(operand.literal.value) for operand in expr.right.expressions if hasattr(operand, "literal")]
-                    s.store[m.curr_module][lhs_var] = "".join(parts)
-                elif hasattr(expr.right, "literal"):
-                    # Handle literal expressions (IntegerLiteralExpression, etc.)
-                    # Normalize Verilog literals to decimal strings
-                    s.store[m.curr_module][lhs_var] = normalize_verilog_literal(str(expr.right.literal.value))
-                else:
-                    # Handle complex RHS expressions (e.g., out + 1 + out_wire)
-                    # Convert RHS to string representation and substitute symbolic values
+            elif hasattr(expr.left, 'kind') and str(expr.left.kind) == 'SyntaxKind.ElementSelectExpression':
+                base = getattr(expr.left, 'left', getattr(expr.left, 'value', None))
+                selector = getattr(expr.left, 'right', getattr(expr.left, 'selector', None))
+                if base and selector:
+                    base_name = getattr(base, 'identifier', base)
+                    base_name = getattr(base_name, 'valueText', str(base_name))
+                    idx_val = getattr(selector, 'literal', selector)
+                    idx_val = getattr(idx_val, 'value', getattr(idx_val, 'valueText', str(idx_val)))
+                    lhs_var = f"{base_name}[{idx_val}]"
+            if lhs_var is not None:
+                # Convert RHS to Z3 expression
+                try:
+                    rhs_z3 = self.expr_to_z3(m, s, expr.right)
+                    s.store[m.curr_module][lhs_var] = rhs_z3
+                except Exception:
+                    # Fall back to string-based representation
                     rhs_str = conjunction_with_pointers(expr.right, s, m)
                     rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
                     s.store[m.curr_module][lhs_var] = rhs_with_symbols
-            else:
-                # LHS doesn't have an identifier attribute — skip for now
-                ...
 
         elif kind == ps.SyntaxKind.NonblockingAssignmentExpression:
+            # Get LHS variable name (handle array element selects)
+            lhs_var = None
             if hasattr(expr.left, "identifier"):
                 lhs_var = expr.left.identifier.value
-                # Check for simple var-to-var assignment first
-                if hasattr(expr.right, "identifier") and expr.right.identifier.value in s.store[m.curr_module]:
-                    s.store[m.curr_module][lhs_var] = s.store[m.curr_module][expr.right.identifier.value]
-                elif expr.right.kind == ps.SyntaxKind.ConcatenationExpression:
-                    # Handle concatenation on RHS
-                    concat_value = ""
-                    for operand in expr.right.expressions:
-                        if hasattr(operand, "value"):
-                            concat_value += str(operand.value)
-                    s.store[m.curr_module][lhs_var] = concat_value
-                elif hasattr(expr.right, "literal"):
-                    # Handle literal expressions
-                    s.store[m.curr_module][lhs_var] = str(expr.right.literal.value)
-                else:
-                    # Handle complex RHS expressions (e.g., out + 1 + out_wire)
-                    # Convert RHS to string representation and substitute symbolic values
+            elif hasattr(expr.left, 'kind') and str(expr.left.kind) == 'SyntaxKind.ElementSelectExpression':
+                base = getattr(expr.left, 'left', getattr(expr.left, 'value', None))
+                selector = getattr(expr.left, 'right', getattr(expr.left, 'selector', None))
+                if base and selector:
+                    base_name = getattr(base, 'identifier', base)
+                    base_name = getattr(base_name, 'valueText', str(base_name))
+                    idx_val = getattr(selector, 'literal', selector)
+                    idx_val = getattr(idx_val, 'value', getattr(idx_val, 'valueText', str(idx_val)))
+                    lhs_var = f"{base_name}[{idx_val}]"
+            if lhs_var is not None:
+                # Convert RHS to Z3 expression and use pending NBA queue
+                try:
+                    rhs_z3 = self.expr_to_z3(m, s, expr.right)
+                except Exception:
+                    # Fall back to string-based representation
                     rhs_str = conjunction_with_pointers(expr.right, s, m)
-                    rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
-                    s.store[m.curr_module][lhs_var] = rhs_with_symbols
-            else:
-                # LHS doesn't have an identifier attribute — skip for now
-                ...
+                    rhs_z3 = substitute_symbols(rhs_str, s.store[m.curr_module])
+                s.add_pending_nba(m.curr_module, lhs_var, rhs_z3)
 
         elif kind ==ps.ExpressionKind.Concatenation:
             for e in expr.operands:
@@ -792,21 +791,100 @@ class SymbolicDFS:
             pass
 
 
+    def evaluate_comb(self, m: ExecutionManager, s: SymbolicState, node):
+        """Evaluate a continuous assignment or wire declaration syntax node.
+
+        Handles:
+        - ContinuousAssignSyntax: assign out = expr;
+        - DataDeclarationSyntax / NetDeclarationSyntax with initializer: wire x = expr;
+        - NetSymbol / ContinuousAssignSymbol wrapping syntax nodes
+        """
+        if node is None:
+            return
+
+        cname = node.__class__.__name__
+
+        # Unwrap Symbol wrappers to their syntax nodes
+        if cname in ('ContinuousAssignSymbol', 'NetSymbol'):
+            syntax = getattr(node, 'syntax', None)
+            if syntax is not None:
+                node = syntax
+                cname = node.__class__.__name__
+
+        # DEBUG
+        print(f"[EVAL-COMB] module={m.curr_module} cname={cname}")
+
+        # Handle ContinuousAssignSyntax: assign lhs = rhs;
+        if cname == 'ContinuousAssignSyntax':
+            assigns = getattr(node, 'assigns', None)
+            if assigns is None:
+                return
+            for assign in assigns:
+                lhs = getattr(assign, 'left', None)
+                rhs = getattr(assign, 'right', None)
+                if lhs is None or rhs is None:
+                    continue
+                lhs_name = None
+                if hasattr(lhs, 'identifier'):
+                    lhs_name = lhs.identifier.value if hasattr(lhs.identifier, 'value') else str(lhs.identifier)
+                elif hasattr(lhs, 'valueText'):
+                    lhs_name = lhs.valueText
+                if lhs_name:
+                    try:
+                        rhs_z3 = self.expr_to_z3(m, s, rhs)
+                        s.store[m.curr_module][lhs_name] = rhs_z3
+                    except Exception:
+                        rhs_str = conjunction_with_pointers(rhs, s, m)
+                        rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
+                        s.store[m.curr_module][lhs_name] = rhs_with_symbols
+            return
+
+        # Handle NetDeclarationSyntax / DataDeclarationSyntax with initializer: wire x = expr;
+        if cname in ('NetDeclarationSyntax', 'DataDeclarationSyntax'):
+            declarators = getattr(node, 'declarators', None)
+            if declarators is None:
+                return
+            for decl in declarators:
+                name_node = getattr(decl, 'name', None)
+                init = getattr(decl, 'initializer', None)
+                if name_node is None or init is None:
+                    continue
+                lhs_name = getattr(name_node, 'valueText', str(name_node))
+                init_expr = getattr(init, 'expr', getattr(init, 'expression', init))
+                if init_expr is not None:
+                    try:
+                        rhs_z3 = self.expr_to_z3(m, s, init_expr)
+                        s.store[m.curr_module][lhs_name] = rhs_z3
+                    except Exception:
+                        rhs_str = conjunction_with_pointers(init_expr, s, m)
+                        rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
+                        s.store[m.curr_module][lhs_name] = rhs_with_symbols
+            return
+
     def visit_stmt(self, m: ExecutionManager, s: SymbolicState, stmt, modules=None, direction=None):
         """Visits statements"""
-        # class_name = stmt.__class__.__name__
-        # print("visit:", class_name, getattr(getattr(stmt, "kind", None), "name", getattr(stmt, "kind", None)))  # DEBUG
-        # if "Assert" in class_name or "Concurrent" in class_name:
-        #     print(f"  [ASSERTION NODE] {class_name}")
         if stmt is None or m.ignore:
             return
 
         kind = stmt.kind
+        cname = stmt.__class__.__name__
+
+        # DEBUG: log assertion-related nodes
+        if 'Assert' in cname or 'Assertion' in cname:
+            print(f"[VISIT-STMT-DEBUG] module={m.curr_module} class={cname} kind={kind}")
 
         # Handle SyntaxList by iterating through children
         if kind == ps.SyntaxKind.SyntaxList:
             for child in stmt:
                 self.visit_stmt(m, s, child, modules, direction)
+            return
+
+        # Handle BlockStatementSyntax (SequentialBlockStatement / ParallelBlockStatement)
+        if isinstance(stmt, ps.BlockStatementSyntax):
+            items = getattr(stmt, 'items', getattr(stmt, 'statements', None))
+            if items is not None:
+                for child in items:
+                    self.visit_stmt(m, s, child, modules, direction)
             return
 
         # Handle PropertySpecSyntax - contains assertion condition
@@ -839,51 +917,70 @@ class SymbolicDFS:
                 m.branch_points_seen.add(branch_id)
                 m.branch_count += 1
             #print("[slang_helper] branch_count: Conditional Statement:", m.branch_count, "branch_id:", branch_id)  # DEBUG
-            # PySlang 7.0 uses conditions list, not predicate attribute
-            # Pattern matches usage in dfs_stmt() method (line 550)
-            cond_expr = stmt.conditions[0].expr if (hasattr(stmt, 'conditions') and stmt.conditions) else None
+            # Extract condition expression (handle both semantic and syntax nodes)
+            cond_expr = None
+            if hasattr(stmt, 'conditions') and stmt.conditions:
+                # Semantic node: ConditionalStatement with conditions list
+                cond_expr = stmt.conditions[0].expr
+            elif hasattr(stmt, 'predicate'):
+                # Syntax node: ConditionalStatementSyntax with predicate
+                predicate = stmt.predicate
+                # predicate is ConditionalPredicateSyntax, extract the expression
+                if hasattr(predicate, 'expr'):
+                    cond_expr = predicate.expr
+                elif hasattr(predicate, 'expression'):
+                    cond_expr = predicate.expression
+                elif hasattr(predicate, 'conditions'):
+                    # Try conditions list within predicate
+                    conditions = predicate.conditions
+                    if hasattr(conditions, '__iter__'):
+                        for cond in conditions:
+                            if hasattr(cond, 'expr'):
+                                cond_expr = cond.expr
+                                break
+                            elif hasattr(cond, 'expression'):
+                                cond_expr = cond.expression
+                                break
+
             if cond_expr:
                 self.visit_expr(m, s, cond_expr)
-                s.pc.push()
                 s.assertion_counter += 1
                 cond_z3 = self.expr_to_z3(m, s, cond_expr)
-                if direction:
-                    key = str(cond_z3)
-                    self.branch = True
-                    if m.cache is not None and m.cache.exists(key):
-                        result = m.cache.get(key).decode()
+                # Ensure cond_z3 is boolean for the path condition
+                from z3 import is_bool, BitVecVal
+                if not is_bool(cond_z3):
+                    if hasattr(cond_z3, 'size'):
+                        cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size())
                     else:
-                        result = str(solve_pc(s.pc))
-                        if m.cache is not None:
-                            m.cache.set(str(cond_z3), str(solve_pc(s.pc)))
-                    s.pc.assert_and_track(cond_z3, f"p{s.assertion_counter}")
+                        cond_z3 = cond_z3 != BitVecVal(0, 32)
+                # Persistently add branch condition to path condition
+                if direction:
+                    self.branch = True
+                    s.pc.add(cond_z3)
                 else:
                     self.branch = False
-                    key = f"~{cond_z3}"
-                    if m.cache is not None and m.cache.exists(key):
-                        result = m.cache.get(key).decode()
-                    else:
-                        result = str(solve_pc(s.pc))
-                        if m.cache is not None:
-                            m.cache.set(f"~{cond_z3}", str(solve_pc(s.pc)))
-                    s.pc.assert_and_track(cond_z3, f"p{s.assertion_counter}")
+                    s.pc.add(Not(cond_z3))
                 if not solve_pc(s.pc):
-                    if m.cache is not None:
-                        m.cache.set(f"~{str(cond_z3)}", False)
-                    s.pc.pop()
                     m.abandon = True
                     m.ignore = True
                     return
 
-            # PySlang 7.0 uses ifTrue/ifFalse for ConditionalStatementSyntax
-            # The branches are visited as separate basic blocks in the CFG path,
-            # so we should NOT visit them here. The direction parameter determines
-            # which path was taken, and the branch statements will be executed
-            # when we visit the corresponding basic block.
-            # We only need to evaluate the condition and update the path condition here.
-
-            if cond_expr:
-                s.pc.pop()
+            # Visit the body of the taken branch
+            # The CFG splits top-level conditionals into separate basic blocks,
+            # but nested conditionals (e.g., assertions inside if statements)
+            # remain as single nodes and need their bodies visited here.
+            if direction:
+                # Then branch
+                then_body = getattr(stmt, 'ifTrue', getattr(stmt, 'statement', None))
+                if then_body is not None:
+                    self.visit_stmt(m, s, then_body, modules, direction)
+            else:
+                # Else branch
+                else_clause = getattr(stmt, 'elseClause', None)
+                if else_clause is not None:
+                    else_body = getattr(else_clause, 'statement', getattr(else_clause, 'clause', else_clause))
+                    if else_body is not None:
+                        self.visit_stmt(m, s, else_body, modules, direction)
 
         elif kind == ps.StatementKind.List:
             
@@ -1138,6 +1235,16 @@ class SymbolicDFS:
         # Get assertion kind (assert, assume, cover)
         assertion_kind = getattr(stmt, 'assertionKind', None)
 
+        # DEBUG: dump u_assert store on first assertion check
+        if m.curr_module == 'u_assert':
+            print(f"[ASSERT-DEBUG] cycle={m.cycle} module={m.curr_module} cond={cond}")
+            print(f"[ASSERT-DEBUG] store keys: {list(s.store.get('u_assert', {}).keys())}")
+            for k, v in list(s.store.get('u_assert', {}).items())[:15]:
+                print(f"[ASSERT-DEBUG]   {k} = {v} (type={type(v).__name__})")
+            print(f"[ASSERT-DEBUG] pc assertions count: {len(list(s.pc.assertions()))}")
+            for a in s.pc.assertions():
+                print(f"[ASSERT-DEBUG]   pc: {a}")
+
         # Visit the condition expression to update symbolic state
         self.visit_expr(m, s, cond)
 
@@ -1194,40 +1301,38 @@ class SymbolicDFS:
             self.visit_stmt(m, s, stmt.ifFalse, modules, direction)
 
     def _handle_immediate_assertion_syntax(self, m: ExecutionManager, s: SymbolicState, stmt, modules, direction):
-        """Handle ImmediateAssertionStatementSyntax (syntax node).
-
-        Task #1: Extract assertion condition from syntax node
-        Task #2: Convert to Z3
-        Task #3: Check for violations
-        """
-        # Task #1: Extract the assertion expression from syntax node
+        """Handle ImmediateAssertionStatementSyntax (syntax node)."""
         expr = getattr(stmt, 'expr', None)
         if expr is None:
             return
 
-        # Get assertion keyword (assert, assume, cover)
         keyword = getattr(stmt, 'keyword', None)
         assertion_kind = str(keyword) if keyword else 'assert'
 
-        # Visit the expression to update symbolic state
         self.visit_expr(m, s, expr)
 
-        # Task #2: Convert expression to Z3
         try:
             cond_z3 = self.expr_to_z3(m, s, expr)
         except Exception as e:
-            # If conversion fails, skip this assertion
             return
 
         if cond_z3 is None:
             return
 
-        # Task #3: Check for assertion violation
         from z3 import Not, is_bool
 
         if not is_bool(cond_z3):
             from z3 import BitVecVal
             cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size()) if hasattr(cond_z3, 'size') else cond_z3
+
+        # DEBUG
+        print(f"[ASSERT-SYNTAX-DEBUG] cycle={m.cycle} module={m.curr_module} cond_z3={cond_z3}")
+        print(f"[ASSERT-SYNTAX-DEBUG] store:")
+        for k, v in s.store.get(m.curr_module, {}).items():
+            print(f"[ASSERT-SYNTAX-DEBUG]   {k} = {v} ({type(v).__name__})")
+        print(f"[ASSERT-SYNTAX-DEBUG] pc assertions ({len(list(s.pc.assertions()))}):")
+        for a in s.pc.assertions():
+            print(f"[ASSERT-SYNTAX-DEBUG]   {a}")
 
         # Push a new context for checking
         s.pc.push()

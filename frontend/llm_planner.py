@@ -29,7 +29,9 @@ The Symbolic Execution Engine will use your milestones to steer the search. If t
     * Do not invent signals (e.g., do not use `fifo_count` if the code says `fifo_cnt`).
 2.  **Simple Conditions**: Milestones must be boolean expressions using simple operators:
     * Allowed: `==`, `!=`, `>`, `<`, `>=`, `<=`, `&&`, `||`, `!`.
+    * Allowed on right-hand side: arithmetic expressions like `(sig + 1)`, `(sig << 1)`.
     * FORBIDDEN: SystemVerilog specific syntax like `@(posedge clk)`, `|->`, `$rose`, `$past`.
+    * FORBIDDEN: Verilog preprocessor macros (backtick defines like `` `THRESHOLD``). Replace them with their numeric values from the source code.
 3.  **Temporal Progression**: Milestones must form a TEMPORAL sequence across clock cycles.
     * Each milestone should represent a state that can only be reached AFTER the previous milestone.
     * Early milestones should be PREREQUISITES for later milestones (e.g., a counter must be initialized before it can increment).
@@ -193,6 +195,34 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
         )
         return response.content[0].text
 
+    def _log_llm_prompt(self, rtl_context: str, target: str, known_signals: List[str], num_cycles: int) -> None:
+        """Log the full LLM prompt to llm_prompt_log.txt for debugging."""
+        cycle_constraint = ""
+        if num_cycles > 0:
+            cycle_constraint = f"\n\nCycle Budget: The engine will run for at most {num_cycles} clock cycles. The entire milestone sequence (including reset) must be reachable within this budget. Do NOT generate more milestones than can be achieved in {num_cycles} cycles."
+
+        user_prompt = f"""RTL Code:
+```verilog
+{rtl_context}
+```
+
+Verification Target: {target}{cycle_constraint}
+
+Generate milestones to reach this target. Return ONLY the JSON array."""
+
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "llm_prompt_log.txt")
+
+        with open(log_path, "a") as f:
+            f.write(f"{'='*80}\n")
+            f.write(f"[{timestamp}] Provider: {self.provider}\n")
+            f.write(f"{'='*80}\n\n")
+            f.write(f"--- SYSTEM PROMPT ---\n{self.SYSTEM_PROMPT}\n\n")
+            f.write(f"--- USER PROMPT ---\n{user_prompt}\n\n")
+            f.write(f"--- KNOWN SIGNALS ---\n{known_signals}\n\n")
+
+        print(f"[LLMPlanner] Prompt logged to {log_path}")
+
     def _parse_json_response(self, response: str) -> List[Dict[str, Any]]:
         """Parse JSON from LLM response, handling markdown code blocks."""
         # Strip markdown code blocks if present
@@ -312,6 +342,9 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
             print("[LLMPlanner] Error: No LLM client initialized. Use --mock or provide API key.")
             return self.MOCK_RESPONSES["default"]
 
+        # Log the full LLM prompt to file for debugging
+        self._log_llm_prompt(rtl_context, target, known_signals, num_cycles)
+
         # Call LLM with retry loop for self-correction
         for attempt in range(max_retries):
             try:
@@ -324,6 +357,12 @@ Generate milestones to reach this target. Return ONLY the JSON array."""
                 # Parse response
                 #print(f"[LLMPlanner] LLM response: {response}... (truncated)")
                 print(f"[LLMPlanner] LLM response: {response}")
+
+                # Log the response
+                log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "llm_prompt_log.txt")
+                with open(log_path, "a") as f:
+                    f.write(f"--- LLM RESPONSE (attempt {attempt + 1}) ---\n{response}\n\n")
+
                 milestones = self._parse_json_response(response)
 
                 # Validate signals
