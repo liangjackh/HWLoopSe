@@ -506,11 +506,44 @@ class ExecutionEngine:
 
         # Filter out empty groups
         result = [g for g in groups if len(g) > 1]
+
+        # Identify primary input groups: those containing a top-level input port
+        # Find the top-level module (the one that isn't instantiated by anyone else)
+        all_instances = set(modules_dict.keys())
+        child_instances = set()
+        for parent_module in modules_dict.values():
+            if hasattr(parent_module, 'body'):
+                for child in parent_module.body:
+                    if child.kind == ps.SymbolKind.Instance:
+                        child_instances.add(child.name)
+        top_level_instances = all_instances - child_instances
+
+        # Mark groups as primary inputs if they contain a top-level input port
+        primary_input_groups = []
+        for group in result:
+            is_primary_input = False
+            for inst, sig in group:
+                if inst in top_level_instances:
+                    # Check if this signal is an input port of the top-level module
+                    module = modules_dict.get(inst)
+                    if module and hasattr(module, 'body'):
+                        for member in module.body:
+                            if (member.kind == ps.SymbolKind.Port and
+                                member.name == sig and
+                                hasattr(member, 'direction') and
+                                'In' in str(member.direction)):
+                                is_primary_input = True
+                                break
+                if is_primary_input:
+                    break
+            primary_input_groups.append(is_primary_input)
+
         if result:
             print(f"[PortPropagation] Built {len(result)} wire equivalence group(s):")
             for i, g in enumerate(result):
-                print(f"  group {i}: {g}")
-        return result
+                pi_marker = " [PRIMARY INPUT]" if primary_input_groups[i] else ""
+                print(f"  group {i}: {g}{pi_marker}")
+        return result, primary_input_groups
 
     def _extract_port_connections_from_syntax(self, parent_inst, child_inst, syntax, connect_fn):
         """Extract named port connections from an instance syntax node."""
@@ -746,7 +779,7 @@ class ExecutionEngine:
             pass  # definitions_to_instances not available (manager was passed in)
 
         # Build port propagation map (wire equivalence groups)
-        wire_groups = self._build_port_propagation_map(modules_dict)
+        wire_groups, primary_input_flags = self._build_port_propagation_map(modules_dict)
 
         # Step 3.5: COI pruning (if enabled)
         if self.coi_enabled:
@@ -962,7 +995,8 @@ class ExecutionEngine:
             state=state,
             num_cycles=num_cycles,
             comb_by_module=comb_by_module,
-            wire_groups=wire_groups
+            wire_groups=wire_groups,
+            primary_input_flags=primary_input_flags
         )
 
         self.module_depth -= 1

@@ -341,6 +341,18 @@ class CFG:
         """We want to get a list of AST nodes partitioned into basic blocks.
         Need to keep track of children/parent indices of each block in the list."""
         if hasattr(ast, '__iter__'):
+            # BlockStatementSyntax is iterable but iterating it directly yields raw
+            # tokens (BeginKeyword, SyntaxList, EndKeyword) instead of statements.
+            # Route through ast.items to get the actual statement children.
+            if isinstance(ast, ps.BlockStatementSyntax):
+                self.block_stmt_depth += 1
+                self.block_smt.append(True)
+                self.basic_blocks_sv(m, s, ast.items)
+                if self.block_stmt_depth in self.ind_branch_points:
+                    self.resolve_independent_branch_pts(self.block_stmt_depth)
+                self.block_smt.pop()
+                self.block_stmt_depth -= 1
+                return
             for item in ast:
                 if self.block_smt[self.block_stmt_depth] and (isinstance(item, ps.ConditionalStatementSyntax) or isinstance(item, ps.CaseStatementSyntax) or isinstance(item, ps.ForLoopStatementSyntax)):
                     if not self.block_stmt_depth in self.ind_branch_points:
@@ -447,74 +459,56 @@ class CFG:
     def partition(self):
         """Partitions all_nodes into basic blocks based on partition_points.
 
-        The partition_points mark branch points in the CFG:
-        - The first partition point (0) is the start of the first block
-        - Subsequent partition points mark the START of new blocks (branch targets)
+        partition_points[0] is always 0 (start).
+        partition_points[1] is the first conditional (end of the "preamble" block).
+        partition_points[2+] are starts of branch-target blocks.
 
-        For partition_points = [0, 2, 3, 7, 10]:
-        - Block 0: nodes [0, 1, 2] (from 0 up to and including the conditional at 2)
-        - Block 1: nodes [3, 4, 5, 6] (then-branch: from 3 up to but not including 7)
-        - Block 2: nodes [7, 8, 9, 10] (else-branch: from 7 to the end)
-
-        The key insight is that partition_points[1] (the conditional) is the END of block 0,
-        while partition_points[2] and beyond are the START of new blocks.
+        Block 0: all_nodes[partition_list[0] .. partition_list[1]] (inclusive - preamble + conditional)
+        Block i (i>=1): all_nodes[partition_list[i+1] .. partition_list[i+2]-1]
+          (each branch-target block starts at a partition point and extends to the next)
+        Last block extends to the end of all_nodes.
         """
-        self.partition_points.add(len(self.all_nodes)-1)
         partition_list = sorted(list(self.partition_points))
 
-        # First block: from start to the first branch point (inclusive)
-        # This includes the conditional statement itself
-        if len(partition_list) >= 2:
-            first_block = self.all_nodes[partition_list[0]:partition_list[1]+1]
-            self.basic_block_list.append(first_block)
-
-            # Subsequent blocks: each starts at a partition point and ends before the next
-            for i in range(2, len(partition_list)):
-                start = partition_list[i-1] + 1  # Start after the previous partition point
-                end = partition_list[i]  # End at this partition point (exclusive for intermediate, inclusive for last)
-
-                if i == len(partition_list) - 1:
-                    # Last block: include up to and including the last node
-                    basic_block = self.all_nodes[start:end+1]
-                else:
-                    # Intermediate block: exclude the next partition point
-                    basic_block = self.all_nodes[start:end]
-
-                if basic_block:  # Only add non-empty blocks
-                    self.basic_block_list.append(basic_block)
-        else:
-            # Only one partition point: single block with all nodes
+        if len(partition_list) < 2:
+            # Only one partition point (or none): single block with all nodes
             self.basic_block_list.append(self.all_nodes[:])
+            return
+
+        # Block 0: preamble through the first conditional (inclusive)
+        first_block = self.all_nodes[partition_list[0]:partition_list[1]+1]
+        self.basic_block_list.append(first_block)
+
+        # Subsequent blocks: each partition_list[2+] marks the START of a new block
+        branch_starts = partition_list[2:]  # skip partition_list[0] and partition_list[1]
+        for i, start in enumerate(branch_starts):
+            if i + 1 < len(branch_starts):
+                end = branch_starts[i + 1]
+            else:
+                end = len(self.all_nodes)
+            basic_block = self.all_nodes[start:end]
+            self.basic_block_list.append(basic_block)
 
     def find_basic_block(self, node_idx) -> int:
         """Given a node index, find the index of the basic block that contains it.
 
-        Uses partition points to determine block membership:
-        - Block 0: nodes from partition_list[0] to partition_list[1] (inclusive)
-        - Block i (i > 0): nodes from partition_list[i] to partition_list[i+1]-1 (for branch targets)
+        Block 0: nodes from partition_list[0] to partition_list[1] (inclusive).
+        Block i (i>=1): starts at partition_list[i+1] (branch_starts[i-1]).
         """
         partition_list = sorted(list(self.partition_points))
 
         if len(partition_list) < 2:
             return 0
 
-        # Check if in first block (includes the conditional)
+        # Check if in block 0 (preamble + conditional)
         if node_idx <= partition_list[1]:
             return 0
 
-        # Check subsequent blocks (branch targets)
-        # Block 1 starts at partition_list[2], Block 2 starts at partition_list[3], etc.
-        for i in range(2, len(partition_list)):
-            block_start = partition_list[i]
-
-            if i == len(partition_list) - 1:
-                # Last block: from this partition point to the end
-                if node_idx >= block_start:
-                    return min(i - 1, len(self.basic_block_list) - 1)
-            else:
-                block_end = partition_list[i + 1] - 1
-                if block_start <= node_idx <= block_end:
-                    return min(i - 1, len(self.basic_block_list) - 1)
+        # Branch-target blocks start at partition_list[2+]
+        branch_starts = partition_list[2:]
+        for i in range(len(branch_starts) - 1, -1, -1):
+            if node_idx >= branch_starts[i]:
+                return min(i + 1, len(self.basic_block_list) - 1)
 
         # Fallback: return last block
         return len(self.basic_block_list) - 1

@@ -1,56 +1,36 @@
 {
-  "target": "Violate assertion 'b_out == ((past_3_in_a + 1) << 1)' in u_assert",
-  "target_expr": "u_assert.b_out != ((u_assert.past_3_in_a + 1) << 1)",
+  "target": "Violate assertion 'out <= 3' in test_1",
+  "target_expr": "test_1.out > 3",
   "milestones": [
     {
       "step": 0,
       "description": "System Reset",
-      "condition": "rst_n == 0"
+      "condition": "RST == 1"
     },
     {
       "step": 1,
-      "description": "Reset released, first clock cycle. top_in_a is sampled into in_a_history[0]. valid_pipe starts filling.",
-      "condition": "rst_n == 1 && u_assert.valid_pipe == 1"
+      "description": "Reset released, counter starts incrementing",
+      "condition": "RST == 0 && test_1.out == 0"
     },
     {
       "step": 2,
-      "description": "Second clock cycle. top_in_a from step 1 moves to in_a_history[1]. valid_pipe continues.",
-      "condition": "rst_n == 1 && u_assert.valid_pipe == 3"
+      "description": "Counter increments to 1",
+      "condition": "test_1.out == 1"
     },
     {
       "step": 3,
-      "description": "Third clock cycle. top_in_a from step 1 becomes past_3_in_a. check_en becomes 1. Condition for p_noshift_bug assertion is met.",
-      "condition": "rst_n == 1 && u_assert.check_en == 1 && u_assert.past_3_in_a <= 10"
+      "description": "Counter increments to 2",
+      "condition": "test_1.out == 2"
     },
     {
       "step": 4,
-      "description": "Verification Target: The p_noshift_bug assertion fails because b_out does not equal past_3_in_a + 1.",
-      "condition": "u_assert.b_out != (u_assert.past_3_in_a + 1)"
+      "description": "Counter increments to 3",
+      "condition": "test_1.out == 3"
     },
     {
       "step": 5,
-      "description": "System Reset",
-      "condition": "rst_n == 0"
-    },
-    {
-      "step": 6,
-      "description": "Reset released, valid_pipe starts filling",
-      "condition": "rst_n == 1 && u_assert.valid_pipe == 1"
-    },
-    {
-      "step": 7,
-      "description": "valid_pipe second bit set, top_in_a history being recorded",
-      "condition": "rst_n == 1 && u_assert.valid_pipe == 3"
-    },
-    {
-      "step": 8,
-      "description": "valid_pipe fully filled (check_en becomes 1), past_3_in_a captures a value > BRANCH_THRESHOLD from 3 cycles ago",
-      "condition": "rst_n == 1 && u_assert.check_en == 1 && u_assert.past_3_in_a > 10"
-    },
-    {
-      "step": 9,
-      "description": "Verification Target: b_out does not equal the expected shifted value based on past_3_in_a",
-      "condition": "u_assert.b_out != ((u_assert.past_3_in_a + 1) << 1)"
+      "description": "Counter increments to 4, violating the assertion condition",
+      "condition": "test_1.out > 3"
     }
   ]
 }

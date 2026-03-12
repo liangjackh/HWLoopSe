@@ -689,17 +689,49 @@ class SymbolicDFS:
         elif kind == ps.SyntaxKind.AssignmentExpression:
             # Get LHS variable name (handle array element selects)
             lhs_var = None
-            if hasattr(expr.left, "identifier"):
-                lhs_var = expr.left.identifier.value
-            elif hasattr(expr.left, 'kind') and str(expr.left.kind) == 'SyntaxKind.ElementSelectExpression':
-                base = getattr(expr.left, 'left', getattr(expr.left, 'value', None))
-                selector = getattr(expr.left, 'right', getattr(expr.left, 'selector', None))
-                if base and selector:
-                    base_name = getattr(base, 'identifier', base)
-                    base_name = getattr(base_name, 'valueText', str(base_name))
-                    idx_val = getattr(selector, 'literal', selector)
-                    idx_val = getattr(idx_val, 'value', getattr(idx_val, 'valueText', str(idx_val)))
-                    lhs_var = f"{base_name}[{idx_val}]"
+            lhs = expr.left
+            lhs_class = lhs.__class__.__name__
+            # Check IdentifierSelectNameSyntax FIRST (pipe[0], in_a_history[1], etc.)
+            if lhs_class == 'IdentifierSelectNameSyntax' and hasattr(lhs, 'selectors'):
+                base_name = lhs.identifier.value if hasattr(lhs.identifier, 'value') else str(lhs.identifier)
+                idx_str = None
+                for sel in lhs.selectors:
+                    inner = getattr(sel, 'selector', getattr(sel, 'expr', getattr(sel, 'expression', None)))
+                    if inner is not None:
+                        inner_val = getattr(inner, 'value', getattr(inner, 'valueText', None))
+                        if inner_val is not None:
+                            idx_str = str(inner_val)
+                        else:
+                            lit = getattr(inner, 'literal', None)
+                            if lit is not None:
+                                idx_str = str(getattr(lit, 'value', lit))
+                            else:
+                                idx_str = str(inner)
+                if idx_str is not None:
+                    lhs_var = f"{base_name}[{idx_str}]"
+                else:
+                    lhs_var = base_name
+            elif hasattr(lhs, "identifier"):
+                lhs_var = lhs.identifier.value if hasattr(lhs.identifier, 'value') else str(lhs.identifier)
+            elif hasattr(lhs, 'kind'):
+                lhs_kind = str(lhs.kind)
+                if 'ElementSelect' in lhs_kind:
+                    base = getattr(lhs, 'left', getattr(lhs, 'value', None))
+                    selector = getattr(lhs, 'right', getattr(lhs, 'selector', None))
+                    if base and selector:
+                        if hasattr(base, 'symbol'):
+                            base_name = base.symbol.name
+                        elif hasattr(base, 'identifier'):
+                            base_name = getattr(base.identifier, 'valueText', getattr(base.identifier, 'value', str(base.identifier)))
+                        else:
+                            base_name = str(base)
+                        if hasattr(selector, 'value'):
+                            idx_val = str(selector.value)
+                        elif hasattr(selector, 'literal'):
+                            idx_val = getattr(selector.literal, 'value', str(selector.literal))
+                        else:
+                            idx_val = str(selector)
+                        lhs_var = f"{base_name}[{idx_val}]"
             if lhs_var is not None:
                 # Convert RHS to Z3 expression
                 try:
@@ -714,17 +746,50 @@ class SymbolicDFS:
         elif kind == ps.SyntaxKind.NonblockingAssignmentExpression:
             # Get LHS variable name (handle array element selects)
             lhs_var = None
-            if hasattr(expr.left, "identifier"):
-                lhs_var = expr.left.identifier.value
-            elif hasattr(expr.left, 'kind') and str(expr.left.kind) == 'SyntaxKind.ElementSelectExpression':
-                base = getattr(expr.left, 'left', getattr(expr.left, 'value', None))
-                selector = getattr(expr.left, 'right', getattr(expr.left, 'selector', None))
-                if base and selector:
-                    base_name = getattr(base, 'identifier', base)
-                    base_name = getattr(base_name, 'valueText', str(base_name))
-                    idx_val = getattr(selector, 'literal', selector)
-                    idx_val = getattr(idx_val, 'value', getattr(idx_val, 'valueText', str(idx_val)))
-                    lhs_var = f"{base_name}[{idx_val}]"
+            lhs = expr.left
+            lhs_class = lhs.__class__.__name__
+            # Check IdentifierSelectNameSyntax FIRST (pipe[0], in_a_history[1], etc.)
+            # because it also has .identifier but we need the index too
+            if lhs_class == 'IdentifierSelectNameSyntax' and hasattr(lhs, 'selectors'):
+                base_name = lhs.identifier.value if hasattr(lhs.identifier, 'value') else str(lhs.identifier)
+                idx_str = None
+                for sel in lhs.selectors:
+                    inner = getattr(sel, 'selector', getattr(sel, 'expr', getattr(sel, 'expression', None)))
+                    if inner is not None:
+                        inner_val = getattr(inner, 'value', getattr(inner, 'valueText', None))
+                        if inner_val is not None:
+                            idx_str = str(inner_val)
+                        else:
+                            lit = getattr(inner, 'literal', None)
+                            if lit is not None:
+                                idx_str = str(getattr(lit, 'value', lit))
+                            else:
+                                idx_str = str(inner)
+                if idx_str is not None:
+                    lhs_var = f"{base_name}[{idx_str}]"
+                else:
+                    lhs_var = base_name
+            elif hasattr(lhs, "identifier"):
+                lhs_var = lhs.identifier.value if hasattr(lhs.identifier, 'value') else str(lhs.identifier)
+            elif hasattr(lhs, 'kind'):
+                lhs_kind = str(lhs.kind)
+                if 'ElementSelect' in lhs_kind:
+                    base = getattr(lhs, 'left', getattr(lhs, 'value', None))
+                    selector = getattr(lhs, 'right', getattr(lhs, 'selector', None))
+                    if base and selector:
+                        if hasattr(base, 'symbol'):
+                            base_name = base.symbol.name
+                        elif hasattr(base, 'identifier'):
+                            base_name = getattr(base.identifier, 'valueText', getattr(base.identifier, 'value', str(base.identifier)))
+                        else:
+                            base_name = str(base)
+                        if hasattr(selector, 'value'):
+                            idx_val = str(selector.value)
+                        elif hasattr(selector, 'literal'):
+                            idx_val = getattr(selector.literal, 'value', str(selector.literal))
+                        else:
+                            idx_val = str(selector)
+                        lhs_var = f"{base_name}[{idx_val}]"
             if lhs_var is not None:
                 # Convert RHS to Z3 expression and use pending NBA queue
                 try:
@@ -861,6 +926,55 @@ class SymbolicDFS:
                         s.store[m.curr_module][lhs_name] = rhs_with_symbols
             return
 
+        # Handle DeclaratorSyntax directly (individual declarator with initializer)
+        # This happens when the CFG iterates a NetDeclarationSyntax and yields children
+        if cname == 'DeclaratorSyntax':
+            name_node = getattr(node, 'name', None)
+            init = getattr(node, 'initializer', None)
+            if name_node is None or init is None:
+                return
+            lhs_name = getattr(name_node, 'valueText', str(name_node))
+            init_expr = getattr(init, 'expr', getattr(init, 'expression', init))
+            if init_expr is not None:
+                # DEBUG
+                if m.curr_module == 'u_assert' and lhs_name in ('check_en', 'past_3_in_a'):
+                    print(f"[DECL-COMB-DEBUG] {m.curr_module}.{lhs_name} init_expr={init_expr} class={init_expr.__class__.__name__} kind={getattr(init_expr, 'kind', 'N/A')}")
+                    vp = s.store.get(m.curr_module, {}).get('valid_pipe', 'MISSING')
+                    vp2 = s.store.get(m.curr_module, {}).get('valid_pipe[2]', 'MISSING')
+                    iah = s.store.get(m.curr_module, {}).get('in_a_history', 'MISSING')
+                    iah2 = s.store.get(m.curr_module, {}).get('in_a_history[2]', 'MISSING')
+                    print(f"[DECL-COMB-DEBUG]   valid_pipe={vp} ({type(vp).__name__}), valid_pipe[2]={vp2}")
+                    print(f"[DECL-COMB-DEBUG]   in_a_history={iah} ({type(iah).__name__}), in_a_history[2]={iah2}")
+                try:
+                    rhs_z3 = self.expr_to_z3(m, s, init_expr)
+                    s.store[m.curr_module][lhs_name] = rhs_z3
+                except Exception:
+                    rhs_str = conjunction_with_pointers(init_expr, s, m)
+                    rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
+                    s.store[m.curr_module][lhs_name] = rhs_with_symbols
+            return
+
+        # Handle BinaryExpressionSyntax (assign lhs = rhs without the 'assign' keyword wrapper)
+        if cname == 'BinaryExpressionSyntax':
+            lhs = getattr(node, 'left', None)
+            rhs = getattr(node, 'right', None)
+            if lhs is None or rhs is None:
+                return
+            lhs_name = None
+            if hasattr(lhs, 'identifier'):
+                lhs_name = lhs.identifier.value if hasattr(lhs.identifier, 'value') else str(lhs.identifier)
+            elif hasattr(lhs, 'valueText'):
+                lhs_name = lhs.valueText
+            if lhs_name:
+                try:
+                    rhs_z3 = self.expr_to_z3(m, s, rhs)
+                    s.store[m.curr_module][lhs_name] = rhs_z3
+                except Exception:
+                    rhs_str = conjunction_with_pointers(rhs, s, m)
+                    rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
+                    s.store[m.curr_module][lhs_name] = rhs_with_symbols
+            return
+
     def visit_stmt(self, m: ExecutionManager, s: SymbolicState, stmt, modules=None, direction=None):
         """Visits statements"""
         if stmt is None or m.ignore:
@@ -943,6 +1057,11 @@ class SymbolicDFS:
                                 break
 
             if cond_expr:
+                # DEBUG: trace condition extraction
+                print(f"[COND-DEBUG] module={m.curr_module} dir={direction} cond_expr={cond_expr} class={cond_expr.__class__.__name__} kind={getattr(cond_expr, 'kind', 'N/A')}")
+                if m.curr_module in s.store:
+                    rst = s.store[m.curr_module].get('rst_n', 'MISSING')
+                    print(f"[COND-DEBUG]   store[{m.curr_module}].rst_n = {rst} (type={type(rst).__name__})")
                 self.visit_expr(m, s, cond_expr)
                 s.assertion_counter += 1
                 cond_z3 = self.expr_to_z3(m, s, cond_expr)
@@ -954,33 +1073,19 @@ class SymbolicDFS:
                     else:
                         cond_z3 = cond_z3 != BitVecVal(0, 32)
                 # Persistently add branch condition to path condition
-                if direction:
-                    self.branch = True
-                    s.pc.add(cond_z3)
-                else:
-                    self.branch = False
-                    s.pc.add(Not(cond_z3))
+                # Use push/pop to test SAT first, only keep if feasible
+                constraint = cond_z3 if direction else Not(cond_z3)
+                self.branch = bool(direction)
+                s.pc.push()
+                s.pc.add(constraint)
                 if not solve_pc(s.pc):
+                    s.pc.pop()  # Remove the infeasible constraint
                     m.abandon = True
                     m.ignore = True
                     return
-
-            # Visit the body of the taken branch
-            # The CFG splits top-level conditionals into separate basic blocks,
-            # but nested conditionals (e.g., assertions inside if statements)
-            # remain as single nodes and need their bodies visited here.
-            if direction:
-                # Then branch
-                then_body = getattr(stmt, 'ifTrue', getattr(stmt, 'statement', None))
-                if then_body is not None:
-                    self.visit_stmt(m, s, then_body, modules, direction)
-            else:
-                # Else branch
-                else_clause = getattr(stmt, 'elseClause', None)
-                if else_clause is not None:
-                    else_body = getattr(else_clause, 'statement', getattr(else_clause, 'clause', else_clause))
-                    if else_body is not None:
-                        self.visit_stmt(m, s, else_body, modules, direction)
+                # SAT — commit the constraint permanently
+                s.pc.pop()
+                s.pc.add(constraint)
 
         elif kind == ps.StatementKind.List:
             

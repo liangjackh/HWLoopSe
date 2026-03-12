@@ -1,1992 +1,411 @@
 [ExecutionEngine] Auto-plan enabled (provider=deepseek, mock=False)
 [ExecutionEngine] Cone of Influence (COI) pruning enabled
-
-========================================
-COMPILATION DIAGNOSTICS:
-========================================
-designs/benchmarks/or1200/buggy-or1200/or1200_cpu.v:383:14: warning: implicit conversion expands from 17 to 32 bits [-Wwidth-expand]
-        prev_esr <= esr;
-                 ~~ ^~~
-designs/benchmarks/or1200/buggy-or1200/or1200_cpu.v:385:20: warning: implicit conversion expands from 1 to 32 bits [-Wwidth-expand]
-        prev_id_freeze <= id_freeze;
-                       ~~ ^~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_cpu.v:629:40: warning: implicit conversion expands from 17 to 32 bits [-Wwidth-expand]
-wire [31:0] attack_dataw = attack_do ? sr : rf_dataw;
-                                     ~ ^~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:260:56: warning: '&' within '|' [-Wbitwise-op-parentheses]
-assign id_flushpipe = (except_flushpipe | extend_flush & ~attack) | pc_we;
-                                        ~ ~~~~~~~~~~~~~^~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:260:56: note: place parentheses around the '&' expression to silence this warning
-assign id_flushpipe = (except_flushpipe | extend_flush & ~attack) | pc_we;
-                                          ~~~~~~~~~~~~~^~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:261:56: warning: '&' within '|' [-Wbitwise-op-parentheses]
-assign ex_flushpipe = (except_flushpipe | extend_flush & ~attack) | pc_we;
-                                        ~ ~~~~~~~~~~~~~^~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:261:56: note: place parentheses around the '&' expression to silence this warning
-assign ex_flushpipe = (except_flushpipe | extend_flush & ~attack) | pc_we;
-                                          ~~~~~~~~~~~~~^~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:262:56: warning: '&' within '|' [-Wbitwise-op-parentheses]
-assign wb_flushpipe = (except_flushpipe | extend_flush & ~attack) | pc_we;
-                                        ~ ~~~~~~~~~~~~~^~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:262:56: note: place parentheses around the '&' expression to silence this warning
-assign wb_flushpipe = (except_flushpipe | extend_flush & ~attack) | pc_we;
-                                          ~~~~~~~~~~~~~^~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:374:22: warning: '&' within '|' [-Wbitwise-op-parentheses]
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:374:22: note: place parentheses around the '&' expression to silence this warning
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:560:112: warning: implicit conversion expands from 6 to 32 bits [-Wwidth-expand]
-                sp_return_counter <= (sp_return_counter == 6'd1) ? 0 : (sp_return_counter == 6'd0 || ~sp_attack_enable[5]) ? sp_return_counter : sp_return_counter - 6'd1;
-                                                                 ~                                                           ^~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:560:132: warning: implicit conversion expands from 6 to 32 bits [-Wwidth-expand]
-                sp_return_counter <= (sp_return_counter == 6'd1) ? 0 : (sp_return_counter == 6'd0 || ~sp_attack_enable[5]) ? sp_return_counter : sp_return_counter - 6'd1;
-                                                                 ~                                                                               ^~~~~~~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:584:22: warning: '&' within '|' [-Wbitwise-op-parentheses]
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:584:22: note: place parentheses around the '&' expression to silence this warning
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:699:22: warning: '&' within '|' [-Wbitwise-op-parentheses]
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:699:22: note: place parentheses around the '&' expression to silence this warning
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:809:22: warning: '&' within '|' [-Wbitwise-op-parentheses]
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:809:22: note: place parentheses around the '&' expression to silence this warning
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:881:22: warning: '&' within '|' [-Wbitwise-op-parentheses]
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:881:22: note: place parentheses around the '&' expression to silence this warning
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:896:22: warning: '&' within '|' [-Wbitwise-op-parentheses]
-        else if (!ex_freeze & id_freeze | ex_flushpipe) begin
-                 ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:896:22: note: place parentheses around the '&' expression to silence this warning
-        else if (!ex_freeze & id_freeze | ex_flushpipe) begin
-                 ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:950:22: warning: '&' within '|' [-Wbitwise-op-parentheses]
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:950:22: note: place parentheses around the '&' expression to silence this warning
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:969:23: warning: '&' within '|' [-Wbitwise-op-parentheses]
-        else  if (!ex_freeze & id_freeze | ex_flushpipe)
-                  ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:969:23: note: place parentheses around the '&' expression to silence this warning
-        else  if (!ex_freeze & id_freeze | ex_flushpipe)
-                  ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:1120:22: warning: '&' within '|' [-Wbitwise-op-parentheses]
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:1120:22: note: place parentheses around the '&' expression to silence this warning
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:1180:26: warning: '&' within '|' [-Wbitwise-op-parentheses]
-        end else if (!ex_freeze & id_freeze | ex_flushpipe)
-                     ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:1180:26: note: place parentheses around the '&' expression to silence this warning
-        end else if (!ex_freeze & id_freeze | ex_flushpipe)
-                     ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:1203:22: warning: '&' within '|' [-Wbitwise-op-parentheses]
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:1203:22: note: place parentheses around the '&' expression to silence this warning
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:1224:22: warning: '&' within '|' [-Wbitwise-op-parentheses]
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_ctrl.v:1224:22: note: place parentheses around the '&' expression to silence this warning
-        else if (!ex_freeze & id_freeze | ex_flushpipe)
-                 ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_dc_fsm.v:380:2: warning: 'case' missing 'default' label [-Wcase-default]
-        case (state)    // synopsys parallel_case
-        ^~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_du.v:600:81: warning: '&' within '|' [-Wbitwise-op-parentheses]
-                        | ~((ex_insn[31:26] == `OR1200_OR32_NOP) & ex_insn[16]) & dmr1[`OR1200_DU_DMR1_ST]
-                        ~ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_du.v:600:81: note: place parentheses around the '&' expression to silence this warning
-                        | ~((ex_insn[31:26] == `OR1200_OR32_NOP) & ex_insn[16]) & dmr1[`OR1200_DU_DMR1_ST]
-                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_du.v:603:101: warning: '&' within '|' [-Wbitwise-op-parentheses]
-                        | (branch_op != `OR1200_BRANCHOP_NOP) & (branch_op != `OR1200_BRANCHOP_RFE) & dmr1[`OR1200_DU_DMR1_BT]
-                        ~ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_du.v:603:101: note: place parentheses around the '&' expression to silence this warning
-                        | (branch_op != `OR1200_BRANCHOP_NOP) & (branch_op != `OR1200_BRANCHOP_RFE) & dmr1[`OR1200_DU_DMR1_BT]
-                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_du.v:647:11: warning: implicit conversion truncates from 32 to 14 bits [-Wwidth-trunc]
-                dsr <=  spr_dat_i[`OR1200_DU_DSR_WIDTH-1:0] & 32'hffffffbf;
-                    ~~  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_du.v:647:47: warning: bitwise operation between operands of different types ('logic[13:0]' and 'bit[31:0]') [-Wbitwise-op-mismatch]
-                dsr <=  spr_dat_i[`OR1200_DU_DSR_WIDTH-1:0] & 32'hffffffbf;
-                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^ ~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_except.v:665:24: warning: implicit conversion truncates from 32 to 17 bits [-Wwidth-trunc]
-                    sp_esr_ghost <=  datain;
-                                 ~~  ^~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_arith.v:345:19: warning: comparison of differently signed types ('reg' and 'logic signed[31:0]') [-Wsign-compare]
-        else if (s_state == t_state_busy) begin
-                 ~~~~~~~ ^~ ~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_arith.v:348:18: warning: comparison of differently signed types ('reg[5:0]' and 'logic signed[31:0]') [-Wsign-compare]
-               ((s_count==MUL_COUNT) & (fpu_op_i==3'd2)) |
-                 ~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_post_norm_addsub.v:136:6: warning: 'casez' missing 'default' label [-Wcase-default]
-     casez(s_fract_28_i[26:0])  // synopsys full_case parallel_case
-     ^~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_post_norm_div.v:187:6: warning: 'casez' missing 'default' label [-Wcase-default]
-     casez(s_qutnt_i) // synopsys full_case parallel_case
-     ^~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_post_norm_intfloat_conv.v:140:6: warning: 'casez' missing 'default' label [-Wcase-default]
-     casez(fract_in)    // synopsys full_case parallel_case
-     ^~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_post_norm_intfloat_conv.v:315:56: warning: implicit conversion expands from 8 to 32 bits [-Wwidth-expand]
-   assign exp_f2i   = f2i_zero ? 0 : f2i_max ? 8'hff : exp_f2i_1[55:48];
-                               ~                       ^~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_post_norm_intfloat_conv.v:389:6: warning: 'case' missing 'default' label [-Wcase-default]
-     case(rmode)        // synopsys full_case parallel_case
-     ^~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_post_norm_intfloat_conv.v:396:6: warning: 'case' missing 'default' label [-Wcase-default]
-     case(rmode)        // synopsys full_case parallel_case
-     ^~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_post_norm_mul.v:143:8: warning: 'casez' missing 'default' label [-Wcase-default]
-       casez(s_fract_48_i[46:1])        // synopsys full_case parallel_case
-       ^~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_post_norm_mul.v:197:6: warning: 'casez' missing 'default' label [-Wcase-default]
-     casez(s_fract_48_i) // synopsys full_case parallel_case
-     ^~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_pre_norm_addsub.v:141:2: warning: 'case' missing 'default' label [-Wcase-default]
-        case(s_mux_diff)
-        ^~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_pre_norm_addsub.v:156:6: warning: 'casez' missing 'default' label [-Wcase-default]
-     casez(s_fract_sm_28) // synopsys full_case parallel_case
-     ^~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_pre_norm_div.v:113:6: warning: 'casez' missing 'default' label [-Wcase-default]
-     casez(s_fracta_24) // synopsys full_case parallel_case
-     ^~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_fpu_pre_norm_div.v:143:6: warning: 'casez' missing 'default' label [-Wcase-default]
-     casez(s_fractb_24) // synopsys full_case parallel_case
-     ^~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_genpc.v:300:8: warning: '&' within '|' [-Wbitwise-op-parentheses]
-              & !genpc_refetch) begin
-              ^~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_genpc.v:300:8: note: place parentheses around the '&' expression to silence this warning
-              & !genpc_refetch) begin
-              ^~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_gmultp2_32x32.v:82:7: warning: implicit conversion changes signedness from 'logic[31:0]' to 'integer' [-Wsign-conversion]
-        xi = X;
-           ~ ^
-designs/benchmarks/or1200/buggy-or1200/or1200_gmultp2_32x32.v:88:7: warning: implicit conversion changes signedness from 'logic[31:0]' to 'integer' [-Wsign-conversion]
-        yi = Y;
-           ~ ^
-designs/benchmarks/or1200/buggy-or1200/or1200_gmultp2_32x32.v:97:24: warning: implicit conversion changes signedness from 'logic signed[63:0]' to 'reg[63:0]' [-Wsign-conversion]
-                p0 <=  xi * yi;
-                   ~~  ^~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_ic_fsm.v:142:66: warning: '&' within '|' [-Wbitwise-op-parentheses]
-   assign burst = (state == `OR1200_ICFSM_CFETCH) & tagcomp_miss & 
-                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-designs/benchmarks/or1200/buggy-or1200/or1200_ic_fsm.v:142:66: note: place parentheses around the '&' expression to silence this warning
-   assign burst = (state == `OR1200_ICFSM_CFETCH) & tagcomp_miss & 
-                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-designs/benchmarks/or1200/buggy-or1200/or1200_lsu.v:136:25: warning: '&' within '|' [-Wbitwise-op-parentheses]
-    else if (!ex_freeze & id_freeze | flushpipe)
-             ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_lsu.v:136:25: note: place parentheses around the '&' expression to silence this warning
-    else if (!ex_freeze & id_freeze | flushpipe)
-             ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_lsu.v:161:25: warning: '&' within '|' [-Wbitwise-op-parentheses]
-    else if (!ex_freeze & id_freeze | flushpipe)
-             ~~~~~~~~~~~^~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_lsu.v:161:25: note: place parentheses around the '&' expression to silence this warning
-    else if (!ex_freeze & id_freeze | flushpipe)
-             ~~~~~~~~~~~^~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_lsu.v:166:63: warning: '&' within '|' [-Wbitwise-op-parentheses]
-                            (id_lsu_op == `OR1200_LSUOP_LHS)) & id_precalc_sum[0]
-                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_lsu.v:166:63: note: place parentheses around the '&' expression to silence this warning
-                            (id_lsu_op == `OR1200_LSUOP_LHS)) & id_precalc_sum[0]
-                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_lsu.v:169:49: warning: '&' within '|' [-Wbitwise-op-parentheses]
-                            (id_lsu_op == `OR1200_LSUOP_LWS)) & |id_precalc_sum[1:0];
-                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_lsu.v:169:49: note: place parentheses around the '&' expression to silence this warning
-                            (id_lsu_op == `OR1200_LSUOP_LWS)) & |id_precalc_sum[1:0];
-                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_mem2reg.v:394:2: warning: 'case' missing 'default' label [-Wcase-default]
-        case(addr) // synopsys parallel_case
-        ^~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_rf.v:196:63: warning: implicit conversion expands from 5 to 32 bits [-Wwidth-expand]
-assign rf_addrw = attack ? 32'd12 : (spr_valid & spr_write) ? spr_addr[4:0] : addrw;
-                         ~                                    ^~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_rf.v:196:79: warning: implicit conversion expands from 5 to 32 bits [-Wwidth-expand]
-assign rf_addrw = attack ? 32'd12 : (spr_valid & spr_write) ? spr_addr[4:0] : addrw;
-                         ~                                                    ^~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_rf.v:206:28: warning: implicit conversion expands from 17 to 32 bits [-Wwidth-expand]
-assign rf_dataw = attack ? sr : (spr_valid & spr_write) ? spr_dat_i : dataw;
-                         ~ ^~
-designs/benchmarks/or1200/buggy-or1200/or1200_rf.v:220:72: warning: '&' within '|' [-Wbitwise-op-parentheses]
-assign rf_we = (attack | ((spr_valid & spr_write) | (we & ~wb_freeze)) & rf_we_allow) & ~sp_exception_comb;
-                       ~ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_rf.v:220:72: note: place parentheses around the '&' expression to silence this warning
-assign rf_we = (attack | ((spr_valid & spr_write) | (we & ~wb_freeze)) & rf_we_allow) & ~sp_exception_comb;
-                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_sb_fifo.v:108:15: warning: comparison of differently signed types ('reg[1:0]' and 'logic signed[31:0]') [-Wsign-compare]
-                if (wr_pntr >= fl-1)
-                    ~~~~~~~ ^~ ~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_sb_fifo.v:118:15: warning: comparison of differently signed types ('reg[1:0]' and 'logic signed[31:0]') [-Wsign-compare]
-                if (rd_pntr >= fl-1)
-                    ~~~~~~~ ^~ ~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_sb_fifo.v:127:12: warning: comparison of differently signed types ('reg[3:0]' and 'logic signed[31:0]') [-Wsign-compare]
-                if (cntr >= (fl-1)) begin
-                    ~~~~ ^~  ~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_sb_fifo.v:131:15: warning: comparison of differently signed types ('reg[1:0]' and 'logic signed[31:0]') [-Wsign-compare]
-                if (wr_pntr >= fl-1)
-                    ~~~~~~~ ^~ ~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_sb_fifo.v:144:15: warning: comparison of differently signed types ('reg[1:0]' and 'logic signed[31:0]') [-Wsign-compare]
-                if (rd_pntr >= fl-1)
-                    ~~~~~~~ ^~ ~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_sprs.v:281:6: warning: 'case' missing 'default' label [-Wcase-default]
-     case (spr_addr[`OR1200_SPR_GROUP_BITS])    // synopsys parallel_case
-     ^~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_sprs.v:358:28: warning: implicit conversion expands from 3 to 4 bits [-Wwidth-expand]
-      = (except_started) ? {sr[`OR1200_SR_FO:`OR1200_SR_EPH],1'b0} :
-                         ~ ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_sprs.v:467:22: warning: bitwise operation between operands of different types ('logic[16:0]' and 'logic[31:0]') [-Wbitwise-op-mismatch]
-                     (sp_esr_ghost & {32{sp_esr_ghost_sel}}) |
-                      ~~~~~~~~~~~~ ^ ~~~~~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_tt.v:163:21: warning: '&' within '|' [-Wbitwise-op-parentheses]
-assign stop = match & (ttmr[`OR1200_TT_TTMR_M] == 2'b10) | (ttmr[`OR1200_TT_TTMR_M] == 2'b00) | du_stall;
-              ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_tt.v:163:21: note: place parentheses around the '&' expression to silence this warning
-assign stop = match & (ttmr[`OR1200_TT_TTMR_M] == 2'b10) | (ttmr[`OR1200_TT_TTMR_M] == 2'b00) | du_stall;
-              ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  in instance: or1200_top.iwb_biu
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:234:52: warning: '&' within '|' [-Wbitwise-op-parentheses]
-           wb_cyc_nxt = !wb_stb_o | !wb_err_i & !wb_rty_i & 
-                                  ~ ~~~~~~~~~~~~~~~~~~~~~~^
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:234:52: note: place parentheses around the '&' expression to silence this warning
-           wb_cyc_nxt = !wb_stb_o | !wb_err_i & !wb_rty_i & 
-                                    ~~~~~~~~~~~~~~~~~~~~~~^
-  in instance: or1200_top.iwb_biu
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:237:52: warning: '&' within '|' [-Wbitwise-op-parentheses]
-           wb_stb_nxt = !wb_stb_o | !wb_err_i & !wb_rty_i & !wb_ack | 
-                                  ~ ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:237:52: note: place parentheses around the '&' expression to silence this warning
-           wb_stb_nxt = !wb_stb_o | !wb_err_i & !wb_rty_i & !wb_ack | 
-                                    ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~
-  in instance: or1200_top.iwb_biu
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:238:26: warning: '&' within '|' [-Wbitwise-op-parentheses]
-                        !wb_err_i & !wb_rty_i & wb_cti_o == 3'b010 ;
-                        ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:238:26: note: place parentheses around the '&' expression to silence this warning
-                        !wb_err_i & !wb_rty_i & wb_cti_o == 3'b010 ;
-                        ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
-  in instance: or1200_top.iwb_biu
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:239:39: warning: '&' within '|' [-Wbitwise-op-parentheses]
-           wb_cti_nxt[2] = wb_stb_o & wb_ack & burst_len == 'h0 | wb_cti_o[2];
-                           ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:239:39: note: place parentheses around the '&' expression to silence this warning
-           wb_cti_nxt[2] = wb_stb_o & wb_ack & burst_len == 'h0 | wb_cti_o[2];
-                           ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
-  in instance: or1200_top.iwb_biu
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:241:39: warning: '&' within '|' [-Wbitwise-op-parentheses]
-           wb_cti_nxt[0] = wb_stb_o & wb_ack & burst_len == 'h0 | wb_cti_o[0];
-                           ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:241:39: note: place parentheses around the '&' expression to silence this warning
-           wb_cti_nxt[0] = wb_stb_o & wb_ack & burst_len == 'h0 | wb_cti_o[0];
-                           ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
-  in instance: or1200_top.iwb_biu
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:246:44: warning: '&' within '|' [-Wbitwise-op-parentheses]
-           else if ((wb_err_i | wb_rty_i | wb_ack & wb_cti_o==3'b111) & 
-                                         ~ ~~~~~~~^~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:246:44: note: place parentheses around the '&' expression to silence this warning
-           else if ((wb_err_i | wb_rty_i | wb_ack & wb_cti_o==3'b111) & 
-                                           ~~~~~~~^~~~~~~~~~~~~~~~~~
-  in instance: or1200_top.iwb_biu
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:254:52: warning: '&' within '|' [-Wbitwise-op-parentheses]
-           wb_cyc_nxt = !wb_stb_o | !wb_err_i & !wb_rty_i & 
-                                  ~ ~~~~~~~~~~~~~~~~~~~~~~^
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:254:52: note: place parentheses around the '&' expression to silence this warning
-           wb_cyc_nxt = !wb_stb_o | !wb_err_i & !wb_rty_i & 
-                                    ~~~~~~~~~~~~~~~~~~~~~~^
-  in instance: or1200_top.iwb_biu
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:256:52: warning: '&' within '|' [-Wbitwise-op-parentheses]
-           wb_stb_nxt = !wb_stb_o | !wb_err_i & !wb_rty_i & 
-                                  ~ ~~~~~~~~~~~~~~~~~~~~~~^
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:256:52: note: place parentheses around the '&' expression to silence this warning
-           wb_stb_nxt = !wb_stb_o | !wb_err_i & !wb_rty_i & 
-                                    ~~~~~~~~~~~~~~~~~~~~~~^
-  in instance: or1200_top.iwb_biu
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:258:28: warning: '&' within '|' [-Wbitwise-op-parentheses]
-           wb_cti_nxt[2] = wb_ack & wb_stb_o | wb_cti_o[2];
-                           ~~~~~~~^~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:258:28: note: place parentheses around the '&' expression to silence this warning
-           wb_cti_nxt[2] = wb_ack & wb_stb_o | wb_cti_o[2];
-                           ~~~~~~~^~~~~~~~~~
-  in instance: or1200_top.iwb_biu
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:260:28: warning: '&' within '|' [-Wbitwise-op-parentheses]
-           wb_cti_nxt[0] = wb_ack & wb_stb_o | wb_cti_o[0];
-                           ~~~~~~~^~~~~~~~~~ ~
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:260:28: note: place parentheses around the '&' expression to silence this warning
-           wb_cti_nxt[0] = wb_ack & wb_stb_o | wb_cti_o[0];
-                           ~~~~~~~^~~~~~~~~~
-  in instance: or1200_top.iwb_biu
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:261:39: warning: '&' within '|' [-Wbitwise-op-parentheses]
-           if ((wb_err_i | wb_rty_i | wb_ack & wb_cti_o == 3'b111) & wb_stb_o)
-                                    ~ ~~~~~~~^~~~~~~~~~~~~~~~~~~~
-designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v:261:39: note: place parentheses around the '&' expression to silence this warning
-           if ((wb_err_i | wb_rty_i | wb_ack & wb_cti_o == 3'b111) & wb_stb_o)
-                                      ~~~~~~~^~~~~~~~~~~~~~~~~~~~
-
-========================================
-
-[Info] Found 43 top-level module instance(s):
-  - or1200_top
-  - iwb_biu
-  - dwb_biu
-  - or1200_immu_top
-  - or1200_immu_tlb
-  - itlb_mr_ram
-  - itlb_tr_ram
-  - or1200_ic_top
-  - or1200_ic_fsm
-  - or1200_ic_ram
-  - or1200_ic_tag
-  - or1200_cpu
-  - or1200_genpc
-  - or1200_if
-  - or1200_ctrl
-  - or1200_rf
-  - rf_a
-  - rf_b
-  - or1200_operandmuxes
-  - or1200_alu
-  - or1200_fpu
-  - or1200_mult_mac
-  - or1200_gmultp2_32x32
-  - or1200_sprs
-  - or1200_lsu
-  - or1200_mem2reg
-  - or1200_reg2mem
-  - or1200_wbmux
-  - or1200_freeze
-  - or1200_except
-  - or1200_cfgr
-  - u_assertions
-  - or1200_dmmu_top
-  - or1200_dmmu_tlb
-  - dtlb_ram
-  - dtlb_tr_ram
-  - or1200_dc_top
-  - or1200_qmem_top
-  - or1200_sb
-  - or1200_du
-  - or1200_pic
-  - or1200_tt
-  - or1200_pm
+[Info] Found 2 top-level module instance(s):
+  - place_holder
+  - test_1
 [ExecutionEngine] Strategy set to: MilestoneDirectedStrategy
 [ExecutionEngine] Using directed search strategy
-Executing for 10 clock cycles
+Executing for 6 clock cycles
 -----------------------------------
-Processing instance: or1200_top, definition: or1200_top
+Processing instance: place_holder, definition: place_holder
 -----------------------------------
-Processing instance: iwb_biu, definition: or1200_wb_biu
------------------------------------
-Processing instance: dwb_biu, definition: or1200_wb_biu
------------------------------------
-Processing instance: or1200_immu_top, definition: or1200_immu_top
------------------------------------
-Processing instance: or1200_immu_tlb, definition: or1200_immu_tlb
------------------------------------
-Processing instance: itlb_mr_ram, definition: or1200_spram
------------------------------------
-Processing instance: itlb_tr_ram, definition: or1200_spram
------------------------------------
-Processing instance: or1200_ic_top, definition: or1200_ic_top
------------------------------------
-Processing instance: or1200_ic_fsm, definition: or1200_ic_fsm
------------------------------------
-Processing instance: or1200_ic_ram, definition: or1200_ic_ram
------------------------------------
-Processing instance: or1200_ic_tag, definition: or1200_ic_tag
------------------------------------
-Processing instance: or1200_cpu, definition: or1200_cpu
------------------------------------
-Processing instance: or1200_genpc, definition: or1200_genpc
------------------------------------
-Processing instance: or1200_if, definition: or1200_if
------------------------------------
-Processing instance: or1200_ctrl, definition: or1200_ctrl
------------------------------------
-Processing instance: or1200_rf, definition: or1200_rf
------------------------------------
-Processing instance: rf_a, definition: or1200_dpram
------------------------------------
-Processing instance: rf_b, definition: or1200_dpram
------------------------------------
-Processing instance: or1200_operandmuxes, definition: or1200_operandmuxes
------------------------------------
-Processing instance: or1200_alu, definition: or1200_alu
------------------------------------
-Processing instance: or1200_fpu, definition: or1200_fpu
------------------------------------
-Processing instance: or1200_mult_mac, definition: or1200_mult_mac
------------------------------------
-Processing instance: or1200_gmultp2_32x32, definition: or1200_gmultp2_32x32
------------------------------------
-Processing instance: or1200_sprs, definition: or1200_sprs
------------------------------------
-Processing instance: or1200_lsu, definition: or1200_lsu
------------------------------------
-Processing instance: or1200_mem2reg, definition: or1200_mem2reg
------------------------------------
-Processing instance: or1200_reg2mem, definition: or1200_reg2mem
------------------------------------
-Processing instance: or1200_wbmux, definition: or1200_wbmux
------------------------------------
-Processing instance: or1200_freeze, definition: or1200_freeze
------------------------------------
-Processing instance: or1200_except, definition: or1200_except
------------------------------------
-Processing instance: or1200_cfgr, definition: or1200_cfgr
------------------------------------
-Processing instance: u_assertions, definition: or1200_assertions
------------------------------------
-Processing instance: or1200_dmmu_top, definition: or1200_dmmu_top
------------------------------------
-Processing instance: or1200_dmmu_tlb, definition: or1200_dmmu_tlb
------------------------------------
-Processing instance: dtlb_ram, definition: or1200_spram
------------------------------------
-Processing instance: dtlb_tr_ram, definition: or1200_spram
------------------------------------
-Processing instance: or1200_dc_top, definition: or1200_dc_top
------------------------------------
-Processing instance: or1200_qmem_top, definition: or1200_qmem_top
------------------------------------
-Processing instance: or1200_sb, definition: or1200_sb
------------------------------------
-Processing instance: or1200_du, definition: or1200_du
------------------------------------
-Processing instance: or1200_pic, definition: or1200_pic
------------------------------------
-Processing instance: or1200_tt, definition: or1200_tt
------------------------------------
-Processing instance: or1200_pm, definition: or1200_pm
-Building CFGs for module definition: or1200_top (1 instance(s))
-  Built 168 CFG(s) for or1200_top
-Building CFGs for module definition: or1200_wb_biu (2 instance(s))
-  Built 6 CFG(s) for or1200_wb_biu
-Building CFGs for module definition: or1200_immu_top (1 instance(s))
-  Built 13 CFG(s) for or1200_immu_top
-Building CFGs for module definition: or1200_immu_tlb (1 instance(s))
-  Built 6 CFG(s) for or1200_immu_tlb
-Building CFGs for module definition: or1200_spram (4 instance(s))
-  Built 3 CFG(s) for or1200_spram
-Building CFGs for module definition: or1200_ic_top (1 instance(s))
-  Built 3 CFG(s) for or1200_ic_top
-Building CFGs for module definition: or1200_ic_fsm (1 instance(s))
-  Built 1 CFG(s) for or1200_ic_fsm
-Building CFGs for module definition: or1200_ic_ram (1 instance(s))
-  Built 0 CFG(s) for or1200_ic_ram
-Building CFGs for module definition: or1200_ic_tag (1 instance(s))
-  Built 0 CFG(s) for or1200_ic_tag
-Building CFGs for module definition: or1200_cpu (1 instance(s))
-  Built 115 CFG(s) for or1200_cpu
-Building CFGs for module definition: or1200_genpc (1 instance(s))
-  Built 5 CFG(s) for or1200_genpc
-Building CFGs for module definition: or1200_if (1 instance(s))
-  Built 5 CFG(s) for or1200_if
-Building CFGs for module definition: or1200_ctrl (1 instance(s))
-  Built 28 CFG(s) for or1200_ctrl
-Building CFGs for module definition: or1200_rf (1 instance(s))
-  Built 9 CFG(s) for or1200_rf
-Building CFGs for module definition: or1200_dpram (2 instance(s))
-  Built 3 CFG(s) for or1200_dpram
-Building CFGs for module definition: or1200_operandmuxes (1 instance(s))
-  Built 4 CFG(s) for or1200_operandmuxes
-Building CFGs for module definition: or1200_alu (1 instance(s))
-  Built 7 CFG(s) for or1200_alu
-Building CFGs for module definition: or1200_fpu (1 instance(s))
-  Built 0 CFG(s) for or1200_fpu
-Building CFGs for module definition: or1200_mult_mac (1 instance(s))
-  Built 15 CFG(s) for or1200_mult_mac
-Building CFGs for module definition: or1200_gmultp2_32x32 (1 instance(s))
-  Built 4 CFG(s) for or1200_gmultp2_32x32
-Building CFGs for module definition: or1200_sprs (1 instance(s))
-  Built 12 CFG(s) for or1200_sprs
-Building CFGs for module definition: or1200_lsu (1 instance(s))
-  Built 10 CFG(s) for or1200_lsu
-Building CFGs for module definition: or1200_mem2reg (1 instance(s))
-  Built 2 CFG(s) for or1200_mem2reg
-Building CFGs for module definition: or1200_reg2mem (1 instance(s))
-  Built 4 CFG(s) for or1200_reg2mem
-Building CFGs for module definition: or1200_wbmux (1 instance(s))
-  Built 2 CFG(s) for or1200_wbmux
-Building CFGs for module definition: or1200_freeze (1 instance(s))
-  Built 3 CFG(s) for or1200_freeze
-Building CFGs for module definition: or1200_except (1 instance(s))
-  Built 10 CFG(s) for or1200_except
-Building CFGs for module definition: or1200_cfgr (1 instance(s))
-  Built 1 CFG(s) for or1200_cfgr
-Building CFGs for module definition: or1200_assertions (1 instance(s))
-  Built 1 CFG(s) for or1200_assertions
-Building CFGs for module definition: or1200_dmmu_top (1 instance(s))
-  Built 8 CFG(s) for or1200_dmmu_top
-Building CFGs for module definition: or1200_dmmu_tlb (1 instance(s))
-  Built 6 CFG(s) for or1200_dmmu_tlb
-Building CFGs for module definition: or1200_dc_top (1 instance(s))
-  Built 0 CFG(s) for or1200_dc_top
-Building CFGs for module definition: or1200_qmem_top (1 instance(s))
-  Built 0 CFG(s) for or1200_qmem_top
-Building CFGs for module definition: or1200_sb (1 instance(s))
-  Built 0 CFG(s) for or1200_sb
-Building CFGs for module definition: or1200_du (1 instance(s))
-  Built 11 CFG(s) for or1200_du
-Building CFGs for module definition: or1200_pic (1 instance(s))
-  Built 3 CFG(s) for or1200_pic
-Building CFGs for module definition: or1200_tt (1 instance(s))
-  Built 3 CFG(s) for or1200_tt
-Building CFGs for module definition: or1200_pm (1 instance(s))
-  Built 0 CFG(s) for or1200_pm
-Setting up instance: or1200_top (definition: or1200_top)
-Setting up instance: iwb_biu (definition: or1200_wb_biu)
-Setting up instance: dwb_biu (definition: or1200_wb_biu)
-Setting up instance: or1200_immu_top (definition: or1200_immu_top)
-Setting up instance: or1200_immu_tlb (definition: or1200_immu_tlb)
-Setting up instance: itlb_mr_ram (definition: or1200_spram)
-Setting up instance: itlb_tr_ram (definition: or1200_spram)
-Setting up instance: dtlb_ram (definition: or1200_spram)
-Setting up instance: dtlb_tr_ram (definition: or1200_spram)
-Setting up instance: or1200_ic_top (definition: or1200_ic_top)
-Setting up instance: or1200_ic_fsm (definition: or1200_ic_fsm)
-Setting up instance: or1200_ic_ram (definition: or1200_ic_ram)
-Setting up instance: or1200_ic_tag (definition: or1200_ic_tag)
-Setting up instance: or1200_cpu (definition: or1200_cpu)
-Setting up instance: or1200_genpc (definition: or1200_genpc)
-Setting up instance: or1200_if (definition: or1200_if)
-Setting up instance: or1200_ctrl (definition: or1200_ctrl)
-Setting up instance: or1200_rf (definition: or1200_rf)
-Setting up instance: rf_a (definition: or1200_dpram)
-Setting up instance: rf_b (definition: or1200_dpram)
-Setting up instance: or1200_operandmuxes (definition: or1200_operandmuxes)
-Setting up instance: or1200_alu (definition: or1200_alu)
-Setting up instance: or1200_fpu (definition: or1200_fpu)
-Setting up instance: or1200_mult_mac (definition: or1200_mult_mac)
-Setting up instance: or1200_gmultp2_32x32 (definition: or1200_gmultp2_32x32)
-Setting up instance: or1200_sprs (definition: or1200_sprs)
-Setting up instance: or1200_lsu (definition: or1200_lsu)
-Setting up instance: or1200_mem2reg (definition: or1200_mem2reg)
-Setting up instance: or1200_reg2mem (definition: or1200_reg2mem)
-Setting up instance: or1200_wbmux (definition: or1200_wbmux)
-Setting up instance: or1200_freeze (definition: or1200_freeze)
-Setting up instance: or1200_except (definition: or1200_except)
-Setting up instance: or1200_cfgr (definition: or1200_cfgr)
-Setting up instance: u_assertions (definition: or1200_assertions)
-Setting up instance: or1200_dmmu_top (definition: or1200_dmmu_top)
-Setting up instance: or1200_dmmu_tlb (definition: or1200_dmmu_tlb)
-Setting up instance: or1200_dc_top (definition: or1200_dc_top)
-Setting up instance: or1200_qmem_top (definition: or1200_qmem_top)
-Setting up instance: or1200_sb (definition: or1200_sb)
-Setting up instance: or1200_du (definition: or1200_du)
-Setting up instance: or1200_pic (definition: or1200_pic)
-Setting up instance: or1200_tt (definition: or1200_tt)
-Setting up instance: or1200_pm (definition: or1200_pm)
-[sum] manager.names_list: ['or1200_top', 'iwb_biu', 'dwb_biu', 'or1200_immu_top', 'or1200_immu_tlb', 'itlb_mr_ram', 'itlb_tr_ram', 'dtlb_ram', 'dtlb_tr_ram', 'or1200_ic_top', 'or1200_ic_fsm', 'or1200_ic_ram', 'or1200_ic_tag', 'or1200_cpu', 'or1200_genpc', 'or1200_if', 'or1200_ctrl', 'or1200_rf', 'rf_a', 'rf_b', 'or1200_operandmuxes', 'or1200_alu', 'or1200_fpu', 'or1200_mult_mac', 'or1200_gmultp2_32x32', 'or1200_sprs', 'or1200_lsu', 'or1200_mem2reg', 'or1200_reg2mem', 'or1200_wbmux', 'or1200_freeze', 'or1200_except', 'or1200_cfgr', 'u_assertions', 'or1200_dmmu_top', 'or1200_dmmu_tlb', 'or1200_dc_top', 'or1200_qmem_top', 'or1200_sb', 'or1200_du', 'or1200_pic', 'or1200_tt', 'or1200_pm']
+Processing instance: test_1, definition: place_holder_2
+Building CFGs for module definition: place_holder (1 instance(s))
+  Built 4 CFG(s) for place_holder
+Building CFGs for module definition: place_holder_2 (1 instance(s))
+  Built 2 CFG(s) for place_holder_2
+Setting up instance: place_holder (definition: place_holder)
+Setting up instance: test_1 (definition: place_holder_2)
+[sum] manager.names_list: ['place_holder', 'test_1']
+[PortPropagation] Built 3 wire equivalence group(s):
+  group 0: {('test_1', 'CLK'), ('place_holder', 'CLK')} [PRIMARY INPUT]
+  group 1: {('place_holder', 'RST'), ('test_1', 'RST')} [PRIMARY INPUT]
+  group 2: {('test_1', 'out'), ('place_holder', 'out_wire')}
 [ExecutionEngine] Running Cone of Influence analysis...
-[assertion_extractor] Searching for assertions starting from top module: or1200_top (def: or1200_top)
-[get_assertions] Found ImmediateAssertion in 'or1200_cpu.u_assertions': Expression(ExpressionKind.BinaryOp)
+[assertion_extractor] Searching for assertions starting from top module: place_holder (def: place_holder)
+[get_assertions] Found ImmediateAssertion in 'test_1': Expression(ExpressionKind.BinaryOp)
 [assertion_extractor] Searching all top instances for assertion modules...
 [assertion_extractor] Found 1 unique assertion(s) (after deduplication):
-[assertion_extractor]   Expression(ExpressionKind.BinaryOp) in 'or1200_cpu.u_assertions'
-[assertion_extractor] Processing assertion 0: (operand_b == dcpu_dat_o) || (rst == 1)
-[assertion_extractor] Created target: Violate assertion '(operand_b == dcpu_dat_o) || (rst == 1)' in or1200_cpu.u_assertions
-[assertion_extractor]   Expression: !((or1200_cpu.u_assertions.operand_b == or1200_cpu.u_assertions.dcpu_dat_o) || (or1200_cpu.u_assertions.rst == 1))
-[COI] Starting analysis with 3 seed signal(s)
-[COI]   seed: u_assertions.operand_b
-[COI]   seed: u_assertions.dcpu_dat_o
-[COI]   seed: u_assertions.rst
+[assertion_extractor]   Expression(ExpressionKind.BinaryOp) in 'test_1'
+[assertion_extractor] Processing assertion 0: out <= 3
+[assertion_extractor] Created target: Violate assertion 'out <= 3' in test_1
+[assertion_extractor]   Expression: test_1.out > 3
+[COI-DEBUG] modules_dict keys: ['place_holder', 'test_1']
+[COI-DEBUG] place_holder: children_in_dict=['test_1'], children_NOT_in_dict=[]
+[COI] Starting analysis with 1 seed signal(s)
+[COI]   seed: test_1.out
 [COI] Analysis complete:
-[COI]   Relevant instances: {'or1200_cpu', 'or1200_operandmuxes'}
-[COI]   Relevant CFGs: {('or1200_operandmuxes', 1), ('or1200_cpu', 51)}
-[COI]   Cone signals: 54
-[COI] Pruned all CFGs for instance: or1200_top
-[COI] Pruned all CFGs for instance: iwb_biu
-[COI] Pruned all CFGs for instance: dwb_biu
-[COI] Pruned all CFGs for instance: or1200_immu_top
-[COI] Pruned all CFGs for instance: or1200_immu_tlb
-[COI] Pruned all CFGs for instance: itlb_mr_ram
-[COI] Pruned all CFGs for instance: itlb_tr_ram
-[COI] Pruned all CFGs for instance: dtlb_ram
-[COI] Pruned all CFGs for instance: dtlb_tr_ram
-[COI] Pruned all CFGs for instance: or1200_ic_top
-[COI] Pruned all CFGs for instance: or1200_ic_fsm
-[COI] Pruned all CFGs for instance: or1200_ic_ram
-[COI] Pruned all CFGs for instance: or1200_ic_tag
-[COI] Pruned CFG 0 for instance: or1200_cpu
-[COI] Pruned CFG 1 for instance: or1200_cpu
-[COI] Pruned CFG 2 for instance: or1200_cpu
-[COI] Pruned CFG 3 for instance: or1200_cpu
-[COI] Pruned CFG 4 for instance: or1200_cpu
-[COI] Pruned CFG 5 for instance: or1200_cpu
-[COI] Pruned CFG 6 for instance: or1200_cpu
-[COI] Pruned CFG 7 for instance: or1200_cpu
-[COI] Pruned CFG 8 for instance: or1200_cpu
-[COI] Pruned CFG 9 for instance: or1200_cpu
-[COI] Pruned CFG 10 for instance: or1200_cpu
-[COI] Pruned CFG 11 for instance: or1200_cpu
-[COI] Pruned CFG 12 for instance: or1200_cpu
-[COI] Pruned CFG 13 for instance: or1200_cpu
-[COI] Pruned CFG 14 for instance: or1200_cpu
-[COI] Pruned CFG 15 for instance: or1200_cpu
-[COI] Pruned CFG 16 for instance: or1200_cpu
-[COI] Pruned CFG 17 for instance: or1200_cpu
-[COI] Pruned CFG 18 for instance: or1200_cpu
-[COI] Pruned CFG 19 for instance: or1200_cpu
-[COI] Pruned CFG 20 for instance: or1200_cpu
-[COI] Pruned CFG 21 for instance: or1200_cpu
-[COI] Pruned CFG 22 for instance: or1200_cpu
-[COI] Pruned CFG 23 for instance: or1200_cpu
-[COI] Pruned CFG 24 for instance: or1200_cpu
-[COI] Pruned CFG 25 for instance: or1200_cpu
-[COI] Pruned CFG 26 for instance: or1200_cpu
-[COI] Pruned CFG 27 for instance: or1200_cpu
-[COI] Pruned CFG 28 for instance: or1200_cpu
-[COI] Pruned CFG 29 for instance: or1200_cpu
-[COI] Pruned CFG 30 for instance: or1200_cpu
-[COI] Pruned CFG 31 for instance: or1200_cpu
-[COI] Pruned CFG 32 for instance: or1200_cpu
-[COI] Pruned CFG 33 for instance: or1200_cpu
-[COI] Pruned CFG 34 for instance: or1200_cpu
-[COI] Pruned CFG 35 for instance: or1200_cpu
-[COI] Pruned CFG 36 for instance: or1200_cpu
-[COI] Pruned CFG 37 for instance: or1200_cpu
-[COI] Pruned CFG 38 for instance: or1200_cpu
-[COI] Pruned CFG 39 for instance: or1200_cpu
-[COI] Pruned CFG 40 for instance: or1200_cpu
-[COI] Pruned CFG 41 for instance: or1200_cpu
-[COI] Pruned CFG 42 for instance: or1200_cpu
-[COI] Pruned CFG 43 for instance: or1200_cpu
-[COI] Pruned CFG 44 for instance: or1200_cpu
-[COI] Pruned CFG 45 for instance: or1200_cpu
-[COI] Pruned CFG 46 for instance: or1200_cpu
-[COI] Pruned CFG 47 for instance: or1200_cpu
-[COI] Pruned CFG 48 for instance: or1200_cpu
-[COI] Pruned CFG 49 for instance: or1200_cpu
-[COI] Pruned CFG 50 for instance: or1200_cpu
-[COI] Pruned CFG 52 for instance: or1200_cpu
-[COI] Pruned CFG 53 for instance: or1200_cpu
-[COI] Pruned CFG 54 for instance: or1200_cpu
-[COI] Pruned CFG 55 for instance: or1200_cpu
-[COI] Pruned CFG 56 for instance: or1200_cpu
-[COI] Pruned CFG 57 for instance: or1200_cpu
-[COI] Pruned CFG 58 for instance: or1200_cpu
-[COI] Pruned CFG 59 for instance: or1200_cpu
-[COI] Pruned CFG 60 for instance: or1200_cpu
-[COI] Pruned CFG 61 for instance: or1200_cpu
-[COI] Pruned CFG 62 for instance: or1200_cpu
-[COI] Pruned CFG 63 for instance: or1200_cpu
-[COI] Pruned CFG 64 for instance: or1200_cpu
-[COI] Pruned CFG 65 for instance: or1200_cpu
-[COI] Pruned CFG 66 for instance: or1200_cpu
-[COI] Pruned CFG 67 for instance: or1200_cpu
-[COI] Pruned CFG 68 for instance: or1200_cpu
-[COI] Pruned CFG 69 for instance: or1200_cpu
-[COI] Pruned CFG 70 for instance: or1200_cpu
-[COI] Pruned CFG 71 for instance: or1200_cpu
-[COI] Pruned CFG 72 for instance: or1200_cpu
-[COI] Pruned CFG 73 for instance: or1200_cpu
-[COI] Pruned CFG 74 for instance: or1200_cpu
-[COI] Pruned CFG 75 for instance: or1200_cpu
-[COI] Pruned CFG 76 for instance: or1200_cpu
-[COI] Pruned CFG 77 for instance: or1200_cpu
-[COI] Pruned CFG 78 for instance: or1200_cpu
-[COI] Pruned CFG 79 for instance: or1200_cpu
-[COI] Pruned CFG 80 for instance: or1200_cpu
-[COI] Pruned CFG 81 for instance: or1200_cpu
-[COI] Pruned CFG 82 for instance: or1200_cpu
-[COI] Pruned CFG 83 for instance: or1200_cpu
-[COI] Pruned CFG 84 for instance: or1200_cpu
-[COI] Pruned CFG 85 for instance: or1200_cpu
-[COI] Pruned CFG 86 for instance: or1200_cpu
-[COI] Pruned CFG 87 for instance: or1200_cpu
-[COI] Pruned CFG 88 for instance: or1200_cpu
-[COI] Pruned CFG 89 for instance: or1200_cpu
-[COI] Pruned CFG 90 for instance: or1200_cpu
-[COI] Pruned CFG 91 for instance: or1200_cpu
-[COI] Pruned CFG 92 for instance: or1200_cpu
-[COI] Pruned CFG 93 for instance: or1200_cpu
-[COI] Pruned CFG 94 for instance: or1200_cpu
-[COI] Pruned CFG 95 for instance: or1200_cpu
-[COI] Pruned CFG 96 for instance: or1200_cpu
-[COI] Pruned CFG 97 for instance: or1200_cpu
-[COI] Pruned CFG 98 for instance: or1200_cpu
-[COI] Pruned CFG 99 for instance: or1200_cpu
-[COI] Pruned CFG 100 for instance: or1200_cpu
-[COI] Pruned CFG 101 for instance: or1200_cpu
-[COI] Pruned CFG 102 for instance: or1200_cpu
-[COI] Pruned CFG 103 for instance: or1200_cpu
-[COI] Pruned CFG 104 for instance: or1200_cpu
-[COI] Pruned CFG 105 for instance: or1200_cpu
-[COI] Pruned CFG 106 for instance: or1200_cpu
-[COI] Pruned CFG 107 for instance: or1200_cpu
-[COI] Pruned CFG 108 for instance: or1200_cpu
-[COI] Pruned CFG 109 for instance: or1200_cpu
-[COI] Pruned CFG 110 for instance: or1200_cpu
-[COI] Pruned CFG 111 for instance: or1200_cpu
-[COI] Pruned CFG 112 for instance: or1200_cpu
-[COI] Pruned CFG 113 for instance: or1200_cpu
-[COI] Pruned CFG 114 for instance: or1200_cpu
-[COI] Pruned all CFGs for instance: or1200_genpc
-[COI] Pruned all CFGs for instance: or1200_if
-[COI] Pruned all CFGs for instance: or1200_ctrl
-[COI] Pruned all CFGs for instance: or1200_rf
-[COI] Pruned all CFGs for instance: rf_a
-[COI] Pruned all CFGs for instance: rf_b
-[COI] Pruned CFG 0 for instance: or1200_operandmuxes
-[COI] Pruned CFG 2 for instance: or1200_operandmuxes
-[COI] Pruned CFG 3 for instance: or1200_operandmuxes
-[COI] Pruned all CFGs for instance: or1200_alu
-[COI] Pruned all CFGs for instance: or1200_fpu
-[COI] Pruned all CFGs for instance: or1200_mult_mac
-[COI] Pruned all CFGs for instance: or1200_gmultp2_32x32
-[COI] Pruned all CFGs for instance: or1200_sprs
-[COI] Pruned all CFGs for instance: or1200_lsu
-[COI] Pruned all CFGs for instance: or1200_mem2reg
-[COI] Pruned all CFGs for instance: or1200_reg2mem
-[COI] Pruned all CFGs for instance: or1200_wbmux
-[COI] Pruned all CFGs for instance: or1200_freeze
-[COI] Pruned all CFGs for instance: or1200_except
-[COI] Pruned all CFGs for instance: or1200_cfgr
-[COI] Pruned all CFGs for instance: u_assertions
-[COI] Pruned all CFGs for instance: or1200_dmmu_top
-[COI] Pruned all CFGs for instance: or1200_dmmu_tlb
-[COI] Pruned all CFGs for instance: or1200_dc_top
-[COI] Pruned all CFGs for instance: or1200_qmem_top
-[COI] Pruned all CFGs for instance: or1200_sb
-[COI] Pruned all CFGs for instance: or1200_du
-[COI] Pruned all CFGs for instance: or1200_pic
-[COI] Pruned all CFGs for instance: or1200_tt
-[COI] Pruned all CFGs for instance: or1200_pm
-[COI] Removed instances from exploration: {'or1200_freeze', 'or1200_lsu', 'or1200_mult_mac', 'or1200_alu', 'itlb_mr_ram', 'itlb_tr_ram', 'or1200_immu_top', 'u_assertions', 'or1200_except', 'or1200_immu_tlb', 'or1200_ctrl', 'or1200_dmmu_top', 'or1200_pic', 'or1200_du', 'dtlb_tr_ram', 'dwb_biu', 'or1200_ic_top', 'or1200_reg2mem', 'rf_a', 'or1200_if', 'or1200_sprs', 'or1200_gmultp2_32x32', 'or1200_genpc', 'or1200_wbmux', 'or1200_qmem_top', 'rf_b', 'dtlb_ram', 'or1200_fpu', 'or1200_ic_fsm', 'or1200_mem2reg', 'or1200_pm', 'or1200_ic_ram', 'or1200_tt', 'iwb_biu', 'or1200_dc_top', 'or1200_sb', 'or1200_dmmu_tlb', 'or1200_top', 'or1200_ic_tag', 'or1200_rf', 'or1200_cfgr'}
-[COI] Remaining instances: ['or1200_cpu', 'or1200_operandmuxes']
+[COI]   Relevant instances: {'test_1'}
+[COI]   Relevant CFGs: {('test_1', 0), ('test_1', 1)}
+[COI]   Cone signals: 2
+[COI] Pruned all CFGs for instance: place_holder
+[COI] Removed instances from exploration: {'place_holder'}
+[COI] Remaining instances: ['test_1']
 [ExecutionEngine] Auto-plan mode enabled
-[assertion_extractor] Searching for assertions starting from top module: or1200_top (def: or1200_top)
-[get_assertions] Found ImmediateAssertion in 'or1200_cpu.u_assertions': Expression(ExpressionKind.BinaryOp)
+[assertion_extractor] Searching for assertions starting from top module: place_holder (def: place_holder)
+[get_assertions] Found ImmediateAssertion in 'test_1': Expression(ExpressionKind.BinaryOp)
 [assertion_extractor] Searching all top instances for assertion modules...
 [assertion_extractor] Found 1 unique assertion(s) (after deduplication):
-[assertion_extractor]   Expression(ExpressionKind.BinaryOp) in 'or1200_cpu.u_assertions'
-[assertion_extractor] Processing assertion 0: (operand_b == dcpu_dat_o) || (rst == 1)
-[assertion_extractor] Created target: Violate assertion '(operand_b == dcpu_dat_o) || (rst == 1)' in or1200_cpu.u_assertions
-[assertion_extractor]   Expression: !((or1200_cpu.u_assertions.operand_b == or1200_cpu.u_assertions.dcpu_dat_o) || (or1200_cpu.u_assertions.rst == 1))
+[assertion_extractor]   Expression(ExpressionKind.BinaryOp) in 'test_1'
+[assertion_extractor] Processing assertion 0: out <= 3
+[assertion_extractor] Created target: Violate assertion 'out <= 3' in test_1
+[assertion_extractor]   Expression: test_1.out > 3
 [ExecutionEngine] Found 1 verification target(s) from assertions
-[ExecutionEngine] Planning for: Violate assertion '(operand_b == dcpu_dat_o) || (rst == 1)' in or1200_cpu.u_assertions
-[ContextSlicer] Using COI result: {'or1200_cpu', 'or1200_operandmuxes'}
-[ExecutionEngine] Extracted 26689 chars of RTL context
-- not a Symbol, skipping: Statement(StatementKind.ExpressionStatement)
-- not a Symbol, skipping: Statement(StatementKind.Block)
-- not a Symbol, skipping: Statement(StatementKind.ExpressionStatement)
-- not a Symbol, skipping: Statement(StatementKind.Block)
-- not a Symbol, skipping: Statement(StatementKind.ExpressionStatement)
-- not a Symbol, skipping: Statement(StatementKind.Block)
-- not a Symbol, skipping: Statement(StatementKind.ExpressionStatement)
-- not a Symbol, skipping: Statement(StatementKind.Block)
-- not a Symbol, skipping: Statement(StatementKind.ExpressionStatement)
-- not a Symbol, skipping: Statement(StatementKind.Block)
-- not a Symbol, skipping: Statement(StatementKind.ExpressionStatement)
-- not a Symbol, skipping: Statement(StatementKind.Block)
-- not a Symbol, skipping: Statement(StatementKind.ExpressionStatement)
-- not a Symbol, skipping: Statement(StatementKind.Block)
-- not a Symbol, skipping: Statement(StatementKind.ExpressionStatement)
-- not a Symbol, skipping: Statement(StatementKind.Block)
-[ExecutionEngine] Found 977 signals
+[ExecutionEngine] Planning for: Violate assertion 'out <= 3' in test_1
+[ContextSlicer] Using COI result: {'test_1'}
+[ExecutionEngine] Extracted 424 chars of RTL context
+[ExecutionEngine] Found 4 signals
 [LLMPlanner] Using DeepSeek API at https://api.deepseek.com
-[LLMPlanner] context: // Module: or1200_cpu (instance: or1200_cpu)
-module or1200_cpu(
-	// Clk & Rst
-	clk, rst,
-
-	// Insn interface
-	ic_en,
-	icpu_adr_o, icpu_cycstb_o, icpu_sel_o, icpu_tag_o,
-	icpu_dat_i, icpu_ack_i, icpu_rty_i, icpu_err_i, icpu_adr_i, icpu_tag_i,
-	immu_en,
-	immu_sxe, immu_uxe,
-
-	// Debug unit
-	id_void, id_insn, ex_void, 
-	ex_insn, ex_freeze, wb_insn, wb_freeze, id_pc, ex_pc, wb_pc, branch_op,
-	spr_dat_npc, rf_dataw, ex_flushpipe, 
-	du_stall, du_addr, du_dat_du, du_read, du_write, du_except_stop, 
-	du_except_trig, du_dsr, du_dmr1, du_hwbkpt, du_hwbkpt_ls_r, du_dat_cpu,
-	du_lsu_store_dat, du_lsu_load_dat, 
-	abort_mvspr, abort_ex,
-	
-	// Data interface
-	dc_en,
-	dcpu_adr_o, dcpu_cycstb_o, dcpu_we_o, dcpu_sel_o, dcpu_tag_o, 
-        dcpu_dat_o, dcpu_dat_i, dcpu_ack_i, dcpu_rty_i, dcpu_err_i, dcpu_tag_i,
-	sb_en, dmmu_en, dc_no_writethrough,
-
-	// SR Interface
-	boot_adr_sel_i,
-
-	// Interrupt & tick exceptions
-	sig_int, sig_tick,
-
-	// SPR interface
-	supv, spr_addr, spr_dat_cpu, spr_dat_pic, spr_dat_tt, spr_dat_pm,
-	spr_dat_dmmu, spr_dat_immu, spr_dat_du, spr_cs, spr_we, mtspr_dc_done
+[LLMPlanner] context: // Module: place_holder_2 (instance: test_1)
+module place_holder_2 (
+  input  CLK,
+  input  RST,
+  output reg [31:0] out 
 );
-
-parameter dw = `OR1200_OPERAND_WIDTH;
-parameter aw = `OR1200_REGFILE_ADDR_WIDTH;
-parameter boot_adr = `OR1200_BOOT_ADR;   
-
-//
-// I/O ports
-//
-
-//
-// Clk & Rst
-//
-input 				clk;
-input 				rst;
-
-//
-// Insn (IC) interface
-//
-output				ic_en;
-output	[31:0]			icpu_adr_o;
-output				icpu_cycstb_o;
-output	[3:0]			icpu_sel_o;
-output	[3:0]			icpu_tag_o;
-input	[31:0]			icpu_dat_i;
-input				icpu_ack_i;
-input				icpu_rty_i;
-input				icpu_err_i;
-input	[31:0]			icpu_adr_i;
-input	[3:0]			icpu_tag_i;
-
-//
-// Insn (IMMU) interface
-//
-output				immu_en;
-input 			        immu_sxe;
-input 			        immu_uxe;
-   
-//
-// Debug interface
-//
-output                          id_void;
-output	[31:0]			id_insn;
-output                          ex_void;
-output	[31:0]			ex_insn;
-output				ex_freeze;
-output	[31:0]			wb_insn;
-output				wb_freeze;
-output	[31:0]			id_pc;
-output	[31:0]			ex_pc;
-output	[31:0]			wb_pc;
-output                          ex_flushpipe;
-output	[`OR1200_BRANCHOP_WIDTH-1:0]	branch_op;
-
-input				du_stall;
-input	[dw-1:0]		du_addr;
-input	[dw-1:0]		du_dat_du;
-input				du_read;
-input				du_write;
-input	[`OR1200_DU_DSR_WIDTH-1:0]	du_dsr;
-input	[24:0]			du_dmr1;
-input				du_hwbkpt;
-input				du_hwbkpt_ls_r;
-output	[13:0]			du_except_trig;
-output	[13:0]			du_except_stop;
-output	[dw-1:0]		du_dat_cpu;
-output	[dw-1:0]		rf_dataw;
-output	[dw-1:0]		du_lsu_store_dat;
-output	[dw-1:0]		du_lsu_load_dat;
-
-//
-// Data (DC) interface
-//
-output	[31:0]			dcpu_adr_o;
-output				dcpu_cycstb_o;
-output				dcpu_we_o;
-output	[3:0]			dcpu_sel_o;
-output	[3:0]			dcpu_tag_o;
-output	[31:0]			dcpu_dat_o;
-input	[31:0]			dcpu_dat_i;
-input				dcpu_ack_i;
-input				dcpu_rty_i;
-input				dcpu_err_i;
-input	[3:0]			dcpu_tag_i;
-output				dc_en;
-output  			dc_no_writethrough;
-   
-//
-// Data (DMMU) interface
-//
-output				sb_en;
-output				dmmu_en;
-output				abort_ex;
-output				abort_mvspr;
-
-//
-// SR Interface 
-//
-input				boot_adr_sel_i;
-
-//
-// SPR interface
-//
-output				supv;
-input	[dw-1:0]		spr_dat_pic;
-input	[dw-1:0]		spr_dat_tt;
-input	[dw-1:0]		spr_dat_pm;
-input	[dw-1:0]		spr_dat_dmmu;
-input	[dw-1:0]		spr_dat_immu;
-input	[dw-1:0]		spr_dat_du;
-output	[dw-1:0]		spr_addr;
-output	[dw-1:0]		spr_dat_cpu;
-output	[dw-1:0]		spr_dat_npc;
-output	[31:0]			spr_cs;
-output				spr_we;
-input   			mtspr_dc_done;
-   
-//
-// Interrupt exceptions
-//
-input				sig_int;
-input				sig_tick;
-
-//
-// Internal wires
-//
-wire	[31:0]			if_insn;
-wire				saving_if_insn;
-wire	[31:0]			if_pc;
-wire	[aw-1:0]		rf_addrw;
-wire	[aw-1:0] 		rf_addra;
-wire	[aw-1:0] 		rf_addrb;
-wire				rf_rda;
-wire				rf_rdb;
-wire	[dw-1:0]		id_simm;
-wire	[dw-1:2]		id_branch_addrtarget;
-wire	[dw-1:2]		ex_branch_addrtarget;
-wire	[`OR1200_ALUOP_WIDTH-1:0]	alu_op;
-wire	[`OR1200_ALUOP2_WIDTH-1:0]	alu_op2;
-wire	[`OR1200_COMPOP_WIDTH-1:0]	comp_op;
-wire	[`OR1200_BRANCHOP_WIDTH-1:0]	pre_branch_op;
-wire	[`OR1200_BRANCHOP_WIDTH-1:0]	branch_op;
-wire	[`OR1200_LSUOP_WIDTH-1:0]	id_lsu_op;
-wire				genpc_freeze;
-wire				if_freeze;
-wire				id_freeze;
-wire				ex_freeze;
-wire				wb_freeze;
-wire	[`OR1200_SEL_WIDTH-1:0]	sel_a;
-wire	[`OR1200_SEL_WIDTH-1:0]	sel_b;
-wire	[`OR1200_RFWBOP_WIDTH-1:0]	rfwb_op;
-wire    [`OR1200_FPUOP_WIDTH-1:0]       fpu_op;
-wire	[dw-1:0]		rf_dataw;
-wire	[dw-1:0]		rf_dataa;
-wire	[dw-1:0]		rf_datab;
-wire	[dw-1:0]		muxed_a;
-wire	[dw-1:0]		muxed_b;
-wire	[dw-1:0]		wb_forw;
-wire				wbforw_valid;
-wire	[dw-1:0]		operand_a;
-wire	[dw-1:0]		operand_b;
-wire	[dw-1:0]		alu_dataout;
-wire	[dw-1:0]		lsu_dataout;
-wire	[dw-1:0]		sprs_dataout;
-wire	[dw-1:0]		fpu_dataout;
-wire     			fpu_done;
-wire	[31:0]			ex_simm;
-wire	[`OR1200_MULTICYCLE_WIDTH-1:0]	multicycle;
-wire    [`OR1200_WAIT_ON_WIDTH-1:0]	wait_on;      
-wire	[`OR1200_EXCEPT_WIDTH-1:0]	except_type;
-wire	[4:0]			cust5_op;
-wire	[5:0]			cust5_limm;
-wire				if_flushpipe;
-wire				id_flushpipe;
-wire				ex_flushpipe;
-wire				wb_flushpipe;
-wire				extend_flush;
-wire				ex_branch_taken;
-wire				flag;
-wire				flagforw;
-wire				flag_we;
-wire				flagforw_alu;   
-wire				flag_we_alu;
-wire				flagforw_fpu;
-wire				flag_we_fpu;
-wire				carry;
-wire				cyforw;
-wire				cy_we_alu;
-wire				ovforw;
-wire				ov_we_alu;
-wire				ovforw_mult_mac;
-wire				ov_we_mult_mac;   
-wire				cy_we_rf;
-wire				lsu_stall;
-wire				epcr_we;
-wire				eear_we;
-wire				esr_we;
-wire				sp_epcr_ghost_we;
-wire				sp_eear_ghost_we;
-wire				sp_esr_ghost_we;
-wire				pc_we;
-wire	[31:0]			epcr;
-wire	[31:0]			eear;
-wire	[`OR1200_SR_WIDTH-1:0]	esr;
-wire	[31:0]			sp_epcr_ghost;
-wire	[31:0]			sp_eear_ghost;
-wire	[`OR1200_SR_WIDTH-1:0]	sp_esr_ghost;
-wire 	[`OR1200_FPCSR_WIDTH-1:0]       fpcsr;
-wire 				fpcsr_we;   
-wire				sr_we;
-wire	[`OR1200_SR_WIDTH-1:0]	to_sr;
-wire	[`OR1200_SR_WIDTH-1:0]	sr;
-wire				except_flushpipe;
-wire				except_start;
-wire				except_started;
-wire    			fpu_except_started;   
-wire	[31:0]			wb_insn;
-wire				sig_syscall;
-wire				sig_trap;
-wire    			sig_range;
-wire				sig_fp;
-wire	[31:0]			spr_dat_cfgr;
-wire	[31:0]			spr_dat_rf;
-wire    [31:0]                  spr_dat_npc;
-wire	[31:0]			spr_dat_ppc;
-wire	[31:0]			spr_dat_mac;
-wire [31:0] 			spr_dat_fpu;
-wire     			mtspr_done;
-wire				force_dslot_fetch;
-wire				no_more_dslot;
-wire				ex_void;
-wire				ex_spr_read;
-wire				ex_spr_write;
-wire				if_stall;
-wire				id_macrc_op;
-wire				ex_macrc_op;
-wire	[`OR1200_MACOP_WIDTH-1:0] id_mac_op;
-wire	[`OR1200_MACOP_WIDTH-1:0] mac_op;
-wire	[31:0]			mult_mac_result;
-wire				mult_mac_stall;
-wire	[13:0]			except_trig;
-wire	[13:0]			except_stop;
-wire				genpc_refetch;
-wire				rfe;
-wire				lsu_unstall;
-wire				except_align;
-wire				except_dtlbmiss;
-wire				except_dmmufault;
-wire				except_illegal;
-wire				except_itlbmiss;
-wire				except_immufault;
-wire				except_ibuserr;
-wire				except_dbuserr;
-wire				abort_ex;
-wire				abort_mvspr;
-wire 			        gpr_written_to;
-wire 	[4:0]		        gpr_written_addr;
-wire 	[31:0]		        gpr_written_data;
-wire 	[31:0]		        ipr_written_data;
-
-wire sp_insn_is_exthz;
-
-assign sp_insn_is_exthz = (id_insn[31:26] == 6'h38);
-
-wire [5:0] sp_return_counter;
+  initial begin
+    out = 0;
+  end
   
-// Wires needed to connect the processor to the fabric
-wire [31:0] sp_address;
-wire [31:0] sp_data;
-wire [31:0] sp_strobe;
-wire [31:0] sp_assertions_violated;
-wire sp_assertion_violated = |sp_assertions_violated;
-reg  [31:0] sp_assertions_violated_reg;
-reg  sp_assertion_violated_reg;
-reg  sp_exception_hold;
-wire sp_exceptionHandled;
-wire sp_exceptionGated;
-wire [31:0] sp_attack_enable;
-
-// registers needed for assertions and state tracking
-reg [31:0] prev_epcr;
-reg [31:0] prev_eear;
-reg prev_sr0;
-reg [31:0] prev_esr;
-reg [31:0] prev_if_insn;
-reg [31:0] prev_id_freeze;
-reg [31:0] prev_ex_insn;
-
-
-always @(posedge clk) begin
-	prev_epcr <= epcr;
-	prev_eear <= eear;
-	prev_sr0 <= sr[0];
-	prev_esr <= esr;
-	prev_if_insn <= if_insn;
-	prev_id_freeze <= id_freeze;
-	prev_ex_insn <= ex_insn;
-end
-
-always @(posedge clk)begin
-  sp_assertion_violated_reg <= 1'b0;
-  
-   if(rst == `OR1200_RST_VALUE)begin
-      sp_assertions_violated_reg <= 1'b0;
-      sp_assertion_violated_reg <= 1'b0;
-   end
-   else if(sp_assertion_violated)begin
-      sp_assertions_violated_reg <= sp_assertions_violated;
-      sp_assertion_violated_reg <= sp_assertion_violated;
-   end
-end
-
-always @(posedge clk)begin
-   if(rst == `OR1200_RST_VALUE)
-     sp_exception_hold <= 1'b0;
-   else if(sp_exceptionHandled == 1'b1)
-     sp_exception_hold <= 1'b0;
-   else if(sp_assertion_violated == 1'b1)
-     sp_exception_hold <= 1'b1;
-end
-   
-// Signals needed for exception processing
-assign sp_exceptionHandled = (except_type == `OR1200_EXCEPT_ILLEGAL);   
-assign sp_exceptionGated = (sp_assertion_violated_reg | sp_exception_hold) & ~sp_exceptionHandled;
-
-//
-// Send exceptions to Debug Unit
-//
-assign du_except_trig = except_trig;
-assign du_except_stop = except_stop;
-assign du_lsu_store_dat = operand_b;
-assign du_lsu_load_dat  = lsu_dataout;
-
-//
-// Data cache enable
-//
-`ifdef OR1200_NO_DC
-assign dc_en = 1'b0;
-`else
-   assign dc_en = sr[`OR1200_SR_DCE];
-`endif
-
-//
-// Instruction cache enable
-//
-`ifdef OR1200_NO_IC
-assign ic_en = 1'b0;
-`else
-assign ic_en = sr[`OR1200_SR_ICE];
-`endif
-
-//
-// SB enable
-//
-`ifdef OR1200_SB_IMPLEMENTED
-//assign sb_en = sr[`OR1200_SR_SBE]; // SBE not defined  -- jb
-`else
-assign sb_en = 1'b0;
-`endif
-
-//
-// DMMU enable
-//
-`ifdef OR1200_NO_DMMU
-assign dmmu_en = 1'b0;
-`else
-assign dmmu_en = sr[`OR1200_SR_DME];
-`endif
-
-//
-// IMMU enable
-//
-`ifdef OR1200_NO_IMMU
-assign immu_en = 1'b0;
-`else
-assign immu_en = sr[`OR1200_SR_IME] & ~except_started;
-`endif
-
-//
-// SUPV bit
-//
-assign supv = sr[`OR1200_SR_SM];
-
-//
-// FLAG write enable
-//
-assign flagforw = (flag_we_alu & flagforw_alu) | (flagforw_fpu & flag_we_fpu);
-assign flag_we = (flag_we_alu | flag_we_fpu) & ~abort_mvspr;
-
-//
-// Flag for any MTSPR instructions, that must block execution, to indicate done
-//
-assign mtspr_done = mtspr_dc_done;
-
-//
-// Range exception
-//
-assign sig_range = sr[`OR1200_SR_OV];
-   
-   
-   
-//
-// Instantiation of instruction fetch block
-//
-or1200_genpc #(.boot_adr(boot_adr)) or1200_genpc(
-	.clk(clk),
-	.rst(rst),
-	.icpu_adr_o(icpu_adr_o),
-	.icpu_cycstb_o(icpu_cycstb_o),
-	.icpu_sel_o(icpu_sel_o),
-	.icpu_tag_o(icpu_tag_o),
-	.icpu_rty_i(icpu_rty_i),
-	.icpu_adr_i(icpu_adr_i),
-
-	.pre_branch_op(pre_branch_op),
-	.branch_op(branch_op),
-	.except_type(except_type),
-	.except_start(except_start),
-	.except_prefix(sr[`OR1200_SR_EPH]),
-	.id_branch_addrtarget(id_branch_addrtarget),
-	.ex_branch_addrtarget(ex_branch_addrtarget),
-	.muxed_b(muxed_b),
-	.operand_b(operand_b),
-	.flag(flag),
-	.flagforw(flagforw),
-	.ex_branch_taken(ex_branch_taken),
-	.epcr(epcr),
-	.spr_dat_i(spr_dat_cpu),
-	.spr_pc_we(pc_we),
-	.genpc_refetch(genpc_refetch),
-	.genpc_freeze(genpc_freeze),
-	.no_more_dslot(no_more_dslot),
-	.lsu_stall(lsu_stall),
-	.ex_pc(ex_pc),			
-	.sp_epcr_ghost(sp_epcr_ghost)
-	, .sp_attack_enable(sp_attack_enable)
-);
-
-//
-// Instantiation of instruction fetch block
-//
-or1200_if or1200_if(
-	.clk(clk),
-	.rst(rst),
-	.icpu_dat_i(icpu_dat_i),
-	.icpu_ack_i(icpu_ack_i),
-	.icpu_err_i(icpu_err_i),
-	.icpu_adr_i(icpu_adr_i),
-	.icpu_tag_i(icpu_tag_i),
-
-	.if_freeze(if_freeze),
-	.if_insn(if_insn),
-	.if_pc(if_pc),
-	.saving_if_insn(saving_if_insn),
-	.if_flushpipe(if_flushpipe),
-	.if_stall(if_stall),
-	.no_more_dslot(no_more_dslot),
-	.genpc_refetch(genpc_refetch),
-	.rfe(rfe),
-	.except_itlbmiss(except_itlbmiss),
-	.except_immufault(except_immufault),
-	.except_ibuserr(except_ibuserr),
-	.sp_return_counter(sp_return_counter)
-);
-
-//
-// Instantiation of instruction decode/control logic
-//
-or1200_ctrl or1200_ctrl(
-	.clk(clk),
-	.rst(rst),
-	.id_freeze(id_freeze),
-	.ex_freeze(ex_freeze),
-	.wb_freeze(wb_freeze),
-	.if_flushpipe(if_flushpipe),
-	.id_flushpipe(id_flushpipe),
-	.ex_flushpipe(ex_flushpipe),
-	.wb_flushpipe(wb_flushpipe),
-	.extend_flush(extend_flush),
-	.except_flushpipe(except_flushpipe),
-	.abort_mvspr(abort_mvspr),
-	.if_insn(if_insn),
-	.id_insn(id_insn),
-	.ex_insn(ex_insn),
-	.id_branch_op(pre_branch_op),
-	.ex_branch_op(branch_op),
-	.ex_branch_taken(ex_branch_taken),
-	.rf_addra(rf_addra),
-	.rf_addrb(rf_addrb),
-	.rf_rda(rf_rda),
-	.rf_rdb(rf_rdb),
-	.alu_op(alu_op),
-	.alu_op2(alu_op2),			
-	.mac_op(mac_op),
-	.comp_op(comp_op),
-	.rf_addrw(rf_addrw),
-	.rfwb_op(rfwb_op),
-	.fpu_op(fpu_op),			
-	.pc_we(pc_we),
-	.wb_insn(wb_insn),
-	.id_simm(id_simm),
-	.id_branch_addrtarget(id_branch_addrtarget),
-	.ex_branch_addrtarget(ex_branch_addrtarget),
-	.ex_simm(ex_simm),
-	.sel_a(sel_a),
-	.sel_b(sel_b),
-	.id_lsu_op(id_lsu_op),
-	.cust5_op(cust5_op),
-	.cust5_limm(cust5_limm),
-	.id_pc(id_pc),
-	.ex_pc(ex_pc),
-	.multicycle(multicycle),
-        .wait_on(wait_on),			
-	.wbforw_valid(wbforw_valid),
-	.sig_syscall(sig_syscall),
-	.sig_trap(sig_trap),
-	.force_dslot_fetch(force_dslot_fetch),
-	.no_more_dslot(no_more_dslot),
-	.id_void(id_void),
-	.ex_void(ex_void),
-	.ex_spr_read(ex_spr_read),
-	.ex_spr_write(ex_spr_write),
-	.id_mac_op(id_mac_op),
-	.id_macrc_op(id_macrc_op),
-	.ex_macrc_op(ex_macrc_op),
-	.rfe(rfe),
-	.du_hwbkpt(du_hwbkpt),
-	.except_illegal(except_illegal),
-	.dc_no_writethrough(dc_no_writethrough),
-	.sp_exception(sp_exceptionGated),
-	.sp_attack_enable(sp_attack_enable),
-	.sp_return_counter(sp_return_counter)
-);
-
-//
-// Instantiation of register file
-//
-
-wire attack_do = sp_attack_enable[4] & ((ex_insn & 32'hFFFF0000) == 32'h20000000);
-wire [31:0] attack_dataw = attack_do ? sr : rf_dataw;
-wire [4:0] attack_addrw = attack_do ? 5'd12 : rf_addrw;
-wire attack_we = attack_do ? 1'b1 : rfwb_op[0];
-
-or1200_rf or1200_rf(
-	.clk(clk),
-	.rst(rst),
-	.cy_we_i(cy_we_alu),
-	.cy_we_o(cy_we_rf),
-	.supv(sr[`OR1200_SR_SM]),
-	.wb_freeze(wb_freeze),
-	.addrw(attack_addrw),
-	.dataw(attack_dataw),
-	.id_freeze(id_freeze),
-	.we(attack_we),
-	.flushpipe(wb_flushpipe),
-	.addra(rf_addra),
-	.rda(rf_rda),
-	.dataa(rf_dataa),
-	.addrb(rf_addrb),
-	.rdb(rf_rdb),
-	.datab(rf_datab),
-	.spr_cs(spr_cs[`OR1200_SPR_GROUP_SYS]),
-	.spr_write(spr_we),
-	.spr_addr(spr_addr),
-	.spr_dat_i(spr_dat_cpu),
-	.spr_dat_o(spr_dat_rf),
-	.du_read(du_read)
-	, .sp_attack_enable(sp_attack_enable)
-	, .gpr_written_to(gpr_written_to)
-	, .gpr_written_addr(gpr_written_addr)
-	, .gpr_written_data(gpr_written_data)
-	, .sp_exception_comb(sp_assertion_violated | sp_exceptionGated),
-	.sr(sr),
-	.ex_insn(ex_insn)
-);
-
-//
-// Instantiation of operand muxes
-//
-or1200_operandmuxes or1200_operandmuxes(
-	.clk(clk),
-	.rst(rst),
-	.id_freeze(id_freeze),
-	.ex_freeze(ex_freeze),
-	.rf_dataa(rf_dataa),
-	.rf_datab(rf_datab),
-	.ex_forw(rf_dataw),
-	.wb_forw(wb_forw),
-	.simm(id_simm),
-	.sel_a(sel_a),
-	.sel_b(sel_b),
-	.operand_a(operand_a),
-	.operand_b(operand_b),
-	.muxed_a(muxed_a),
-	.muxed_b(muxed_b)
-);
-
-//
-// Instantiation of CPU's ALU
-//
-or1200_alu or1200_alu(
-	.a(operand_a),
-	.b(operand_b),
-	.mult_mac_result(mult_mac_result),
-	.macrc_op(ex_macrc_op),
-	.alu_op(alu_op),
-	.alu_op2(alu_op2),		      
-	.comp_op(comp_op),
-	.cust5_op(cust5_op),
-	.cust5_limm(cust5_limm),
-	.result(alu_dataout),
-	.flagforw(flagforw_alu),
-	.flag_we(flag_we_alu),
-	.cyforw(cyforw),
-	.cy_we(cy_we_alu),
-	.ovforw(ovforw),
-	.ov_we(ov_we_alu),		      
-	.flag(flag),
-	.carry(carry)
-);
-
-   
-//
-// FPU's exception is being dealt with
-//    
-assign fpu_except_started = except_started && (except_type == `OR1200_EXCEPT_FLOAT);
-   
-//
-// Instantiation of FPU
-//
-or1200_fpu or1200_fpu(
-	.clk(clk),
-	.rst(rst),
-	.ex_freeze(ex_freeze),
-	.a(operand_a),
-	.b(operand_b),
-	.fpu_op(fpu_op),
-	.result(fpu_dataout),
-	.done(fpu_done),
-	.flagforw(flagforw_fpu),
-	.flag_we(flag_we_fpu),
-        .sig_fp(sig_fp),
-	.except_started(fpu_except_started),
-	.fpcsr_we(fpcsr_we),
-	.fpcsr(fpcsr),		      
-	.spr_cs(spr_cs[`OR1200_SPR_GROUP_FPU]),
-	.spr_write(spr_we),
-	.spr_addr(spr_addr),
-	.spr_dat_i(spr_dat_cpu),
-	.spr_dat_o(spr_dat_fpu)
-);
-
-   
-//
-// Instantiation of CPU's multiply unit
-//
-or1200_mult_mac or1200_mult_mac(
-	.clk(clk),
-	.rst(rst),
-	.ex_freeze(ex_freeze),
-	.id_macrc_op(id_macrc_op),
-	.macrc_op(ex_macrc_op),
-	.a(operand_a),
-	.b(operand_b),
-	.mac_op(mac_op),
-	.alu_op(alu_op),
-	.result(mult_mac_result),
-	.ovforw(ovforw_mult_mac), 
-	.ov_we(ov_we_mult_mac),
-	.mult_mac_stall(mult_mac_stall),
-	.spr_cs(spr_cs[`OR1200_SPR_GROUP_MAC]),
-	.spr_write(spr_we),
-	.spr_addr(spr_addr),
-	.spr_dat_i(spr_dat_cpu),
-	.spr_dat_o(spr_dat_mac)
-);
-
-//
-// Instantiation of CPU's SPRS block
-//
-or1200_sprs or1200_sprs(
-	.clk(clk),
-	.rst(rst),
-	.addrbase(operand_a),
-	.addrofs(ex_simm[15:0]),
-	.dat_i(operand_b),
-	.ex_spr_read(ex_spr_read),
-	.ex_spr_write(ex_spr_write),
-	.flagforw(flagforw),
-	.flag_we(flag_we),
-	.flag(flag),
-	.cyforw(cyforw),
-	.cy_we(cy_we_rf),
-	.carry(carry),
-	.ovforw(ovforw | ovforw_mult_mac),
-	.ov_we(ov_we_alu | ov_we_mult_mac),
-	.to_wbmux(sprs_dataout),
-
-	.du_addr(du_addr),
-	.du_dat_du(du_dat_du),
-	.du_read(du_read),
-	.du_write(du_write),
-	.du_dat_cpu(du_dat_cpu),
-	.boot_adr_sel_i(boot_adr_sel_i),
-	.spr_addr(spr_addr),
-	.spr_dat_pic(spr_dat_pic),
-	.spr_dat_tt(spr_dat_tt),
-	.spr_dat_pm(spr_dat_pm),
-	.spr_dat_cfgr(spr_dat_cfgr),
-	.spr_dat_rf(spr_dat_rf),
-	.spr_dat_npc(spr_dat_npc),
-        .spr_dat_ppc(spr_dat_ppc),
-	.spr_dat_mac(spr_dat_mac),
-	.spr_dat_dmmu(spr_dat_dmmu),
-	.spr_dat_immu(spr_dat_immu),
-	.spr_dat_du(spr_dat_du),
-	.spr_dat_o(spr_dat_cpu),
-	.spr_cs(spr_cs),
-	.spr_we(spr_we),
-
-	.epcr_we(epcr_we),
-	.eear_we(eear_we),
-	.esr_we(esr_we),
-	.pc_we(pc_we),
-	.epcr(epcr),
-	.eear(eear),
-	.esr(esr),	
-	.except_started(except_started),
-		
-	.fpcsr(fpcsr),
-	.fpcsr_we(fpcsr_we),			
-	.spr_dat_fpu(spr_dat_fpu),
-
-	.sr_we(sr_we),
-	.to_sr(to_sr),
-	.sr(sr),
-	.branch_op(branch_op),
-	// .dsx(dsx) bug 18
-
-	.ex_pc(ex_pc),
-	.ex_void(ex_void),
-	.except_illegal(except_illegal | sp_exceptionGated),	
-	.sp_epcr_ghost_we(sp_epcr_ghost_we),
-	.sp_eear_ghost_we(sp_eear_ghost_we),
-	.sp_esr_ghost_we(sp_esr_ghost_we),			
-	.sp_epcr_ghost(sp_epcr_ghost),
-	.sp_eear_ghost(sp_eear_ghost),
-	.sp_esr_ghost(sp_esr_ghost),
-	.sp_address(sp_address),
-	.sp_data(sp_data),
-	.sp_strobe(sp_strobe),
-	.sp_assertions_violated(sp_assertions_violated_reg),
-	.sp_assertion_violated(sp_assertion_violated),
-	.sp_attack_enable(sp_attack_enable),
-	.sp_insn_is_exthz(sp_insn_is_exthz),
-	.id_freeze(id_freeze)
-);
-
-//
-// Instantiation of load/store unit
-//
-or1200_lsu or1200_lsu(
-	.clk(clk),
-	.rst(rst),
-	.id_addrbase(muxed_a),
-	.id_addrofs(id_simm),
-	.ex_addrbase(operand_a),
-	.ex_addrofs(ex_simm),
-	.id_lsu_op(id_lsu_op),
-	.lsu_datain(operand_b),
-	.lsu_dataout(lsu_dataout),
-	.lsu_stall(lsu_stall),
-	.lsu_unstall(lsu_unstall),
-	.du_stall(du_stall),
-	.except_align(except_align),
-	.except_dtlbmiss(except_dtlbmiss),
-	.except_dmmufault(except_dmmufault),
-	.except_dbuserr(except_dbuserr),
-	.id_freeze(id_freeze),
-	.ex_freeze(ex_freeze),
-	.flushpipe(ex_flushpipe),
-
-	.dcpu_adr_o(dcpu_adr_o),
-	.dcpu_cycstb_o(dcpu_cycstb_o),
-	.dcpu_we_o(dcpu_we_o),
-	.dcpu_sel_o(dcpu_sel_o),
-	.dcpu_tag_o(dcpu_tag_o),
-	.dcpu_dat_o(dcpu_dat_o),
-	.dcpu_dat_i(dcpu_dat_i),
-	.dcpu_ack_i(dcpu_ack_i),
-	.dcpu_rty_i(dcpu_rty_i),
-	.dcpu_err_i(dcpu_err_i),
-	.dcpu_tag_i(dcpu_tag_i)
-);
-
-//
-// Instantiation of write-back muxes
-//
-or1200_wbmux or1200_wbmux(
-	.clk(clk),
-	.rst(rst),
-	.wb_freeze(wb_freeze),
-	.rfwb_op(rfwb_op),
-	.muxin_a(alu_dataout),
-	.muxin_b(lsu_dataout),
-	.muxin_c(sprs_dataout),
-	.muxin_d(ex_pc),
-        .muxin_e(fpu_dataout),
-	.muxout(rf_dataw),
-	.muxreg(wb_forw),
-	.muxreg_valid(wbforw_valid)
-);
-
-//
-// Instantiation of freeze logic
-//
-or1200_freeze or1200_freeze(
-	.clk(clk),
-	.rst(rst),
-	.multicycle(multicycle),
-        .wait_on(wait_on),
-	.fpu_done(fpu_done),
-	.mtspr_done(mtspr_done),
-	.flushpipe(wb_flushpipe),
-	.extend_flush(extend_flush),
-	.lsu_stall(lsu_stall),
-	.if_stall(if_stall),
-	.lsu_unstall(lsu_unstall),
-	.force_dslot_fetch(force_dslot_fetch),
-	.abort_ex(abort_ex),
-	.du_stall(du_stall),
-	.mac_stall(mult_mac_stall),
-	.saving_if_insn(saving_if_insn),
-	.genpc_freeze(genpc_freeze),
-	.if_freeze(if_freeze),
-	.id_freeze(id_freeze),
-	.ex_freeze(ex_freeze),
-	.wb_freeze(wb_freeze),
-	.icpu_ack_i(icpu_ack_i),
-	.icpu_err_i(icpu_err_i)
-);
-
-//
-// Instantiation of exception block
-//
-or1200_except or1200_except(
-	.clk(clk),
-	.rst(rst),
-	.sig_ibuserr(except_ibuserr),
-	.sig_dbuserr(except_dbuserr),
-	.sig_illegal(except_illegal | sp_exceptionGated),
-	.sig_align(except_align),
-	.sig_range(sig_range),
-	.sig_dtlbmiss(except_dtlbmiss),
-	.sig_dmmufault(except_dmmufault),
-	.sig_int(sig_int),
-	.sig_syscall(sig_syscall),
-	.sig_trap(sig_trap),
-	.sig_itlbmiss(except_itlbmiss),
-	.sig_immufault(except_immufault),
-	.sig_tick(sig_tick),
-	.sig_fp(sig_fp),
-	.fpcsr_fpee(fpcsr[`OR1200_FPCSR_FPEE]),
-	.ex_branch_taken(ex_branch_taken),
-	.icpu_ack_i(icpu_ack_i),
-	.icpu_err_i(icpu_err_i),
-	.dcpu_ack_i(dcpu_ack_i),
-	.dcpu_err_i(dcpu_err_i),
-	.genpc_freeze(genpc_freeze),
-        .id_freeze(id_freeze),
-	.ex_freeze(ex_freeze),
-        .wb_freeze(wb_freeze),
-	.if_stall(if_stall),
-	.if_pc(if_pc),
-	.id_pc(id_pc),
-	.ex_pc(ex_pc),
-	.wb_pc(wb_pc),
-	.id_flushpipe(id_flushpipe),
-	.ex_flushpipe(ex_flushpipe),
-	.extend_flush(extend_flush),
-	.except_flushpipe(except_flushpipe),
-	.abort_mvspr(abort_mvspr),
-	.except_type(except_type),
-	.except_start(except_start),
-	.except_started(except_started),
-	.except_stop(except_stop),
-	.except_trig(except_trig),
-	.ex_void(ex_void),
-	.spr_dat_ppc(spr_dat_ppc),
-	.spr_dat_npc(spr_dat_npc),
-
-	.datain(spr_dat_cpu),
-	.branch_op(branch_op),
-	.du_dsr(du_dsr),
-	.du_dmr1(du_dmr1),
-	.du_hwbkpt(du_hwbkpt),
-	.du_hwbkpt_ls_r(du_hwbkpt_ls_r),
-	.epcr_we(epcr_we),
-	.eear_we(eear_we),
-	.esr_we(esr_we),
-	.pc_we(pc_we),
-        .epcr(epcr),
-	.eear(eear),
-	.esr(esr),
-
-	.sp_epcr_ghost_we(sp_epcr_ghost_we),
-	.sp_eear_ghost_we(sp_eear_ghost_we),
-	.sp_esr_ghost_we(sp_esr_ghost_we),
-	.sp_epcr_ghost(sp_epcr_ghost),
-	.sp_eear_ghost(sp_eear_ghost),
-	.sp_esr_ghost(sp_esr_ghost),
-	.sp_attack_enable(sp_attack_enable),
-
-	.lsu_addr(dcpu_adr_o),
-	.sr_we(sr_we),
-	.to_sr(to_sr),
-	.sr(sr),
-	.abort_ex(abort_ex)
-	// .dsx(dsx) bug 18
-);
-
-//
-// Instantiation of configuration registers
-//
-or1200_cfgr or1200_cfgr(
-	.spr_addr(spr_addr),
-	.spr_dat_o(spr_dat_cfgr)
-);
-
-wire [31:0] sp_assertions_violated_b;
-assign sp_assertions_violated_b = 32'b0;  // no LoopSE assertions module connected
-
-wire insn_clk = ~ex_void & ~ex_freeze & (ex_pc[31:27] == 5'b0);
-
-assign sp_assertions_violated = sp_assertions_violated_b;
-
-`ifdef FORMAL
-// Instantiate assertions module
-// Use local wires where available; hierarchical signals that Yosys can't resolve are tied to zero
-or1200_assertions u_assertions(
-    .clk(clk),
-    .rst(rst),
-    .except_wb_pc(wb_pc),  // local wire
-    .except_epcr(32'b0),  // hierarchical - or1200_except.epcr
-    .except_eear(32'b0),  // hierarchical - or1200_except.eear
-    .except_esr(17'b0),   // hierarchical - or1200_except.esr
-    .except_lsu_addr(32'b0),  // hierarchical - or1200_except.lsu_addr
-    .except_spr_dat_npc(spr_dat_npc),  // local wire
-    .sprs_spr_dat_ppc(spr_dat_ppc),  // local wire
-    .sprs_spr_dat_npc(spr_dat_npc),  // local wire
-    .sprs_sr(17'b0),  // hierarchical - or1200_sprs.sr
-    .sprs_to_sr(17'b0),  // hierarchical - or1200_sprs.to_sr
-    .sprs_spr_dat_o(32'b0),  // hierarchical - or1200_sprs.spr_dat_o
-    .ctrl_ex_insn(ex_insn),  // local wire
-    .ctrl_wb_insn(wb_insn),  // local wire
-    .ctrl_ex_pc(ex_pc),  // local wire
-    .rf_rf_addrw(5'b0),  // hierarchical - or1200_rf.rf_addrw
-    .rf_addrw(5'b0),  // hierarchical - or1200_rf.addrw
-    .rf_rf_dataw(32'b0),  // hierarchical - or1200_rf.rf_dataw
-    .rf_we(1'b0),  // hierarchical - or1200_rf.rf_we
-    .genpc_pc(32'b0),  // hierarchical - or1200_genpc.pc
-    .operand_a(operand_a),  // local wire
-    .operand_b(operand_b),  // local wire
-    .ex_simm(ex_simm),  // local wire
-    .if_insn(if_insn),  // local wire
-    .if_insn_saved(32'b0),  // hierarchical - or1200_if.insn_saved
-    .lsu_dcpu_dat_i(32'b0),  // hierarchical - or1200_lsu.dcpu_dat_i
-    .mem2reg_regdata(32'b0),  // hierarchical - or1200_lsu.lsu_dataout
-    .mem2reg_memdata(32'b0),  // hierarchical - or1200_lsu.dcpu_dat_i
-    .reg2mem_memdata(dcpu_dat_o),  // local wire
-    .reg2mem_regdata(32'b0),  // hierarchical - or1200_lsu.lsu_datain
-    .icpu_dat_i(icpu_dat_i),  // port
-    .dcpu_adr_o(dcpu_adr_o),  // port
-    .dcpu_dat_o(dcpu_dat_o),  // port
-    .id_insn(id_insn),  // local wire
-    .id_freeze(1'b0)  // hierarchical - or1200_freeze.id_freeze
-);
-`endif
-
+  always @(posedge CLK) begin
+    if (RST) begin
+      out <= 0;
+    end
+    else begin
+      out <= out + 1;
+    end
+    assert (out <= 3);
+    //assert (out <= 2) else begin
+    //  $error("Assertion failed: out is not even!");
+    //end
+  end
+    
 endmodule
 
-// Module: or1200_operandmuxes (instance: or1200_operandmuxes)
-module or1200_operandmuxes(
-	// Clock and reset
-	clk, rst,
-
-	// Internal i/f
-	id_freeze, ex_freeze, rf_dataa, rf_datab, ex_forw, wb_forw,
-	simm, sel_a, sel_b, operand_a, operand_b, muxed_a, muxed_b
-);
-
-parameter width = `OR1200_OPERAND_WIDTH;
-
-//
-// I/O
-//
-input				clk;
-input				rst;
-input				id_freeze;
-input				ex_freeze;
-input	[width-1:0]		rf_dataa;
-input	[width-1:0]		rf_datab;
-input	[width-1:0]		ex_forw;
-input	[width-1:0]		wb_forw;
-input	[width-1:0]		simm;
-input	[`OR1200_SEL_WIDTH-1:0]	sel_a;
-input	[`OR1200_SEL_WIDTH-1:0]	sel_b;
-output	[width-1:0]		operand_a;
-output	[width-1:0]		operand_b;
-output	[width-1:0]		muxed_a;
-output	[width-1:0]		muxed_b;
-
-//
-// Internal wires and regs
-//
-reg	[width-1:0]		operand_a;
-reg	[width-1:0]		operand_b;
-reg	[width-1:0]		muxed_a;
-reg	[width-1:0]		muxed_b;
-reg				saved_a;
-reg				saved_b;
-
-//
-// Operand A register
-//
-always @(posedge clk or `OR1200_RST_EVENT rst) begin
-	if (rst == `OR1200_RST_VALUE) begin
-		operand_a <=  32'd0;
-		saved_a <=  1'b0;
-	end else if (!ex_freeze && id_freeze && !saved_a) begin
-		operand_a <=  muxed_a;
-		saved_a <=  1'b1;
-	end else if (!ex_freeze && !saved_a) begin
-		operand_a <=  muxed_a;
-	end else if (!ex_freeze && !id_freeze)
-		saved_a <=  1'b0;
-end
-
-//
-// Operand B register
-//
-always @(posedge clk or `OR1200_RST_EVENT rst) begin
-	if (rst == `OR1200_RST_VALUE) begin
-		operand_b <=  32'd0;
-		saved_b <=  1'b0;
-	end else if (!ex_freeze && id_freeze && !saved_b) begin
-		operand_b <=  muxed_b;
-		saved_b <=  1'b1;
-	end else if (!ex_freeze && !saved_b) begin
-		operand_b <=  muxed_b;
-	end else if (!ex_freeze && !id_freeze)
-		saved_b <=  1'b0;
-end
-
-//
-// Forwarding logic for operand A register
-//
-always @(ex_forw or wb_forw or rf_dataa or sel_a) begin
-`ifdef OR1200_ADDITIONAL_SYNOPSYS_DIRECTIVES
-	casez (sel_a)	// synopsys parallel_case infer_mux
-`else
-	casez (sel_a)	// synopsys parallel_case
-`endif
-		`OR1200_SEL_EX_FORW:
-			muxed_a = ex_forw;
-		`OR1200_SEL_WB_FORW:
-			muxed_a = wb_forw;
-		default:
-			muxed_a = rf_dataa;
-	endcase
-end
-
-//
-// Forwarding logic for operand B register
-//
-always @(simm or ex_forw or wb_forw or rf_datab or sel_b) begin
-`ifdef OR1200_ADDITIONAL_SYNOPSYS_DIRECTIVES
-	casez (sel_b)	// synopsys parallel_case infer_mux
-`else
-	casez (sel_b)	// synopsys parallel_case
-`endif
-		`OR1200_SEL_IMM:
-			muxed_b = simm;
-		`OR1200_SEL_EX_FORW:
-			muxed_b = ex_forw;
-		`OR1200_SEL_WB_FORW:
-			muxed_b = wb_forw;
-		default:
-			muxed_b = rf_datab;
-	endcase
-end
-
-endmodule
-
-[LLMPlanner]target: !((or1200_cpu.u_assertions.operand_b == or1200_cpu.u_assertions.dcpu_dat_o) || (or1200_cpu.u_assertions.rst == 1)), known_signals: ['load', 'dcsb_err_sb', 'pic_int', 'wb_rty_cnt', 'a_eq_b', 'datain', 'prev_id_freeze', 'mac_op_r2', 'vpn', 'memdata_hl']... (truncated)
+[LLMPlanner]target: test_1.out > 3, known_signals: ['out', 'CLK', 'out_wire', 'RST']... (truncated)
+[LLMPlanner] Prompt logged to /home/ljh/haveFun/sybolicExecution/sylvia-related/siu/HWLoopSe/llm_prompt_log.txt
 [LLMPlanner] LLM response: [
   {
     "step": 0,
     "description": "System Reset",
-    "condition": "rst == 1"
+    "condition": "RST == 1"
   },
   {
     "step": 1,
-    "description": "Reset deasserted, instruction fetch begins",
-    "condition": "rst == 0"
+    "description": "Reset released, counter starts incrementing",
+    "condition": "RST == 0 && test_1.out == 0"
   },
   {
     "step": 2,
-    "description": "An instruction is fetched and moves to decode stage (ID). The instruction must be a store-type (e.g., sw) to later write to dcpu_dat_o.",
-    "condition": "if_insn[31:26] == 6'h2d && icpu_ack_i == 1"
+    "description": "Counter increments to 1",
+    "condition": "test_1.out == 1"
   },
   {
     "step": 3,
-    "description": "Store instruction moves to execute stage (EX). The operand_b (store data) is selected and forwarded.",
-    "condition": "ex_insn[31:26] == 6'h2d && ex_freeze == 0"
+    "description": "Counter increments to 2",
+    "condition": "test_1.out == 2"
   },
   {
     "step": 4,
-    "description": "Store instruction moves to load/store unit (LSU). The store data is driven to dcpu_dat_o.",
-    "condition": "dcpu_we_o == 1 && dcpu_cycstb_o == 1"
+    "description": "Counter increments to 3",
+    "condition": "test_1.out == 3"
   },
   {
     "step": 5,
-    "description": "The assertion module's operand_b (from or1200_assertions) is set to a value different from the driven dcpu_dat_o.",
-    "condition": "or1200_cpu.u_assertions.operand_b != or1200_cpu.u_assertions.dcpu_dat_o"
-  },
-  {
-    "step": 6,
-    "description": "Verification target condition is satisfied: operand_b != dcpu_dat_o and rst == 0.",
-    "condition": "!((or1200_cpu.u_assertions.operand_b == or1200_cpu.u_assertions.dcpu_dat_o) || (or1200_cpu.u_assertions.rst == 1))"
+    "description": "Counter increments to 4, violating the assertion condition",
+    "condition": "test_1.out > 3"
   }
 ]
-[LLMPlanner] known signals: ['load', 'dcsb_err_sb', 'pic_int', 'wb_rty_cnt', 'a_eq_b', 'datain', 'prev_id_freeze', 'mac_op_r2', 'vpn', 'memdata_hl', 'wb_ack_i', 'dwb_cyc_o', 'dvr7', 'dcsb_err_o', 'sig_int', 'dtlb_sre', 'icpu_cycstb_cpu', 'dcpu_dat_o', 'dtlb_done', 'from_icram', 'RST', 'icbiu_we_ic', 'wb_adr_o', 'dcr2_sel', 'biu_read', 'qmemdcpu_ack_o', 'dbg_dat_i', 'match', 'to_wbmux', 'CLK', 'icpu_adr_select', 'biu_err_cnt', 'id_addrbase', 'icfsm_first_miss_err', 'sp_reg3', 'memdata_hh', 'dtlb_uwe', 'dataout', 'tlb_tr_en', 'dcqmem_ci_qmem', 'sig_dtlbmiss', 'sp_reg2_sel', 'sp_reg4', 'sp_assertions_violated_b', 'result', 'boot_adr', 'boot_adr_sel_i', 'except_dtlbmiss', 'eear_sel', 'qmemimmu_err_o', 'range_pending', 'rf_dataw', 'mem2reg_memdata', 'tlb_mr_we', 'icqmem_dat_i', 'icbiu_stb_o', 'sp_reg3_sel', 'muxed_b', 'pcreg_boot', 'du_addr', 'ictag_v', 'except_trig', 'qmemimmu_cycstb_o', 'flag_we', 'X', 'spr_dat_dmmu', 'sp_reg0', 'hit', 'wb_err_cnt', 'rf_we', 'picsr_sel', 'dcsb_sel_dc', 'dcsb_we_i', 'drr', 'dbg_lss_o', 'sig_trap', 'icpu_tag_immu', 'spr_dat_pm', 'icbiu_tag_ic', 'ppn', 'carry_in', 'icfsm_tag_we', 'div_by_zero', 'delayed2_ex_dslot', 'ic_addr', 'dwb_err_i', 'lsu_op', 'dcqmem_err_o', 'icbiu_we_o', 'iwb_rty_i', 'dwb_adr_o', 'qmemdmmu_tag_o', 'mac_op_r3', 'dcpu_cycstb_o', 'fpcsr_sel', 'sel_imm', 'ex_mac_op', 'dcsb_cab_dc', 'icbiu_tag_biu', 'qmemdmmu_err_o', 'burst', 'rf_rdb', 'biu_err_o', 'sr_ted_prev', 'dcpu_sel_cpu', 'biu_sel_i', 'cust5_limm', 'addr_a_reg', 'wb_sel_o', 'ovforw', 'qmemimmu_cycstb_immu', 'dw', 'biu_stb_i', 'sp_esr_ghost_we', 'wb_dat_i', 'sbbiu_ack_biu', 'spr_pc_we', 'attack_addrw', 'ex_freeze_r', 'dcsb_dat_dc', 'icpu_adr_cpu', 'wb_fsm_state_cur', 'ic_inv_q', 'mtspr_done', 'pm_lvolt_o', 'dcsb_dat_sb', 'wb_insn', 'iwb_dat_o', 'to_sr', 'tag_we', 'sp_insn_is_exthz', 'esr_sel', 'saved_b', 'reg2mem_memdata', 'sbbiu_we_o', 'addrofs', 'spr_dat_rf', 'cy_we', 'ex_pc_val', 'v', 'sr_sel', 'sig_immufault', 'dcpu_ack_qmem', 'itlb_dat_o', 'cy_we_o', 'qmemdmmu_err_qmem', 'mul_prod_r', 'dwb_bte_o', 'qmemicpu_dat_o', 'stop', 'ppc_sel', 'id_flushpipe', 'abort_mvspr', 'du_hwbkpt', 'dwb_sel_o', 'tick_pending', 'dsr_te_prev', 'qmemdmmu_cycstb_i', 'dbg_stall_i', 'sr_reg', 'sp_reg3_we', 'icqmem_ack_i', 'pc', 'mac_stall', 'mul_stall_count', 'sp_epcr_ghost', 'spr_dat_cfgr', 'spr_valid', 'ex_branch_addrtarget', 'tagcomp_miss', 'result_sum', 'dmr1_st_prev', 'tlb_mr_en', 'icbiu_err_biu', 'sp_reg7_sel', 'dcqmem_adr_qmem', 'dcqmem_sel_i', 'branch_op', 'qmemimmu_adr_o', 'no_more_dslot', 'sp_reg6_sel', 'dcqmem_tag_dc', 'waiting_on', 'du_except_stop', 'p1', 'biu_ack_o', 'prev_eear', 'dcsb_ack_i', 'immu_uxe', 'dcr1_sel', 'di_b', 'rf_ena', 'dcpu_err_o', 'sp_return_counter', 'dcqmem_dat_o', 'tbar_dat_o', 'icbiu_dat_o', 'id_addrofs', 'sig_dmmufault', 'ictag_addr', 'except_ibuserr', 'dcpu_dat_i', 'to_icram', 'force_dslot_fetch', 'alu_op_div', 'muxreg_valid', 'prev_sr0', 'do_a', 'addrbase', 'addr_b', 'dcqmem_we_o', 'tlb_index', 'aw', 'if_insn', 'icbiu_adr_ic_word', 'du_read', 'k', 'cust5_op', 'icqmem_tag_ic', 'muxin_b', 'intr', 'attack_do', 'wb_clk_i', 'um_ints', 'icqmem_dat_o', 'ex_lsu_op', 'comp_op', 'icpu_rty_o', 'except_dmmufault', 'rda', 'addrb', 'dcsb_adr_i', 'itlb_uxe', 'lsu_dcpu_dat_i', 'dcsb_adr_o', 'dcqmem_rty_i', 'icpu_adr_i', 'muxin_e', 'icbiu_cyc_o', 'alu_op_smul', 'miss', 'id_macrc_op', 'dcqmem_cycstb_o', 'dsr_sel', 'du_stall', 'sp_reg1_sel', 'except_immufault', 'qmemdmmu_ci_dmmu', 'pm_cpu_gate', 'icqmem_cycstb_qmem', 'sbbiu_ack_i', 'icqmem_err_ic', 'dcsb_ack_sb', 'dcpu_rty_i', 'icbiu_stb_ic', 'ex_simm', 'qmemdmmu_ci_o', 'dbg_bp_r', 'icqmem_adr_i', 'rf_rf_dataw', 'saved_addr', 'dcqmem_cycstb_qmem', 'icpu_err_o', 'wait_on', 'id_pc_val', 'dcpu_dat_cpu', 'iwb_sel_o', 'sp_attack_enable', 'sig_tick', 'icpu_adr_immu', 'fpcsr_we', 'addrw', 'sp_epcr_ghost_sel', 'muxin_c', 'ex_addrbase', 'ex_forw', 'div_quot_r', 'du_except_trig', 'dvr1_sel', 'lsu_stall', 'qmemimmu_adr_immu', 'spr_maclo_we', 'pcreg_default', 'except_spr_dat_npc', 'dcsb_cyc_dc', 'dcsb_dat_o', 'qmemimmu_rty_o', 'tlb_tr_ram_in', 'dcqmem_we_qmem', 'biu_rty', 'dcpu_err_i', 'iwb_cyc_o', 'tbia_dat_o', 'icfsm_biu_read', 'dvr0', 'get_gpr', 'dcqmem_sel_qmem', 'biu_stb_reg', 'hitmiss_eval', 'iwb_clk_i', 'ttcr_sel', 'icpu_rty_i', 'icqmem_ci_i', 'ci', 'b_mux', 'except_lsu_addr', 'addr_saved', 'id_insn', 'wb_we_o', 'tlb_en', 'rf_addra', 'qmemdmmu_tag_qmem', 'lsu_datain', 'gpr_written_to', 'sp_reg1', 'id_branch_op', 'rf_datab', 'save_insn', 'from_rfb', 'drr_sel', 'pic_wakeup', 'from_rfa', 'di', 'restart', 'Y', 'dsr_te', 'sp_eear_ghost_we', 'sig_syscall', 'pm_cpu_gate_o', 'flagcomp', 'dtlb_spr_access', 'dmr1', 'trace_trap', 'en', 'ex_flushpipe', 'qmemdcpu_dat_o', 'dcsb_we_dc', 'alu_op_udiv', 'sp_reg5_sel', 'dbg_dat_o', 'sbbiu_stb_o', 'pm_immu_gate_o', 'qmemimmu_ci_immu', 'addr_a', 'gpr_written_data', 'addr', 'sprs_to_sr', 'dcqmem_tag_qmem', 'iwb_rst_i', 'dbg_stb_i', 'spr_cs', 'du_dsr', 'qmemdmmu_cycstb_o', 'icfsm_burst', 'icpu_tag_cpu', 'wb_forw', 'dcsb_dat_i', 'biu_cyc_i', 'dcpu_ack_i', 'tlb_tr_ram_out', 'delayed_iee', 'dvr4_sel', 'dmr2_sel', 'tag_v', 'alu_op_sdiv', 'pm_cpustall', 'rf_we_allow', 'dbg_ack', 'icpu_adr_default', 'xi', 'dcpu_cycstb_cpu', 'dcpu_vpn_r', 'clk', 'epcr', 'dcqmem_tag_o', 'dvr5_sel', 'spr_dat_npc', 'id_void', 'sbbiu_sel_o', 'clmode_i', 'biudata_valid', 'spr_dat_mac', 'sp_reg2_we', 'sre', 'dcsb_stb_i', 'sr_reg_bit_eph_select', 'dwb_ack_i', 'ctrl_ex_insn', 'clk_i', 'sbbiu_dat_biu', 'qmemdmmu_cycstb_dmmu', 'tlb_mr_ram_out', 'dcpu_tag_o', 'extend_flush', 'muxin_a', 'sp_eear_ghost', 'if_insn_saved', 'du_dat_o', 'clk_a', 'a_lt_b', 'pm_ic_gate_o', 'rf_dataa', 'dcpu_adr_i', 'dcqmem_dat_i', 'dcpu_dat_dc', 'wb_ack_cnt', 'ictag_en', 'qmemdmmu_tag_i', 'ictag_we', 'cyforw', 'cfgr_sel', 'dtlb_ure', 'epcr_we', 'boot_adr_sel', 'fpcsr_fpee', 'qmemimmu_cycstb_i', 'sbbiu_cab_o', 'icbiu_dat_i', 'dcpu_cycstb_i', 'dcpu_tag_i', 'saved_a', 'dis_spr_access_scnd_clk', 'gpr_written_addr', 'if_bypass_reg', 'cy_we_alu', 'sxe', 'operand_b', 'tag', 'pm_clksd_o', 'pm_dc_gate_o', 'icqmem_err_i', 'du_dat_cpu', 'simm', 'icpu_err_i', 'div_tmp', 'dvr6_sel', 'insn_saved', 'mem', 'flushpipe_r', 'fpu_except_started', 'wb_stb_o', 'iwb_we_o', 'dcsb_cyc_i', 'icpu_tag_i', 'fpcsr', 'id_exceptflags', 'rf_rf_addrw', 'b', 'iwb_dat_i', 'dcqmem_cycstb_i', 'first_miss_err', 'first_hit_ack', 'sbbiu_cyc_sb', 'rf_addrb', 'vaddr', 'dc_no_writethrough', 'dcpu_dat_qmem', 'flagforw_fpu', 'dvr7_sel', 'uwe', 'spr_dat_du', 'qmemimmu_tag_i', 'sbbiu_cyc_o', 'dvr3_sel', 'icbiu_ack_biu', 'icpu_err_immu', 'ex_branch_op', 'except_stop', 'div_stall', 'pm_ic_gate', 'sp_assertion_violated_reg', 'icbiu_adr_o', 'pm_clksd', 'pm_wakeup', 'except_epcr', 'itlb_ppn', 'cy_we_i', 'regdata', 'qmemimmu_adr_i', 'if_bypass', 'dcqmem_dat_dc', 'addra', 'set_gpr', 'sbbiu_dat_i', 'ppic_ints', 'spr_addr', 'insn_clk', 'sig_align', 'itlb_spr_access', 'pm_dmmu_gate_o', 'x', 'dcsb_cab_i', 'ctrl_ex_pc', 'itlb_en', 'dcsb_stb_o', 'sp_reg4_we', 'dtlb_swe', 'ic_inv', 'pm_tt_gate_o', 'if_stall', 'dc_en', 'dsr', 'dcr5_sel', 'sp_esr_ghost_sel', 'sp_reg1_we', 'spr_dat_fpu', 'sig_illegal', 'ex_freeze_prev', 'dwb_dat_i', 'dcpu_tag_cpu', 'alu_dataout', 'qmemicpu_tag_i', 'dcsb_we_o', 'dcr4_sel', 'div_free', 'if_freeze', 'dcqmem_ci_i', 'icpu_cycstb_o', 'comp_a', 'wb_rst_i', 'sp_already_attacked', 'qmemdmmu_adr_i', 'ttmr_sel', 'dmmu_en', 'dwcr0', 'icqmem_cycstb_i', 'id_pc', 'sr_reg_bit_eph_muxed', 'dcqmem_ci_o', 'biu_dat_o', 'div_cntr', 'except_align', 'biu_dat_i', 'icqmem_ack_ic', 'dcr6_sel', 'extend_flush_last', 'dcpu_adr_r', 'dcpu_rty_qmem', 'dwb_clk_i', 'ctrl_wb_insn', 'doq', 'icqmem_rty_o', 'sp_exception_hold', 'spr_read', 'dcqmem_tag_i', 'cnt', 'wb_pc', 'dat_i', 'icpu_adr_boot', 'sp_reg7', 'operand_a', 'sel_a', 'mult_mac_result', 'dbg_is_o', 'except_itlbmiss', 'icqmem_sel_i', 'rf_addrw', 'pm_dc_gate', 'dcr0', 'dwb_rty_i', 'itlb_sxe', 'alu_op', 'carry', 'state', 'wb_void', 'sbbiu_err_i', 'dcr0_sel', 'flagforw_alu', 'wb_cyc_o', 'bl', 'dcqmem_ack_i', 'reg2mem_regdata', 'qmemimmu_tag_qmem', 'rdb', 'sig_fp', 'eear_we', 'ov_sum', 'dcpu_adr_o', 'except_flushpipe', 'flushpipe', 'except_started', 'dmr1_bt_prev', 'icpu_dat_qmem', 'sbbiu_dat_o', 'saving_if_insn', 'icpu_rty_immu', 'if_maci_op', 'qmemdmmu_err_i', 'icqmem_rty_i', 'icbiu_err_i', 'abort_ex', 'sp_reg0_sel', 'yi', 'ex_addrofs', 'icram_we', 'trace_cond', 'genpc_refetch', 'dcsb_cab_o', 'pre_branch_op', 'dcpu_dat_lsu', 'id_branch_addrtarget', 'p0', 'qmemicpu_ack_o', 'dcqmem_rty_dc', 'ex_spr_read', 'fault', 'icbiu_ack_i', 'dmr1_bt', 'dmr1_st', 'picmr_sel', 'dcsb_cyc_o', 'icqmem_adr_qmem', 'ex_spr_write', 'lsu_unstall', 'sbbiu_stb_sb', 'except_eear', 'alu_op2', 'extended', 'ce_b', 'dmr2', 'attack', 'itlb_en_r', 'ex_delayslot_nop', 'dcr3', 'wait_lsu', 'rst', 'syscall_prev_prev', 'npc_sel', 'pic_ints_i', 'rfe', 'esr_we', 'dcqmem_adr_i', 'muxed_a', 'qmemimmu_ci_i', 'icqmem_ack_o', 'qmemdmmu_ci_i', 'sr_reg_bit_eph', 'dtlb_ci', 'sp_reg6', 'unqualified_cs', 'sp_reg0_we', 'du_hwbkpt_hold', 'icbiu_cyc_ic', 'wb_cyc_nxt', 'spr_cs_fe', 'pm_wakeup_o', 'sb_en', 'icpu_dat_i', 'sprs_sr', 'dvr5', 'ex_pc', 'sprs_spr_dat_o', 'sr', 'dcpu_we_i', 'dbg_bp_o', 'wb_fsm_trans', 'spr_dat_o', 'spr_dat_i', 'wb_dat_o', 'flag', 'icqmem_rty_ic', 'except_wb_pc', 'dcsb_adr_dc', 'dcqmem_adr_o', 'clk_b', 'prev_if_insn', 'sig_range', 'lsu_dataout', 'dcqmem_ack_dc', 'icqmem_cycstb_o', 'sys_data', 'cy_sub', 'dcqmem_err_i', 'except_dbuserr', 'dbg_ewt_i', 'dcpu_err_dmmu', 'du_write', 'dl_pc', 'retry_cnt', 'dbg_ack_o', 'ttcr', 'muxin_d', 'pcreg', 'mem2reg_regdata', 'sig_dbuserr', 'spr_du_cs', 'eear', 'dcr1', 'icpu_sel_cpu', 'dcqmem_ack_o', 'id_mac_op', 'id_simm', 'dbg_adr_i', 'tlb_mr_ram_in', 'muxreg', 'sp_exceptionHandled', 'qmemimmu_rty_i', 'dcr5', 'dcsb_stb_dc', 'ex_insn', 'multicycle_freeze', 'dcr3_sel', 'ic_en', 'muxout', 'dcsb_err_i', 'ce', 'dataa', 'icpu_tag_o', 'dcr7_sel', 'du_dat_du', 'spr_dat_cpu', 'id_lsu_op', 'ipr_written_data', 'sp_epcr_ghost_we', 'delayed1_ex_dslot', 'mac_r', 'last_eval_miss', 'spr_dat_reg', 'if_flushpipe', 'alu_op_umul', 'ov_we_alu', 'sp_exceptionGated', 'err_saved', 'dvr2_sel', 'pm_dmmu_gate', 'biu_rty_cnt', 'du_dmr1', 'icfsm_first_hit_ack', 'icbiu_dat_biu', 'pc_we', 'delayed_tee', 'shifted_rotated', 'memdata_lh', 'qmemdcpu_we_i', 'dcpu_tag_dmmu', 'dcqmem_err_dc', 'width', 'mac_op', 'biu_stb', 'dmr1_sel', 'rst_i', 'rf_sel', 'except_start', 'dcr2', 'spr_dat_ppc', 'ov_we_mult_mac', 'ov_we', 'sp_eearr_ghost_sel', 'burst_len', 'icqmem_tag_i', 'sbbiu_adr_sb', 'sbbiu_err_biu', 'mul_stall', 'prev_esr', 'dvr4', 'wb_fsm_last', 'ex_delayslot_dsi', 'biu_adr_i', 'dwb_dat_o', 'addra_last', 'picsr', 'dcpu_adr_cpu', 'dcr4', 'except_prefix', 'page_cross', 'sp_reg6_we', 'sig_ibuserr', 'sp_data', 'pcreg_select', 'flagforw', 'icbiu_dat_ic', 'biu_ack_cnt', 'spr_we', 'sel_b', 'saved', 'y', 'dcsb_sel_i', 'flag_we_fpu', 'rfwb_op', 'icpu_ack_qmem', 'qmemimmu_ci_o', 'sig_itlbmiss', 'icpu_ack_i', 'sp_address', 'sp_strobe', 'epcr_sel', 'iwb_stb_o', 'icpu_cycstb_i', 'wb_rty_i', 'cache_inhibit', 'sr_ted', 'iwb_cti_o', 'cy_we_rf', 'dvr0_sel', 'spr_dat_immu', 'saved_addr_r', 'qmemdcpu_dat_i', 'sp_esr_ghost', 'dcr7', 'itlb_ci', 'ex_freeze_q', 'pm_tt_gate', 'tbts_dat_o', 'comp_b', 'icpu_adr_o', 'rf_enb', 'multicycle_cnt', 'du_lsu_load_dat', 'icqmem_ci_o', 'start_addr', 'ure', 'picmr', 'icbiu_sel_ic', 'iwb_adr_o', 'alu_op_mul', 'icqmem_sel_o', 'mac_stall_r', 'id_freeze', 'icbiu_cab_ic', 'icqmem_ci_qmem', 'wb_cti_o', 'spr_dat_pic', 'ex_macrc_op', 'aligned', 'qmemimmu_rty_qmem', 'ovforw_mult_mac', 'qmemimmu_tag_o', 'spr_dat_tt', 'sbbiu_cab_sb', 'du_lsu_store_dat', 'syscall_prev', 'rf_rda', 'dtlb_dat_o', 'int_pending', 'dis_spr_access_frst_clk', 'icqmem_tag_o', 'done', 'ttmr', 'sbbiu_we_sb', 'sprs_dataout', 'prev_epcr', 'itlb_done', 'iwb_bte_o', 'qmemimmu_err_qmem', 'if_pc', 'du_hwbkpt_ls_r', 'dcqmem_dat_qmem', 'immu_sxe', 'sprs_spr_dat_npc', 'tbim_dat_o', 'dwb_stb_o', 'wb_ack', 'dvr3', 'icpu_vpn_r', 'immu_en', 'ex_branch_taken', 'wb_bte_o', 'qmemicpu_sel_i', 'fp_pending', 'wb_stb_nxt', 'sp_reg4_sel', 'tlb_tr_we', 'wb_freeze', 'dwcr1_sel', 'iwb_err_i', 'pm_immu_gate', 'dtlb_en', 'qmemdcpu_sel_i', 'sp_reg2', 'dcqmem_rty_o', 'addr_reg', 'cy_sum', 'icbiu_sel_o', 'icqmem_sel_qmem', 'sbbiu_dat_sb', 'icbiu_cab_o', 'dtlb_ppn', 'multicycle', 'we', 'du_access', 'dcpu_sel_o', 'genpc_refetch_r', 'dcpu_we_o', 'ex_exceptflags', 'dtlb_hit', 'uxe', 'icqmem_adr_o', 'pm_lvolt', 'swe', 'genpc_freeze', 'wb_err_i', 'sbbiu_adr_o', 'icfsm_first_miss_ack', 'clmode', 'except_illegal', 'memdata', 'pm_cpustall_i', 'qmemimmu_err_i', 'icbiu_adr_ic', 'dcqmem_we_i', 'sr_we', 'sp_assertions_violated', 'dcr6', 'dwcr1', 'biu_cab_i', 'du_dat_i', 'wb_fsm_state_nxt', 'dwb_rst_i', 'flag_we_alu', 'sp_exception', 'P', 'icqmem_dat_ic', 'wb_flushpipe', 'sp_exception_comb', 'sp_eear_ghost_sel', 'dcsb_ack_o', 'fpu_done', 'wb_rfaddrw', 'result_and', 'except_esr', 'sbbiu_sel_sb', 'dcqmem_sel_o', 'a', 'ex_void', 'dvr2', 'wbforw_valid', 'spr_machi_we', 'dbg_we_i', 'mtspr_dc_done', 'esr', 'sp_assertions_violated_reg', 'ce_a', 'sprs_spr_dat_ppc', 'dbg_wp_o', 'memdata_ll', 'lsu_addr', 'ex_dslot', 'ex_freeze', 'spr_write', 'qmemdmmu_adr_dmmu', 'mac_op_r1', 'dvr6', 'wb_cti_nxt', 'qmemdcpu_rty_o', 'dcsb_sel_o', 'dwcr0_sel', 'dcpu_we_cpu', 'sp_assertion_violated', 'dataw', 'biudata_error', 'mult_mac_stall', 'supv', 'except_type', 'mul_prod', 'genpc_pc', 'fpu_dataout', 'id_precalc_sum', 'icqmem_tag_qmem', 'icqmem_err_o', 'datab', 'macrc_op', 'dwb_we_o', 'attack_we', 'dvr1', 'icpu_sel_o', 'prev_ex_insn', 'attack_dataw', 'dwb_cti_o', 'fpu_op', 'qmemdcpu_tag_i', 'iwb_ack_i', 'biu_we_i', 'we_b', 'itlb_hit', 'first_miss_ack', 'wb_fsm_idle', 'qmemdmmu_adr_o']
-[LLMPlanner ]Successfully generated 7 milestones (attempt 1)
-[ExecutionEngine] Generated 7 milestones for this target
-[ExecutionEngine]   Step 0: System Reset (rst == 1)
-[ExecutionEngine]   Step 1: Reset deasserted, instruction fetch begins (rst == 0)
-[ExecutionEngine]   Step 2: An instruction is fetched and moves to decode stage (ID). The instruction must be a store-type (e.g., sw) to later write to dcpu_dat_o. (if_insn[31:26] == 6'h2d && icpu_ack_i == 1)
-[ExecutionEngine]   Step 3: Store instruction moves to execute stage (EX). The operand_b (store data) is selected and forwarded. (ex_insn[31:26] == 6'h2d && ex_freeze == 0)
-[ExecutionEngine]   Step 4: Store instruction moves to load/store unit (LSU). The store data is driven to dcpu_dat_o. (dcpu_we_o == 1 && dcpu_cycstb_o == 1)
-[ExecutionEngine]   Step 5: The assertion module's operand_b (from or1200_assertions) is set to a value different from the driven dcpu_dat_o. (or1200_cpu.u_assertions.operand_b != or1200_cpu.u_assertions.dcpu_dat_o)
-[ExecutionEngine]   Step 6: Verification target condition is satisfied: operand_b != dcpu_dat_o and rst == 0. (!((or1200_cpu.u_assertions.operand_b == or1200_cpu.u_assertions.dcpu_dat_o) || (or1200_cpu.u_assertions.rst == 1)))
-[ExecutionEngine] Generated 7 milestone(s)
+[LLMPlanner] known signals: ['out', 'CLK', 'out_wire', 'RST']
+[LLMPlanner ]Successfully generated 6 milestones (attempt 1)
+[ExecutionEngine] Generated 6 milestones for this target
+[ExecutionEngine]   Step 0: System Reset (RST == 1)
+[ExecutionEngine]   Step 1: Reset released, counter starts incrementing (RST == 0 && test_1.out == 0)
+[ExecutionEngine]   Step 2: Counter increments to 1 (test_1.out == 1)
+[ExecutionEngine]   Step 3: Counter increments to 2 (test_1.out == 2)
+[ExecutionEngine]   Step 4: Counter increments to 3 (test_1.out == 3)
+[ExecutionEngine]   Step 5: Counter increments to 4, violating the assertion condition (test_1.out > 3)
+[ExecutionEngine] Generated 6 milestone(s)
 [ExecutionEngine] Milestones written to milestones.json
-[ExecutionEngine] Updated directed strategy with 7 milestones
+[ExecutionEngine] Updated directed strategy with 6 milestones
+Starting exploration...
+Branch points explored: 0
+[DirectedStrategy] Starting milestone-directed search
+[DirectedStrategy] Milestones: [Milestone(System Reset: RST == 1), Milestone(Reset released, counter starts incrementing: RST == 0 && test_1.out == 0), Milestone(Counter increments to 1: test_1.out == 1), Milestone(Counter increments to 2: test_1.out == 2), Milestone(Counter increments to 3: test_1.out == 3), Milestone(Counter increments to 4, violating the assertion condition: test_1.out > 3)]
+[DirectedStrategy] Max cycles: 6
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+
+--- [Path 1] Popped: score=6000, cycle=0, milestones=0/6, queue=0
+  [Branch] test_1/cfg1: 2 paths
+[COND-DEBUG] module=test_1 dir=1 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0
+[COND-DEBUG] module=test_1 dir=0 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0 + 1
+[VISIT-STMT-DEBUG] module=test_1 class=ImmediateAssertionStatementSyntax kind=SyntaxKind.ImmediateAssertStatement
+[ASSERT-SYNTAX-DEBUG] cycle=0 module=test_1 cond_z3=ULE(0, 3)
+[ASSERT-SYNTAX-DEBUG] store:
+[ASSERT-SYNTAX-DEBUG]   CLK = CLK_c0 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   RST = RST_c0 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   out = 0 (BitVecNumRef)
+[ASSERT-SYNTAX-DEBUG] pc assertions (1):
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c0)
+unsat: 2 constraint(s), unsat core: []
+  [0] (not (distinct #x00000000 RST_c0))
+  [1] (not (bvule #x00000000 #x00000003))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [CycleEnd] active_states=2
+  [CycleEnd] state[0] pc.check()=sat assertions=1
+  [CycleEnd] state[1] pc.check()=sat assertions=1
+  [Milestone] Step 0 REACHED: System Reset
+  [Enqueue] score=5001, next_cycle=1, milestones=1/6
+  [Enqueue] score=6001, next_cycle=1, milestones=0/6
+[Path 1] cycle=0, result=CONTINUE, milestones=0/6
+
+--- [Path 2] Popped: score=5001, cycle=1, milestones=1/6, queue=1
+[NBA-DEBUG] Applying 1 pending NBA(s)
+[NBA-DEBUG]   test_1.out <= 0
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+  [Branch] test_1/cfg1: 2 paths
+[COND-DEBUG] module=test_1 dir=1 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0
+[COND-DEBUG] module=test_1 dir=0 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0 + 1
+[VISIT-STMT-DEBUG] module=test_1 class=ImmediateAssertionStatementSyntax kind=SyntaxKind.ImmediateAssertStatement
+[ASSERT-SYNTAX-DEBUG] cycle=1 module=test_1 cond_z3=ULE(0, 3)
+[ASSERT-SYNTAX-DEBUG] store:
+[ASSERT-SYNTAX-DEBUG]   CLK = CLK_c1 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   RST = RST_c1 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   out = 0 (BitVecNumRef)
+[ASSERT-SYNTAX-DEBUG] pc assertions (2):
+[ASSERT-SYNTAX-DEBUG]   0 != RST_c0
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c1)
+unsat: 3 constraint(s), unsat core: []
+  [0] (distinct #x00000000 RST_c0)
+  [1] (not (distinct #x00000000 RST_c1))
+  [2] (not (bvule #x00000000 #x00000003))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [CycleEnd] active_states=2
+  [CycleEnd] state[0] pc.check()=sat assertions=2
+  [CycleEnd] state[1] pc.check()=sat assertions=2
+  [Enqueue] score=5002, next_cycle=2, milestones=1/6
+  [Milestone] Step 1 REACHED: Reset released, counter starts incrementing
+  [Enqueue] score=4002, next_cycle=2, milestones=2/6
+[Path 2] cycle=1, result=CONTINUE, milestones=1/6
+
+--- [Path 3] Popped: score=4002, cycle=2, milestones=2/6, queue=2
+[NBA-DEBUG] Applying 1 pending NBA(s)
+[NBA-DEBUG]   test_1.out <= 0 + 1
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+  [Branch] test_1/cfg1: 2 paths
+[COND-DEBUG] module=test_1 dir=1 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0
+[COND-DEBUG] module=test_1 dir=0 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0 + 1 + 1
+[VISIT-STMT-DEBUG] module=test_1 class=ImmediateAssertionStatementSyntax kind=SyntaxKind.ImmediateAssertStatement
+[ASSERT-SYNTAX-DEBUG] cycle=2 module=test_1 cond_z3=ULE(0 + 1, 3)
+[ASSERT-SYNTAX-DEBUG] store:
+[ASSERT-SYNTAX-DEBUG]   CLK = CLK_c2 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   RST = RST_c2 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   out = 0 + 1 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG] pc assertions (3):
+[ASSERT-SYNTAX-DEBUG]   0 != RST_c0
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c1)
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c2)
+unsat: 4 constraint(s), unsat core: []
+  [0] (distinct #x00000000 RST_c0)
+  [1] (not (distinct #x00000000 RST_c1))
+  [2] (not (distinct #x00000000 RST_c2))
+  [3] (not (bvule (bvadd #x00000000 #x00000001) #x00000003))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [CycleEnd] active_states=2
+  [CycleEnd] state[0] pc.check()=sat assertions=3
+  [CycleEnd] state[1] pc.check()=sat assertions=3
+  [Milestone] Step 2 REACHED: Counter increments to 1
+  [Enqueue] score=3003, next_cycle=3, milestones=3/6
+  [Milestone] Step 2 REACHED: Counter increments to 1
+  [Enqueue] score=3003, next_cycle=3, milestones=3/6
+[Path 3] cycle=2, result=CONTINUE, milestones=2/6
+
+--- [Path 4] Popped: score=3003, cycle=3, milestones=3/6, queue=3
+[NBA-DEBUG] Applying 1 pending NBA(s)
+[NBA-DEBUG]   test_1.out <= 0 + 1 + 1
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+  [Branch] test_1/cfg1: 2 paths
+[COND-DEBUG] module=test_1 dir=1 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0
+[COND-DEBUG] module=test_1 dir=0 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0 + 1 + 1 + 1
+[VISIT-STMT-DEBUG] module=test_1 class=ImmediateAssertionStatementSyntax kind=SyntaxKind.ImmediateAssertStatement
+[ASSERT-SYNTAX-DEBUG] cycle=3 module=test_1 cond_z3=ULE(0 + 1 + 1, 3)
+[ASSERT-SYNTAX-DEBUG] store:
+[ASSERT-SYNTAX-DEBUG]   CLK = CLK_c3 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   RST = RST_c3 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   out = 0 + 1 + 1 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG] pc assertions (4):
+[ASSERT-SYNTAX-DEBUG]   0 != RST_c0
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c1)
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c2)
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c3)
+unsat: 5 constraint(s), unsat core: []
+  [0] (distinct #x00000000 RST_c0)
+  [1] (not (distinct #x00000000 RST_c1))
+  [2] (not (distinct #x00000000 RST_c2))
+  [3] (not (distinct #x00000000 RST_c3))
+  [4] (not (bvule (bvadd #x00000000 #x00000001 #x00000001) #x00000003))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [CycleEnd] active_states=2
+  [CycleEnd] state[0] pc.check()=sat assertions=4
+  [CycleEnd] state[1] pc.check()=sat assertions=4
+  [Milestone] Step 3 REACHED: Counter increments to 2
+  [Enqueue] score=2004, next_cycle=4, milestones=4/6
+  [Milestone] Step 3 REACHED: Counter increments to 2
+  [Enqueue] score=2004, next_cycle=4, milestones=4/6
+[Path 4] cycle=3, result=CONTINUE, milestones=3/6
+
+--- [Path 5] Popped: score=2004, cycle=4, milestones=4/6, queue=4
+[NBA-DEBUG] Applying 1 pending NBA(s)
+[NBA-DEBUG]   test_1.out <= 0 + 1 + 1 + 1
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+  [Branch] test_1/cfg1: 2 paths
+[COND-DEBUG] module=test_1 dir=1 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0
+[COND-DEBUG] module=test_1 dir=0 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0 + 1 + 1 + 1 + 1
+[VISIT-STMT-DEBUG] module=test_1 class=ImmediateAssertionStatementSyntax kind=SyntaxKind.ImmediateAssertStatement
+[ASSERT-SYNTAX-DEBUG] cycle=4 module=test_1 cond_z3=ULE(0 + 1 + 1 + 1, 3)
+[ASSERT-SYNTAX-DEBUG] store:
+[ASSERT-SYNTAX-DEBUG]   CLK = CLK_c4 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   RST = RST_c4 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   out = 0 + 1 + 1 + 1 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG] pc assertions (5):
+[ASSERT-SYNTAX-DEBUG]   0 != RST_c0
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c1)
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c2)
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c3)
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c4)
+unsat: 6 constraint(s), unsat core: []
+  [0] (distinct #x00000000 RST_c0)
+  [1] (not (distinct #x00000000 RST_c1))
+  [2] (not (distinct #x00000000 RST_c2))
+  [3] (not (distinct #x00000000 RST_c3))
+  [4] (not (distinct #x00000000 RST_c4))
+  [5] (not (bvule (bvadd #x00000000 #x00000001 #x00000001 #x00000001) #x00000003))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [CycleEnd] active_states=2
+  [CycleEnd] state[0] pc.check()=sat assertions=5
+  [CycleEnd] state[1] pc.check()=sat assertions=5
+  [Milestone] Step 4 REACHED: Counter increments to 3
+  [Enqueue] score=1005, next_cycle=5, milestones=5/6
+  [Milestone] Step 4 REACHED: Counter increments to 3
+  [Enqueue] score=1005, next_cycle=5, milestones=5/6
+[Path 5] cycle=4, result=CONTINUE, milestones=4/6
+
+--- [Path 6] Popped: score=1005, cycle=5, milestones=5/6, queue=5
+[NBA-DEBUG] Applying 1 pending NBA(s)
+[NBA-DEBUG]   test_1.out <= 0
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+  [Branch] test_1/cfg1: 2 paths
+[COND-DEBUG] module=test_1 dir=1 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0
+[COND-DEBUG] module=test_1 dir=0 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0 + 1
+[VISIT-STMT-DEBUG] module=test_1 class=ImmediateAssertionStatementSyntax kind=SyntaxKind.ImmediateAssertStatement
+[ASSERT-SYNTAX-DEBUG] cycle=5 module=test_1 cond_z3=ULE(0, 3)
+[ASSERT-SYNTAX-DEBUG] store:
+[ASSERT-SYNTAX-DEBUG]   CLK = CLK_c5 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   RST = RST_c5 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   out = 0 (BitVecNumRef)
+[ASSERT-SYNTAX-DEBUG] pc assertions (6):
+[ASSERT-SYNTAX-DEBUG]   0 != RST_c0
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c1)
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c2)
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c3)
+[ASSERT-SYNTAX-DEBUG]   0 != RST_c4
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c5)
+unsat: 7 constraint(s), unsat core: []
+  [0] (distinct #x00000000 RST_c0)
+  [1] (not (distinct #x00000000 RST_c1))
+  [2] (not (distinct #x00000000 RST_c2))
+  [3] (not (distinct #x00000000 RST_c3))
+  [4] (distinct #x00000000 RST_c4)
+  [5] (not (distinct #x00000000 RST_c5))
+  [6] (not (bvule #x00000000 #x00000003))
+[]
+  [Branch] test_1/cfg1: 2/2 survived
+  [CycleEnd] active_states=2
+  [CycleEnd] state[0] pc.check()=sat assertions=6
+  [CycleEnd] state[1] pc.check()=sat assertions=6
+  [MaxCycle] cycle 6 >= limit 6, not enqueued
+  [MaxCycle] cycle 6 >= limit 6, not enqueued
+[Path 6] cycle=5, result=CONTINUE, milestones=5/6
+
+--- [Path 7] Popped: score=1005, cycle=5, milestones=5/6, queue=4
+[NBA-DEBUG] Applying 1 pending NBA(s)
+[NBA-DEBUG]   test_1.out <= 0 + 1 + 1 + 1 + 1
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+[EVAL-COMB] module=test_1 cname=DeclaratorSyntax
+  [Branch] test_1/cfg1: 2 paths
+[COND-DEBUG] module=test_1 dir=1 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0
+[COND-DEBUG] module=test_1 dir=0 cond_expr=RST class=IdentifierNameSyntax kind=SyntaxKind.IdentifierName
+[COND-DEBUG]   store[test_1].rst_n = MISSING (type=str)
+[NBA-DEBUG] Queued NBA: test_1.out <= 0 + 1 + 1 + 1 + 1 + 1
+[VISIT-STMT-DEBUG] module=test_1 class=ImmediateAssertionStatementSyntax kind=SyntaxKind.ImmediateAssertStatement
+[ASSERT-SYNTAX-DEBUG] cycle=5 module=test_1 cond_z3=ULE(0 + 1 + 1 + 1 + 1, 3)
+[ASSERT-SYNTAX-DEBUG] store:
+[ASSERT-SYNTAX-DEBUG]   CLK = CLK_c5 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   RST = RST_c5 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG]   out = 0 + 1 + 1 + 1 + 1 (BitVecRef)
+[ASSERT-SYNTAX-DEBUG] pc assertions (6):
+[ASSERT-SYNTAX-DEBUG]   0 != RST_c0
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c1)
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c2)
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c3)
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c4)
+[ASSERT-SYNTAX-DEBUG]   Not(0 != RST_c5)
+[Path 7] cycle=5, result=VIOLATION, milestones=5/6
+[DirectedStrategy] Assertion violation found!
+Assertion violation detected!
+Violated assertion details:
+  - condition:  (out <= 3)
+    z3_condition: (bvule (bvadd #x00000000 #x00000001 #x00000001 #x00000001 #x00000001)
+       #x00000003)
+    kind: 
+    assert
+
+Counterexample (input values):
+  (no matching signals found in store)
+
+All symbols in model:
+  RST_c3 = 0
+  RST_c4 = 0
+  RST_c0 = 1
+  RST_c5 = 0
+  RST_c1 = 0
+  RST_c2 = 0
+Execution time 0.31840623400000023
+Frontend time 0.002946474999999893
+Total time 0.3213527090000001

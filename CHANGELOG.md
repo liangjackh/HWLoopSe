@@ -1,5 +1,91 @@
 # Changelog
 
+## 2026-03-12 - Fixed Nested-If CFG Path Generation and Assertion Reachability
+
+### Problem: Assertion never executed — cfg1 only generated 1 path instead of 3
+
+The assertion always block in `my_assertions` (cfg1) contains nested `if` statements:
+```systemverilog
+always @(posedge clk) begin
+    if (rst_n && check_en) begin        // outer if
+        if (past_3_in_a <= THRESHOLD) begin  // inner if
+            assert (b_out == (past_3_in_a + 1));
+        end
+    end
+end
+```
+
+This should produce 3 CFG paths:
+- Path 0: `[1,1]` — outer true, inner true → **assert executed**
+- Path 1: `[1,0]` — outer true, inner false → skip assert
+- Path 2: `[0]` — outer false → skip all
+
+But cfg1 only generated 1 path. The assertion was never reached, and every path was pruned/abandoned.
+
+### Root Cause 1: `BlockStatementSyntax` iteration yields raw tokens (`cfg.py: basic_blocks_sv`)
+
+`BlockStatementSyntax` (begin...end blocks) is iterable in pyslang, but iterating it directly yields raw syntax tokens (`BeginKeyword`, `SyntaxList`, `EndKeyword`) rather than semantic statement children. When `_process_conditional_sv` passed the outer if's then-body (a `BlockStatementSyntax`) to `basic_blocks_sv`, the code entered the `hasattr(ast, '__iter__')` branch and iterated raw tokens. The inner `ConditionalStatementSyntax` was never recognized as a branching point.
+
+### Root Cause 2: `partition()` / `find_basic_block()` collapsed adjacent partition points (`cfg.py`)
+
+Even after fixing Root Cause 1, the inner if produced adjacent partition points (e.g., `[0, 2, 3, 4, 5, 6]`). The old `partition()` used `start = pp[i-1]+1` to `end = pp[i]` for intermediate blocks, which produced empty slices when partition points were adjacent. These empty blocks were skipped, collapsing all branch targets into a single block. `find_basic_block()` had matching issues, mapping different nodes to the same block index. Result: all CFG edges pointed to the same block → `nx.all_simple_paths` found only 1 degenerate path.
+
+### Changes Made
+
+#### `engine/cfg.py`
+
+**Fix 1 — `basic_blocks_sv()`: Handle `BlockStatementSyntax` before generic iteration**
+
+Added an early check at the top of the iterable branch:
+```python
+if isinstance(ast, ps.BlockStatementSyntax):
+    self.block_stmt_depth += 1
+    self.block_smt.append(True)
+    self.basic_blocks_sv(m, s, ast.items)  # Use .items, not direct iteration
+    if self.block_stmt_depth in self.ind_branch_points:
+        self.resolve_independent_branch_pts(self.block_stmt_depth)
+    self.block_smt.pop()
+    self.block_stmt_depth -= 1
+    return
+```
+
+This ensures `BlockStatementSyntax` routes through `ast.items` (which yields actual statements like `ConditionalStatementSyntax`) instead of raw tokens.
+
+**Fix 2 — `partition()`: Rewritten for correct block boundaries**
+
+New logic:
+- Block 0: `all_nodes[pp[0] .. pp[1]]` (inclusive) — preamble + first conditional
+- Blocks 1+: each starts at `pp[2+]` (branch targets), extends to the next branch start
+- Last block extends to `len(all_nodes)`
+
+This correctly handles adjacent partition points by treating each `pp[2+]` as the start of a separate block.
+
+**Fix 3 — `find_basic_block()`: Rewritten to match new partition logic**
+
+- `node_idx <= pp[1]` → block 0
+- Otherwise, reverse-scan `branch_starts = pp[2:]` to find the containing block
+
+### Results
+
+cfg1 now correctly generates 3 paths:
+```
+Path 0: [-1, 0, 1, 2, -2]  — outer then, inner then → assert executed
+Path 1: [-1, 0, 1, 3, -2]  — outer then, inner else → skip assert
+Path 2: [-1, 0, 4, -2]     — outer else → skip all
+```
+
+All other CFGs (module_a, module_b, top) continue to work correctly.
+
+The SE engine successfully detected the assertion violation `b_out == (past_3_in_a + 1)` in 8 path explorations, reaching milestone 3/5 at cycle 4.
+
+**Counterexample**: `rst_n_c0=0, rst_n_c1..c4=1, top_in_a_c1=0, top_in_a_c2=0, top_in_a_c3=0, top_in_a_c4=1`
+
+**Execution time**: ~0.75s
+
+### PySlang Library Usage
+- `BlockStatementSyntax` (begin...end): Is iterable but yields raw syntax tokens. Use `.items` property to get semantic statement children.
+- `ConditionalStatementSyntax` (if...else): `.ifTrue` gives the then-body (often a `BlockStatementSyntax`), `.elseClause` gives the else clause.
+
 ## 2026-03-09 - Fixed False Positive Bug Detection and CFG Issues
 
 ### Problem 1: False Positive Termination

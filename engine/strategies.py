@@ -11,7 +11,7 @@ from copy import deepcopy
 import heapq
 import time
 
-from z3 import Solver, sat
+from z3 import Solver, sat, BitVec
 
 from .symbolic_state import SymbolicState
 from .execution_manager import ExecutionManager
@@ -38,7 +38,8 @@ class ExplorationStrategy(ABC):
         state: SymbolicState,
         num_cycles: int,
         comb_by_module: Optional[Dict[str, List[Any]]] = None,
-        wire_groups: Optional[List[Any]] = None
+        wire_groups: Optional[List[Any]] = None,
+        primary_input_flags: Optional[List[bool]] = None
     ) -> None:
         """
         Execute the exploration strategy.
@@ -77,7 +78,8 @@ class BlindSearchStrategy(ExplorationStrategy):
         state: SymbolicState,
         num_cycles: int,
         comb_by_module: Optional[Dict[str, List[Any]]] = None,
-        wire_groups: Optional[List[Any]] = None
+        wire_groups: Optional[List[Any]] = None,
+        primary_input_flags: Optional[List[bool]] = None
     ) -> None:
         """Execute blind exhaustive search with memory optimization."""
 
@@ -334,7 +336,8 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         state: SymbolicState,
         num_cycles: int,
         comb_by_module: Optional[Dict[str, List[Any]]] = None,
-        wire_groups: Optional[List[Any]] = None
+        wire_groups: Optional[List[Any]] = None,
+        primary_input_flags: Optional[List[bool]] = None
     ) -> None:
         """Execute milestone-directed search with priority queue."""
 
@@ -346,6 +349,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         # Store comb_by_module and wire_groups for use in _execute_cycle
         self._comb_by_module = comb_by_module or {}
         self._wire_groups = wire_groups or []
+        self._primary_input_flags = primary_input_flags or []
 
         # Reset milestone progress
         self.milestone_manager.reset()
@@ -447,21 +451,12 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             visitor.dfs(modules_dict[module_name])
             for var_name, sym in visitor.symbolic_store.items():
                 if var_name not in state.store[module_name]:
-                    # Registers / variables → 0 (Verilog default)
-                    # Input ports / nets    → fresh symbolic value
-                    if sym.kind == ps.SymbolKind.Variable:
-                        state.store[module_name][var_name] = BitVecVal(0, 32)
-                    elif sym.kind == ps.SymbolKind.Port:
-                        direction = getattr(sym, 'direction', None)
-                        if direction is not None and str(direction) in (
-                            'ArgumentDirection.In', 'In'
-                        ):
-                            state.store[module_name][var_name] = init_symbol()
-                        else:
-                            # output ports start at 0
-                            state.store[module_name][var_name] = BitVecVal(0, 32)
-                    else:
-                        state.store[module_name][var_name] = init_symbol()
+                    # Initialize everything to 0 (Verilog default for regs).
+                    # Port propagation + _unify_port_symbols will later assign
+                    # shared fresh symbols to signals connected through ports,
+                    # so primary inputs end up symbolic while internal signals
+                    # start at a well-defined value.
+                    state.store[module_name][var_name] = BitVecVal(0, 32)
 
         # Process declarations using visitor.dfs (these are Symbol/Syntax nodes)
         for module_name in manager.names_list:
@@ -478,7 +473,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 visitor.evaluate_comb(manager, state, node)
 
         # Unify port symbols so connected signals share the same value
-        self._unify_port_symbols(state)
+        self._unify_port_symbols(state, cycle=0)
         # Propagate initial values through port connections
         self._propagate_ports(state)
 
@@ -534,26 +529,48 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 if inst in state.store:
                     state.store[inst][sig] = source_value
 
-    def _unify_port_symbols(self, state: SymbolicState):
-        """During initialization, assign the same symbol to all signals in each wire group."""
+    def _unify_port_symbols(self, state: SymbolicState, cycle: int = 0):
+        """Assign a fresh shared Z3 BitVec to all signals in each wire group.
+
+        Uses cycle number in the symbol name so that primary inputs get
+        independent symbols at each clock cycle, allowing the solver to
+        explore different input values per cycle (e.g. rst_n=0 at cycle 0,
+        rst_n=1 at cycle 1).
+        """
         if not self._wire_groups:
             return
 
         for group in self._wire_groups:
-            # Find the first member that has a symbol, or create one
-            shared_symbol = None
-            for inst, sig in group:
-                if inst in state.store and sig in state.store[inst]:
-                    shared_symbol = state.store[inst][sig]
-                    break
-
-            if shared_symbol is None:
-                shared_symbol = init_symbol()
+            # Pick a representative name for the group
+            rep_inst, rep_sig = next(iter(group))
+            sym_name = f"{rep_sig}_c{cycle}"
+            shared_bv = BitVec(sym_name, 32)
 
             # Assign to all members
             for inst, sig in group:
                 if inst in state.store:
-                    state.store[inst][sig] = shared_symbol
+                    state.store[inst][sig] = shared_bv
+
+    def _refresh_primary_inputs(self, state: SymbolicState, cycle: int):
+        """Assign fresh Z3 BitVec symbols to primary input wire groups for this cycle.
+
+        Only primary inputs (top-level input ports like rst_n, top_in) get
+        refreshed. Internal wires (out_a, out_b, etc.) keep their computed values.
+        """
+        if not self._wire_groups or not self._primary_input_flags:
+            return
+
+        for i, group in enumerate(self._wire_groups):
+            if i >= len(self._primary_input_flags) or not self._primary_input_flags[i]:
+                continue  # Not a primary input group
+
+            rep_inst, rep_sig = next(iter(group))
+            sym_name = f"{rep_sig}_c{cycle}"
+            shared_bv = BitVec(sym_name, 32)
+
+            for inst, sig in group:
+                if inst in state.store:
+                    state.store[inst][sig] = shared_bv
 
 # engine/strategies.py (截取 MilestoneDirectedStrategy 的修改部分)
     def _execute_cycle(
@@ -571,6 +588,9 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         if cycle > 0:
             item.state.apply_pending_nba()
+            # Refresh primary input symbols for this cycle
+            # This allows the solver to explore different input values per cycle
+            self._refresh_primary_inputs(item.state, cycle)
             # Re-evaluate combinational logic after register updates
             for module_name in manager.names_list:
                 manager.curr_module = module_name
@@ -630,6 +650,10 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         manager.curr_module = saved_module
 
         # 2. 周期结束：处理所有存活的平行宇宙，检查里程碑，然后推入全局队列
+        print(f"  [CycleEnd] active_states={len(active_states)}")
+        for i, state in enumerate(active_states):
+            sat_result = state.pc.check()
+            print(f"  [CycleEnd] state[{i}] pc.check()={sat_result} assertions={len(list(state.pc.assertions()))}")
         for state in active_states:
             current_progress = item.milestones_completed
 
@@ -682,9 +706,11 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         valid_states = []
 
+        # Always save a clean copy before executing any paths
+        clean_base_state = self._clone_state(state)
+
         if len(paths) > 1:
             print(f"  [Branch] {module_name}/cfg{cfg_idx}: {len(paths)} paths")
-            clean_base_state = self._clone_state(state)
 
         for path_idx, cfg_path in enumerate(paths):
             # Reset abandon/ignore flags for each new path
@@ -715,6 +741,15 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         if len(paths) > 1:
             print(f"  [Branch] {module_name}/cfg{cfg_idx}: {len(valid_states)}/{len(paths)} survived")
+
+        # If all paths were abandoned/UNSAT, preserve the original state
+        # so execution can continue to the next module/cycle.
+        # This handles cases like assertion guards that are false at cycle 0.
+        if not valid_states:
+            if len(paths) > 1:
+                valid_states = [clean_base_state]
+            else:
+                valid_states = [state]
 
         return valid_states
     
