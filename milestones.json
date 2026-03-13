@@ -1,36 +1,41 @@
 {
-  "target": "Violate assertion 'out <= 3' in test_1",
-  "target_expr": "test_1.out > 3",
+  "target": "Violate assertion '(operand_b == dcpu_dat_o) || (rst == 1)' in or1200_cpu.u_assertions",
+  "target_expr": "!((or1200_cpu.u_assertions.operand_b == or1200_cpu.u_assertions.dcpu_dat_o) || (or1200_cpu.u_assertions.rst == 1))",
   "milestones": [
     {
       "step": 0,
       "description": "System Reset",
-      "condition": "RST == 1"
+      "condition": "rst == 1"
     },
     {
       "step": 1,
-      "description": "Reset released, counter starts incrementing",
-      "condition": "RST == 0 && test_1.out == 0"
+      "description": "Reset released, CPU begins fetching instructions",
+      "condition": "rst == 0"
     },
     {
       "step": 2,
-      "description": "Counter increments to 1",
-      "condition": "test_1.out == 1"
+      "description": "An instruction that writes to a register is in EX stage (e.g., l.addi)",
+      "condition": "or1200_cpu.ex_insn[31:26] == 6'h2a"
     },
     {
       "step": 3,
-      "description": "Counter increments to 2",
-      "condition": "test_1.out == 2"
+      "description": "A load/store instruction enters ID stage, setting up operand_b",
+      "condition": "(or1200_cpu.id_insn[31:26] == 6'h35) || (or1200_cpu.id_insn[31:26] == 6'h33)"
     },
     {
       "step": 4,
-      "description": "Counter increments to 3",
-      "condition": "test_1.out == 3"
+      "description": "Load/store instruction moves to EX stage, activating LSU",
+      "condition": "(or1200_cpu.ex_insn[31:26] == 6'h35) || (or1200_cpu.ex_insn[31:26] == 6'h33)"
     },
     {
       "step": 5,
-      "description": "Counter increments to 4, violating the assertion condition",
-      "condition": "test_1.out > 3"
+      "description": "LSU generates store data (operand_b) and drives dcpu_dat_o",
+      "condition": "or1200_cpu.dcpu_we_o == 1 && or1200_cpu.dcpu_cycstb_o == 1"
+    },
+    {
+      "step": 6,
+      "description": "Assertion p52 triggers because operand_b != dcpu_dat_o",
+      "condition": "or1200_cpu.u_assertions.operand_b != or1200_cpu.u_assertions.dcpu_dat_o"
     }
   ]
 }

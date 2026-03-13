@@ -467,6 +467,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         visitor.dfs(node)
 
         # Evaluate combinational logic using evaluate_comb (handles syntax nodes)
+        print(f"Initializing state: evaluating combinational logic for all modules...")
         for module_name in manager.names_list:
             manager.curr_module = module_name
             for node in self._comb_by_module.get(module_name, []):

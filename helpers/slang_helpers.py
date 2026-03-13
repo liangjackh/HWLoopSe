@@ -4,7 +4,7 @@ import re
 from helpers.utils import init_symbol
 from engine.execution_manager import ExecutionManager
 from engine.symbolic_state import SymbolicState
-from helpers.rvalue_to_z3 import solve_pc, parse_verilog_literal
+from helpers.rvalue_to_z3 import solve_pc, parse_verilog_literal, _match_bv_widths
 from helpers.rvalue_parser import conjunction_with_pointers
 from z3 import Not, is_bool, BoolVal, ExprRef, BitVecRef, BitVecVal
 
@@ -1066,7 +1066,6 @@ class SymbolicDFS:
                 s.assertion_counter += 1
                 cond_z3 = self.expr_to_z3(m, s, cond_expr)
                 # Ensure cond_z3 is boolean for the path condition
-                from z3 import is_bool, BitVecVal
                 if not is_bool(cond_z3):
                     if hasattr(cond_z3, 'size'):
                         cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size())
@@ -1209,6 +1208,7 @@ class SymbolicDFS:
                             match_guard = cond_expr
                             mismatch_guard = Not(cond_expr)
                         elif case_expr is not None:
+                            cond_expr, case_expr = _match_bv_widths(cond_expr, case_expr)
                             match_guard = cond_expr == case_expr
                             mismatch_guard = cond_expr != case_expr
                         elif isinstance(cond_expr, BitVecRef):
@@ -1366,11 +1366,11 @@ class SymbolicDFS:
         # Task #3: Check for assertion violation
         # An assertion is violated if the condition can be false
         # We check if NOT(condition) is satisfiable
-        from z3 import Not, is_bool
+
 
         if not is_bool(cond_z3):
             # Try to convert to boolean
-            from z3 import BitVecVal
+
             cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size()) if hasattr(cond_z3, 'size') else cond_z3
 
         # Push a new context for checking
@@ -1424,10 +1424,10 @@ class SymbolicDFS:
         if cond_z3 is None:
             return
 
-        from z3 import Not, is_bool
+
 
         if not is_bool(cond_z3):
-            from z3 import BitVecVal
+
             cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size()) if hasattr(cond_z3, 'size') else cond_z3
 
         # DEBUG
@@ -1507,10 +1507,10 @@ class SymbolicDFS:
             return
 
         # Check for assertion violation
-        from z3 import Not, is_bool
+
 
         if not is_bool(cond_z3):
-            from z3 import BitVecVal
+
             cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size()) if hasattr(cond_z3, 'size') else cond_z3
 
         # Push a new context for checking
@@ -1570,10 +1570,10 @@ class SymbolicDFS:
             return
 
         # Check for assertion violation
-        from z3 import Not, is_bool
+
 
         if not is_bool(cond_z3):
-            from z3 import BitVecVal
+
             cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size()) if hasattr(cond_z3, 'size') else cond_z3
 
         s.pc.push()
@@ -1655,7 +1655,6 @@ class SymbolicDFS:
             return
 
         # Check for assertion violation
-        from z3 import Not, is_bool, ExprRef
 
         # Verify we have a valid Z3 expression
         if not isinstance(cond_z3, ExprRef):
@@ -1663,7 +1662,7 @@ class SymbolicDFS:
             return
 
         if not is_bool(cond_z3):
-            from z3 import BitVecVal
+
             cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size()) if hasattr(cond_z3, 'size') else cond_z3
 
         s.pc.push()

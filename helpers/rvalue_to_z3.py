@@ -14,6 +14,40 @@ import ast
 from copy import deepcopy
 
 
+def _bool_to_bv(expr, width=1):
+    """Convert a Z3 BoolRef to a BitVecRef of the given width."""
+    if isinstance(expr, BoolRef) and not isinstance(expr, BitVecRef):
+        return If(expr, BitVecVal(1, width), BitVecVal(0, width))
+    return expr
+
+
+def _match_bv_widths(lhs, rhs):
+    """Coerce BoolRef to BitVec if needed, then zero-extend the narrower operand (Verilog semantics)."""
+    # Convert BoolRef operands to 1-bit BitVec so they can participate in bitwise ops
+    lhs_is_bool = isinstance(lhs, BoolRef) and not isinstance(lhs, BitVecRef)
+    rhs_is_bool = isinstance(rhs, BoolRef) and not isinstance(rhs, BitVecRef)
+
+    if lhs_is_bool and rhs_is_bool:
+        # Both bools — leave as-is (caller will use And/Or/== which accept BoolRef)
+        return lhs, rhs
+
+    if lhs_is_bool:
+        target_w = rhs.size() if isinstance(rhs, BitVecRef) else 1
+        lhs = _bool_to_bv(lhs, target_w)
+    elif rhs_is_bool:
+        target_w = lhs.size() if isinstance(lhs, BitVecRef) else 1
+        rhs = _bool_to_bv(rhs, target_w)
+
+    # Now reconcile BitVec widths
+    if isinstance(lhs, BitVecRef) and isinstance(rhs, BitVecRef):
+        lw, rw = lhs.size(), rhs.size()
+        if lw < rw:
+            lhs = z3.ZeroExt(rw - lw, lhs)
+        elif rw < lw:
+            rhs = z3.ZeroExt(lw - rw, rhs)
+    return lhs, rhs
+
+
 def parse_verilog_literal(val_str: str):
     """Parse Verilog-style literals like 1'b0, 32'd5, 8'hFF and return (value, bit_width).
 
@@ -111,6 +145,8 @@ def parse_infix_expr_to_z3(expr_str: str, s, m):
 
                     if lhs is None or rhs is None:
                         continue
+
+                    lhs, rhs = _match_bv_widths(lhs, rhs)
 
                     # Apply the operator
                     op_stripped = op.strip()
@@ -422,6 +458,8 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
             op = str(e.op) if hasattr(e, 'op') else ""
             debug_print("BinaryOp", f"lhs={lhs}, rhs={rhs}, op={op}")
 
+            lhs, rhs = _match_bv_widths(lhs, rhs)
+
             # Map PySlang binary operators to Z3
             if "LessThanEqual" in op or "LessEq" in op:
                 return z3.ULE(lhs, rhs)
@@ -656,6 +694,8 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
         op_token = str(getattr(e, 'operatorToken', ''))
         debug_print("BinaryExpressionSyntax", f"lhs={lhs}, rhs={rhs}, op_token={op_token}")
 
+        lhs, rhs = _match_bv_widths(lhs, rhs)
+
         if "<=" in op_token:
             return z3.ULE(lhs, rhs)
         elif ">=" in op_token:
@@ -679,12 +719,12 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
         elif "%" in op_token:
             return z3.URem(lhs, rhs)
         elif "&&" in op_token:
-            lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
-            rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
+            lhs_bool = lhs != BitVecVal(0, lhs.size()) if hasattr(lhs, 'size') else lhs
+            rhs_bool = rhs != BitVecVal(0, rhs.size()) if hasattr(rhs, 'size') else rhs
             return And(lhs_bool, rhs_bool)
         elif "||" in op_token:
-            lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
-            rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
+            lhs_bool = lhs != BitVecVal(0, lhs.size()) if hasattr(lhs, 'size') else lhs
+            rhs_bool = rhs != BitVecVal(0, rhs.size()) if hasattr(rhs, 'size') else rhs
             return Or(lhs_bool, rhs_bool)
         elif "&" in op_token:
             return lhs & rhs
@@ -1010,11 +1050,13 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
     elif is_eq(e):
         lhs = parse_expr_to_Z3(e.left, s, m)
         rhs = parse_expr_to_Z3(e.right, s, m)
+        lhs, rhs = _match_bv_widths(lhs, rhs)
         # Return the equality expression without modifying path condition
         return (lhs == rhs)
     elif is_distinct(e):
         lhs = parse_expr_to_Z3(e.left, s, m)
         rhs = parse_expr_to_Z3(e.right, s, m)
+        lhs, rhs = _match_bv_widths(lhs, rhs)
         # Return the inequality expression without modifying path condition
         # Handle type conversion if needed
         if isinstance(rhs, z3.z3.BitVecRef) and not isinstance(lhs, z3.z3.BitVecRef):
@@ -1308,6 +1350,8 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
             lhs = parse_expr_to_Z3(e.left, s, m)
             rhs = parse_expr_to_Z3(e.right, s, m)
             op = str(e.op) if hasattr(e, 'op') else ""
+
+            lhs, rhs = _match_bv_widths(lhs, rhs)
 
             # Map PySlang binary operators to Z3
             if op == "BinaryOperator.LessThanEqual" or "LessEq" in op:
