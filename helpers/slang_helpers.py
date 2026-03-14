@@ -6,8 +6,39 @@ from engine.execution_manager import ExecutionManager
 from engine.symbolic_state import SymbolicState
 from helpers.rvalue_to_z3 import solve_pc, parse_verilog_literal, _match_bv_widths
 from helpers.rvalue_parser import conjunction_with_pointers
-from z3 import Not, is_bool, BoolVal, ExprRef, BitVecRef, BitVecVal
+from z3 import Not, is_bool, BoolVal, ExprRef, BitVecRef, BitVecVal, simplify, is_true, is_false
 from helpers.debug import debug_print, DEBUG_ENABLED
+
+
+def _try_add_constraint(constraint, s, m):
+    """Add a branch constraint to the path condition with short-circuit and dedup.
+
+    Returns True if the constraint was added (or was trivially true / already present).
+    Returns False if the constraint is infeasible (caller should abandon the path).
+    """
+    simplified = simplify(constraint)
+
+    # 1. Concrete short-circuit
+    if is_true(simplified):
+        return True   # trivially True — nothing to add
+    if is_false(simplified):
+        return False  # trivially False — abandon path
+
+    # 2. Duplicate detection
+    key = simplified.sexpr()
+    if key in s.pc_constraint_set:
+        return True   # already in solver — skip
+
+    # 3. Symbolic: test with Z3 solver
+    s.pc.push()
+    s.pc.add(constraint)
+    if not solve_pc(s.pc):
+        s.pc.pop()
+        return False  # UNSAT — abandon path
+    s.pc.pop()
+    s.pc.add(constraint)
+    s.pc_constraint_set.add(key)
+    return True
 
 
 def normalize_verilog_literal(val_str: str) -> str:
@@ -1073,19 +1104,13 @@ class SymbolicDFS:
                     else:
                         cond_z3 = cond_z3 != BitVecVal(0, 32)
                 # Persistently add branch condition to path condition
-                # Use push/pop to test SAT first, only keep if feasible
+                # Short-circuit concrete values and deduplicate constraints
                 constraint = cond_z3 if direction else Not(cond_z3)
                 self.branch = bool(direction)
-                s.pc.push()
-                s.pc.add(constraint)
-                if not solve_pc(s.pc):
-                    s.pc.pop()  # Remove the infeasible constraint
+                if not _try_add_constraint(constraint, s, m):
                     m.abandon = True
                     m.ignore = True
                     return
-                # SAT — commit the constraint permanently
-                s.pc.pop()
-                s.pc.add(constraint)
 
         elif kind == ps.StatementKind.List:
             
@@ -1118,40 +1143,16 @@ class SymbolicDFS:
                 m.branch_count += 1
             if hasattr(stmt, "cond"):
                 self.visit_expr(m, s, stmt.cond)
-                s.pc.push()
                 s.assertion_counter += 1
                 cond_z3 = self.expr_to_z3(m, s, stmt.cond)
-                if direction:
-                    key = str(cond_z3)
-                    self.branch = True
-                    if m.cache is not None and m.cache.exists(key):
-                        result = m.cache.get(key).decode()
-                    else:
-                        result = str(solve_pc(s.pc))
-                        if m.cache is not None:
-                            m.cache.set(str(cond_z3), str(solve_pc(s.pc)))
-                    s.pc.assert_and_track(cond_z3, f"p{s.assertion_counter}")
-                else:
-                    key = str(f"~{cond_z3}")
-                    self.branch = False
-                    if m.cache is not None and m.cache.exists(key):
-                        result = m.cache.get(key).decode()
-                    else:
-                        result = str(solve_pc(s.pc))
-                        if m.cache is not None:
-                            m.cache.set(f"~{str(cond_z3)}", str(solve_pc(s.pc)))
-                    s.pc.assert_and_track(~cond_z3, f"p{s.assertion_counter}")
-                if not solve_pc(s.pc):
-                    s.pc.pop()
-                    if m.cache is not None:
-                        m.cache.set(str(cond_z3), False)
+                constraint = cond_z3 if direction else Not(cond_z3)
+                self.branch = bool(direction)
+                if not _try_add_constraint(constraint, s, m):
                     m.abandon = True
                     m.ignore = True
                     return
             if hasattr(stmt, "body"):
                 self.visit_stmt(m, s, stmt.body, modules, direction)
-            if hasattr(stmt, "cond"):
-                s.pc.pop()
 
         elif kind == ps.StatementKind.DoWhileLoop:
             # print("dowhile")  # DEBUG
@@ -1197,7 +1198,6 @@ class SymbolicDFS:
                 #for e in case.exprs:
                 for e in exprs:
                     self.visit_expr(m, s, e)
-                    s.pc.push()
                     s.assertion_counter += 1
                     case_z3 = self.expr_to_z3(m, s, e)
 
@@ -1227,19 +1227,8 @@ class SymbolicDFS:
                     if not isinstance(guard, ExprRef) or not is_bool(guard):
                         guard = BoolVal(True)
 
-                    key = str(guard)
                     self.branch = bool(direction)
-                    if m.cache is not None and m.cache.exists(key):
-                        result = m.cache.get(key).decode()
-                    else:
-                        result = str(solve_pc(s.pc))
-                        if m.cache is not None:
-                            m.cache.set(key, result)
-                    s.pc.assert_and_track(guard, f"p{s.assertion_counter}")
-                    if not solve_pc(s.pc):
-                        s.pc.pop()
-                        if m.cache is not None:
-                            m.cache.set(key, str(False))
+                    if not _try_add_constraint(guard, s, m):
                         m.abandon = True
                         m.ignore = True
                         return
@@ -1249,7 +1238,6 @@ class SymbolicDFS:
                         case_body = case.statements
 
                     if case_body is None:
-                        s.pc.pop()
                         continue
 
                     if isinstance(case_body, (list, tuple)):
@@ -1263,8 +1251,6 @@ class SymbolicDFS:
                         if stmt_node is None:
                             continue
                         self.visit_stmt(m, s, stmt_node, modules, direction)
-
-                    s.pc.pop()
 
         elif kind in [ps.StatementKind.ProceduralAssign]:
             self.visit_expr(m, s, stmt.left)

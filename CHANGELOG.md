@@ -1,5 +1,190 @@
 # Changelog
 
+## 2026-03-14 - Concrete Short-Circuit & Constraint Deduplication
+
+### Problem
+
+After fixing the CFG recursion bug and lazy fork, the engine explores many paths but suffers from two performance issues:
+
+1. **Concrete-false dead ends**: Conditions like `0 != 0` are trivially `False` but still cloned, added to the solver, and sent to Z3 — wasting time on guaranteed UNSAT paths.
+2. **Duplicate constraints**: The same constraint (e.g., `rst_c0 == 1`) is added 10-30+ times to the same solver because every module's always block independently checks `if (rst)` and all share the same unified symbol via port unification.
+
+Both issues inflate the solver's assertion list, slow down Z3, and generate pointless work items.
+
+### Root Cause
+
+- **Concrete-false**: When symbolic values are concrete (e.g., `BitVecVal(0, 32)` from register initialization), branch conditions like `rst != 0` simplify to `False`. The old code unconditionally pushed/popped/added these to Z3, which returned UNSAT after a full solver call.
+- **Duplicates**: Port unification assigns a shared Z3 `BitVec` (e.g., `rst_c0`) to all modules connected through ports. Each module's always block has `if (rst)`, producing the same constraint `rst_c0 != 0`. Without deduplication, the solver accumulates N copies (one per module instance).
+
+### Solution
+
+#### 1. `_try_add_constraint()` helper (`helpers/slang_helpers.py`)
+
+A single reusable function used by all three branch handlers. Three-stage logic:
+
+1. **Concrete short-circuit**: `z3.simplify()` the constraint, then `is_true()` / `is_false()` check. Trivially true constraints are skipped (nothing to add). Trivially false constraints cause immediate path abandonment — no Z3 solver call needed.
+2. **Duplicate detection**: Convert simplified constraint to S-expression key via `.sexpr()`. If the key is already in `s.pc_constraint_set`, skip — the solver already has this constraint.
+3. **Symbolic SAT check**: Only if the constraint is non-trivial and novel, push/pop test with Z3. If SAT, commit permanently and record the key.
+
+#### 2. `pc_constraint_set` on `SymbolicState` (`engine/symbolic_state.py`)
+
+A `set()` tracking S-expression keys of constraints already in the solver. Initialized empty in `__init__`.
+
+#### 3. Clone support (`engine/strategies.py`)
+
+- `_clone_state()`: copies `pc_constraint_set` with `set(state.pc_constraint_set)`.
+- `BlindSearchStrategy`: clears `pc_constraint_set` alongside `pc.reset()` between paths.
+
+### Changes Made
+
+#### `engine/symbolic_state.py`
+- Added `self.pc_constraint_set = set()` in `__init__`.
+
+#### `helpers/slang_helpers.py`
+- Added `simplify, is_true, is_false` to z3 imports.
+- Added module-level `_try_add_constraint(constraint, s, m)` function.
+- **Conditional handler** (~line 1077-1088): Replaced push/pop/add/solve_pc block with `_try_add_constraint()` call.
+- **WhileLoop handler** (~line 1119-1175): Replaced push/assert_and_track/pop block (with Redis cache logic) with `_try_add_constraint()` call. Removed the now-unnecessary push/pop scoping around the loop body.
+- **CaseStatement handler** (~line 1200-1246): Replaced push/assert_and_track/pop block (with Redis cache logic) with `_try_add_constraint()` call. Removed orphaned `s.pc.push()` and `s.pc.pop()` calls.
+
+#### `engine/strategies.py`
+- `_clone_state()`: Added `new_state.pc_constraint_set = set(state.pc_constraint_set)`.
+- `BlindSearchStrategy.run()`: Added `state.pc_constraint_set.clear()` after `state.pc.reset()`.
+
+### Expected Impact
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Concrete-false paths | Full Z3 call per path | Instant abandon (no solver) |
+| Duplicate constraints | N copies in solver (N = module instances) | 1 copy per unique constraint |
+| Z3 assertion list size | Inflated by 10-30x | Minimal unique set |
+| Path pruning speed | O(solver call) for trivial cases | O(1) for concrete + duplicate cases |
+
+### PySlang Library Usage
+- No new pyslang API usage in this change.
+
+## 2026-03-14 - Sylvia-style Lazy Fork: Fix Cartesian Product Ordering and Dead-Path Starvation
+
+### Problem
+
+After the Sylvia-style refactor (same date, earlier entry), all 201 paths were abandoned at `or1200_top/cfg27/path0` with zero paths reaching the next cycle. Two issues:
+
+1. **Cartesian product ordering bug**: `itertools.product` iterates the leftmost index slowest. cfg27 (first branching CFG) was always path0 in all 200 alternatives. cfg27/path1 was never generated.
+2. **Upfront clone waste**: 200 states were cloned eagerly before any execution. Most were immediately abandoned at the first CFG, wasting ~1.4s each (283s total for 201 paths).
+
+### Root Cause
+
+The previous fix generated all path combinations upfront via `iter_product(*branching_ranges)`. With cfg27 as the first branching CFG (index 0), its path index varied slowest. The first 200 alternatives only varied later CFGs while cfg27 stayed at path0. Since cfg27/path0 always triggered `abandon`, no path ever reached `[Enqueue]`.
+
+### Solution: Lazy Fork at Branch Points
+
+Replaced upfront Cartesian product generation with lazy forking:
+
+- Execute CFGs sequentially on a single state
+- When encountering a branching CFG (multiple paths), clone the pre-branch state and push sibling paths as new WorkItems
+- Continue executing the chosen path on the current state
+- If the chosen path is abandoned, siblings are already in the worklist and will be explored
+
+This means cfg27/path1 gets pushed to the worklist *before* cfg27/path0 is executed. When path0 is abandoned, the worklist already contains path1 ready to go.
+
+### Key Advantages Over Previous Approach
+
+| Aspect | Upfront Cartesian | Lazy Fork |
+|--------|------------------|-----------|
+| Clone timing | All 200 clones before any execution | Clone only at branch points |
+| cfg27/path1 | Never generated (index 0 varies slowest) | Pushed immediately |
+| Abandoned paths | All 200 wasted | Only clones up to the abandon point |
+| Memory | 200 full state copies | O(branching factor) at each CFG |
+
+### Changes Made
+
+#### `engine/strategies.py`
+
+Rewrote `_execute_cycle()` with lazy fork strategy:
+- `execution_context['remaining_cfgs']`: list of `{module, cfg_idx, path_idx, forked}` dicts tracking which CFGs to execute and which path
+- At each branching CFG: clone pre-branch state, push siblings with `forked=True` (prevents re-forking)
+- Siblings carry `remaining_cfgs` from the current CFG onward, so they resume execution mid-cycle
+- Default path (path 0) executed inline; alternatives deferred to worklist
+
+### PySlang Library Usage
+- No new pyslang API usage in this change.
+
+## 2026-03-14 - Sylvia-style Cycle Execution: Fix O(M²) Comb Re-evaluation and State Explosion
+
+### Problem
+
+Running `python3 -m main 30 or1200_subset.F --sv --auto-plan --milestone-file milestones/or1200_subset.json --coi --strategy directed -t or1200_top` could not complete even a single cycle (Path 1, cycle 0). Two compounding issues:
+
+1. **O(M²) combinational re-evaluation**: After each module's CFG execution, all other modules' comb logic was re-evaluated (nested loop over `manager.names_list`), producing massive `[EVAL-COMB]` log output.
+2. **Intra-cycle state explosion**: Each CFG forked `active_states` via `_execute_cfg_step_by_step`, causing multiplicative growth: 1 → 2 → 4 → 12 → 36 → 132 → 492 states within a single cycle. With ~28 module instances and hundreds of CFGs, the cycle never finished.
+
+### Root Cause
+
+In `strategies.py` `_execute_cycle()`:
+
+**Issue 1** (lines 641-652, old code): After each module's CFGs, a nested loop re-evaluated comb for all other modules:
+```python
+for state in active_states:
+    self._propagate_ports(state, module_name)
+    for dep_module in manager.names_list:          # O(M)
+        if dep_module != module_name:
+            for node in self._comb_by_module[dep_module]:  # O(C)
+                visitor.evaluate_comb(...)
+```
+Total: O(M × M × C × |states|) evaluate_comb calls per cycle.
+
+**Issue 2** (lines 626-644, old code): Each CFG execution multiplied active_states:
+```python
+for cfg_idx, cfg in enumerate(cfgs_by_module[module_name]):
+    next_active_states = []
+    for state in active_states:
+        result = self._execute_cfg_step_by_step(...)  # returns multiple states
+        next_active_states.extend(result)
+    active_states = next_active_states  # grows exponentially
+```
+
+### Solution (Sylvia-style)
+
+Referencing the Sylvia paper's execution model, two key changes:
+
+**Fix 1 — Fixed-point comb evaluation**: Replaced the O(M²) nested loop with `_evaluate_comb_fixedpoint()`, which evaluates all modules' comb logic in 2 passes (sufficient for DAG-structured combinational logic) then propagates ports. Called only at cycle boundaries, not after each module.
+
+**Fix 2 — Single-state cycle execution**: Instead of forking states inside a cycle, each cycle executes exactly ONE path combination (one path per CFG). Alternative path combinations are pushed as separate WorkItems into the global priority queue. This matches Sylvia's approach of deferring branching to the worklist level.
+
+New `_execute_cycle()` flow:
+1. Apply NBA + refresh inputs + comb fixed-point (cycle > 0)
+2. Collect all CFGs with their path indices
+3. Compute Cartesian product of branching CFGs' paths
+4. Execute combo[0] on current state (single state, no fork)
+5. Push remaining combos (up to 200) as new WorkItems
+6. Post-sequential comb fixed-point
+7. SAT check → milestone check → enqueue next cycle
+
+### Performance Impact
+
+| Metric | Before | After |
+|--------|--------|-------|
+| evaluate_comb calls/cycle | M × (M-1) × C × \|states\| | 2 × M × C |
+| States per cycle | Exponential (1→492→...) | Always 1 |
+| Cycle completion | Never (stuck on Path 1) | Completes normally |
+| Branching | Intra-cycle fork | Deferred to worklist |
+
+### Changes Made
+
+#### `engine/strategies.py`
+
+- **New method `_evaluate_comb_fixedpoint()`**: 2-pass comb evaluation + port propagation for all modules.
+- **Rewrote `_execute_cycle()`**: Sylvia-style single-state execution with Cartesian product branching deferred to worklist. MAX_ALTERNATIVES=200 caps sibling work items.
+- **Updated `_initialize_state()`**: Uses `_evaluate_comb_fixedpoint()` after `_unify_port_symbols()`.
+- **`_execute_cfg_step_by_step()`**: Still exists but no longer called from `_execute_cycle()` (kept for compatibility).
+
+### Intermediate Fix Attempt (str-based convergence — reverted)
+
+Initially tried a true fixed-point with `deepcopy(state.store)` + `str()` comparison for convergence detection. This caused Z3 printer stack overflow on deep expressions (or1200's Z3 ASTs are very deep). Reverted to simple 2-pass approach.
+
+### PySlang Library Usage
+- No new pyslang API usage in this change.
+
 ## 2026-03-12 - Fixed Nested-If CFG Path Generation and Assertion Reachability
 
 ### Problem: Assertion never executed — cfg1 only generated 1 path instead of 3

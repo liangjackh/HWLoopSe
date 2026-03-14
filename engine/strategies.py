@@ -211,6 +211,7 @@ class BlindSearchStrategy(ExplorationStrategy):
                 print("------------------------")
 
             state.pc.reset()
+            state.pc_constraint_set.clear()
             for module in manager.dependencies:
                 module = {}
 
@@ -467,17 +468,12 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                     for node in c.decls:
                         visitor.dfs(node)
 
-        # Evaluate combinational logic using evaluate_comb (handles syntax nodes)
-        logging.debug("Initializing state: evaluating combinational logic for all modules...")
-        for module_name in manager.names_list:
-            manager.curr_module = module_name
-            for node in self._comb_by_module.get(module_name, []):
-                visitor.evaluate_comb(manager, state, node)
-
         # Unify port symbols so connected signals share the same value
         self._unify_port_symbols(state, cycle=0)
-        # Propagate initial values through port connections
-        self._propagate_ports(state)
+
+        # Evaluate combinational logic to fixed-point (Sylvia-style)
+        logging.debug("Initializing state: evaluating combinational logic to fixed-point...")
+        self._evaluate_comb_fixedpoint(visitor, manager, state)
 
     def _clone_state(self, state: SymbolicState) -> SymbolicState:
         """
@@ -494,6 +490,9 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         new_state.pc = Solver()
         for assertion in state.pc.assertions():
             new_state.pc.add(assertion)
+
+        # Copy constraint dedup set
+        new_state.pc_constraint_set = set(state.pc_constraint_set)
 
         return new_state
 
@@ -575,6 +574,32 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                     state.store[inst][sig] = shared_bv
 
 # engine/strategies.py (截取 MilestoneDirectedStrategy 的修改部分)
+    def _evaluate_comb_fixedpoint(
+        self,
+        visitor: Any,
+        manager: ExecutionManager,
+        state: SymbolicState,
+        max_iterations: int = 2
+    ) -> int:
+        """Evaluate combinational logic to a stable state (Sylvia-style).
+
+        Combinational logic forms a DAG. Two passes suffice:
+        - Pass 1: evaluate all comb nodes, establishing initial values.
+        - Pass 2: re-evaluate so that nodes depending on other comb outputs
+                  pick up the values computed in pass 1.
+
+        Returns the number of iterations executed.
+        """
+        for iteration in range(max_iterations):
+            for module_name in manager.names_list:
+                manager.curr_module = module_name
+                for node in self._comb_by_module.get(module_name, []):
+                    visitor.evaluate_comb(manager, state, node)
+            self._propagate_ports(state)
+
+        logging.debug(f"  [Comb] Evaluated {max_iterations} pass(es)")
+        return max_iterations
+
     def _execute_cycle(
         self,
         engine: 'ExecutionEngine',
@@ -585,108 +610,142 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         item: WorkItem,
         worklist: List[WorkItem]
     ) -> Optional[str]:
-        """执行一个完整的时钟周期"""
+        """Execute one clock cycle (Sylvia-style: lazy fork at branch points).
+
+        Executes CFGs sequentially on a single state. When a branching CFG is
+        encountered, we execute one path and push the remaining paths as new
+        WorkItems into the worklist (with a snapshot of the state *before* the
+        branch). This avoids both:
+        - Exponential intra-cycle state explosion (old approach)
+        - Generating useless Cartesian products upfront (previous fix)
+
+        The path to execute is chosen from execution_context['remaining_cfgs'],
+        which tracks which CFGs still need to be executed and which path to take.
+        """
         cycle = item.cycle
 
+        # Step 1: Apply NBA and refresh inputs (if cycle > 0)
         if cycle > 0:
             item.state.apply_pending_nba()
-            # Refresh primary input symbols for this cycle
-            # This allows the solver to explore different input values per cycle
             self._refresh_primary_inputs(item.state, cycle)
-            # Re-evaluate combinational logic after register updates
+            self._evaluate_comb_fixedpoint(visitor, manager, item.state)
+
+        # Step 2: Build CFG list if not already in context
+        remaining_cfgs = item.execution_context.get('remaining_cfgs', None)
+        if remaining_cfgs is None:
+            remaining_cfgs = []
             for module_name in manager.names_list:
-                manager.curr_module = module_name
-                for node in self._comb_by_module.get(module_name, []):
-                    visitor.evaluate_comb(manager, item.state, node)
-            # Propagate updated values through port connections
-            self._propagate_ports(item.state)
+                if module_name not in cfgs_by_module:
+                    continue
+                for cfg_idx, cfg in enumerate(cfgs_by_module[module_name]):
+                    if cycle > 0 and getattr(cfg, 'is_initial', False):
+                        continue
+                    paths = cfg.paths
+                    if not paths:
+                        continue
+                    remaining_cfgs.append({
+                        'module': module_name,
+                        'cfg_idx': cfg_idx,
+                        'path_idx': 0,  # default: first path
+                    })
 
-        # 1. 局部状态列表：保存本周期内的所有平行宇宙（最初只有一个）
-        active_states = [item.state]
+        # Step 3: Execute CFGs sequentially, lazy-fork at branches
+        state = item.state
+        for i, cfg_entry in enumerate(remaining_cfgs):
+            module_name = cfg_entry['module']
+            cfg_idx = cfg_entry['cfg_idx']
+            chosen_path_idx = cfg_entry['path_idx']
 
-        for module_name in manager.names_list:
             manager.curr_module = module_name
             manager.cycle = cycle
 
-            if module_name not in cfgs_by_module:
-                # Even if no CFGs, re-evaluate comb for this module
-                next_active_states = []
-                for state in active_states:
-                    for node in self._comb_by_module.get(module_name, []):
-                        visitor.evaluate_comb(manager, state, node)
-                    self._propagate_ports(state, module_name)
-                    next_active_states.append(state)
-                active_states = next_active_states
-                continue
+            cfg = cfgs_by_module[module_name][cfg_idx]
 
-            for cfg_idx, cfg in enumerate(cfgs_by_module[module_name]):
-                # Skip initial blocks after cycle 0
-                if cycle > 0 and getattr(cfg, 'is_initial', False):
-                    continue
-                next_active_states = []
-                for state in active_states:
-                    # 分支裂变：传入1个状态，可能返回1个或多个存活状态
-                    result = self._execute_cfg_step_by_step(
-                        engine, visitor, modules_dict, cfg, cfg_idx,
-                        module_name, manager, state
+            # Clamp path index
+            if chosen_path_idx >= len(cfg.paths):
+                chosen_path_idx = 0
+
+            # Lazy fork: if this CFG has multiple paths and we're taking path 0
+            # (i.e., not already a forked work item for a specific path),
+            # push siblings for the other paths.
+            if len(cfg.paths) > 1 and cfg_entry.get('forked', False) is False:
+                pre_branch_state = self._clone_state(state)
+                for alt_path_idx in range(len(cfg.paths)):
+                    if alt_path_idx == chosen_path_idx:
+                        continue
+                    # Build remaining CFGs for the alternative: same list from
+                    # this point onward, but with this CFG using alt_path_idx
+                    alt_remaining = []
+                    alt_remaining.append({
+                        'module': module_name,
+                        'cfg_idx': cfg_idx,
+                        'path_idx': alt_path_idx,
+                        'forked': True,  # mark so we don't re-fork
+                    })
+                    for j in range(i + 1, len(remaining_cfgs)):
+                        alt_remaining.append(dict(remaining_cfgs[j]))
+                    alt_ctx = {'remaining_cfgs': alt_remaining}
+                    alt_item = WorkItem(
+                        score=item.score + 1,
+                        cycle=cycle,
+                        milestones_completed=item.milestones_completed,
+                        state=self._clone_state(pre_branch_state),
+                        execution_context=alt_ctx
                     )
-                    if result == "VIOLATION":
-                        return "VIOLATION"
-                    # 将该 CFG 分支出的所有有效状态收集起来
-                    next_active_states.extend(result)
-                active_states = next_active_states
+                    heapq.heappush(worklist, alt_item)
 
-            # After all CFGs for this module, propagate via port connections
-            # and re-evaluate comb for dependent modules
-            for state in active_states:
-                self._propagate_ports(state, module_name)
-                # Re-evaluate comb for all modules that might depend on propagated values
-                for dep_module in manager.names_list:
-                    if dep_module != module_name and self._comb_by_module.get(dep_module, []):
-                        saved_module = manager.curr_module
-                        manager.curr_module = dep_module
-                        for node in self._comb_by_module[dep_module]:
-                            visitor.evaluate_comb(manager, state, node)
-                        # Propagate any updates from comb evaluation
-                        self._propagate_ports(state, dep_module)
-                        manager.curr_module = saved_module
+            # Execute the chosen path
+            cfg_path = cfg.paths[chosen_path_idx]
+            manager.ignore = False
+            manager.abandon = False
 
-        # 2. 周期结束：处理所有存活的平行宇宙，检查里程碑，然后推入全局队列
-        logging.debug(f"  [CycleEnd] active_states={len(active_states)}")
-        for i, state in enumerate(active_states):
-            sat_result = state.pc.check()
-            logging.debug(f"  [CycleEnd] state[{i}] pc.check()={sat_result} assertions={len(list(state.pc.assertions()))}")
-        for state in active_states:
-            current_progress = item.milestones_completed
+            result = self._execute_path(
+                engine, visitor, modules_dict, cfg, cfg_path,
+                module_name, manager, state, cfg_idx, chosen_path_idx
+            )
 
-            # Check consecutive milestones (a single cycle may satisfy multiple)
-            while current_progress < len(self.milestone_manager.milestones):
-                success, new_progress = self.milestone_manager.check_and_lock_stateless(state, current_progress)
-                if success:
-                    current_progress = new_progress
-                else:
-                    break
-
-            # Check for assertion violation (milestones are just guidance, not success condition)
-            if manager.assertion_violation:
+            if result == "VIOLATION":
                 return "VIOLATION"
 
-            # 4. 生成下一周期的任务并入队
-            if state.pc.check() == sat:
-                next_cycle = cycle + 1
-                if next_cycle < self.max_cycles:
-                    new_score = self.milestone_manager.compute_score_stateless(current_progress, next_cycle)
-                    new_item = WorkItem(
-                        score=new_score,
-                        cycle=next_cycle,
-                        milestones_completed=current_progress,
-                        state=state,
-                        execution_context=item.execution_context.copy()
-                    )
-                    heapq.heappush(worklist, new_item)
-                    print(f"  [Enqueue] score={new_score}, next_cycle={next_cycle}, milestones={current_progress}/{len(self.milestone_manager.milestones)}")
-                else:
-                    print(f"  [MaxCycle] cycle {next_cycle} >= limit {self.max_cycles}, not enqueued")
+            if manager.abandon or manager.ignore:
+                print(f"  [Pruned] {module_name}/cfg{cfg_idx}/path{chosen_path_idx}: abandoned/ignore")
+                return None
+
+        # Step 4: Re-evaluate comb after sequential logic
+        self._evaluate_comb_fixedpoint(visitor, manager, state)
+
+        # Step 5: Check SAT
+        if state.pc.check() != sat:
+            print(f"  [Pruned] cycle {cycle}: UNSAT after execution")
+            return None
+
+        # Step 6: Check milestones
+        current_progress = item.milestones_completed
+        while current_progress < len(self.milestone_manager.milestones):
+            success, new_progress = self.milestone_manager.check_and_lock_stateless(state, current_progress)
+            if success:
+                current_progress = new_progress
+            else:
+                break
+
+        if manager.assertion_violation:
+            return "VIOLATION"
+
+        # Step 7: Enqueue next cycle
+        next_cycle = cycle + 1
+        if next_cycle < self.max_cycles:
+            new_score = self.milestone_manager.compute_score_stateless(current_progress, next_cycle)
+            new_item = WorkItem(
+                score=new_score,
+                cycle=next_cycle,
+                milestones_completed=current_progress,
+                state=state,
+                execution_context={'remaining_cfgs': None}  # fresh at next cycle
+            )
+            heapq.heappush(worklist, new_item)
+            print(f"  [Enqueue] score={new_score}, next_cycle={next_cycle}, milestones={current_progress}/{len(self.milestone_manager.milestones)}")
+        else:
+            print(f"  [MaxCycle] cycle {next_cycle} >= limit {self.max_cycles}, not enqueued")
 
         return None
 

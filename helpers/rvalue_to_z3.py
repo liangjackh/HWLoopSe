@@ -1024,6 +1024,15 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
             if sub_expr.__class__.__name__ == "Token":
                 continue
             part_z3 = parse_expr_to_Z3(sub_expr, s, m)
+            # Coerce to BitVec for concatenation: BoolRef -> 1-bit BV,
+            # int/str -> 32-bit BV, so z3.Concat never receives non-BV args.
+            if isinstance(part_z3, BoolRef) and not isinstance(part_z3, BitVecRef):
+                part_z3 = _bool_to_bv(part_z3, 1)
+            elif not isinstance(part_z3, BitVecRef):
+                try:
+                    part_z3 = BitVecVal(int(part_z3), 32)
+                except (TypeError, ValueError):
+                    part_z3 = BitVecVal(0, 32)
             parts.append(part_z3)
 
         if len(parts) == 0:

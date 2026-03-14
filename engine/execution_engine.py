@@ -863,6 +863,7 @@ class ExecutionEngine:
                     print("[ExecutionEngine] No seed signals found for COI, skipping pruning")
 
         # Step 4: Load milestones from file (if provided, skips auto-plan)
+        print(f"step4: milestone_file={self.milestone_file}, auto_plan_enabled={self.auto_plan_enabled}")
         if self.milestone_file:
             from engine.milestone import Milestone, MilestoneManager
             from engine.strategies import MilestoneDirectedStrategy
@@ -999,7 +1000,6 @@ class ExecutionEngine:
 
 
         print("Starting exploration...")
-        print(f"Branch points explored: {manager.branch_count}")
 
         if self.debug:
             manager.debug = True

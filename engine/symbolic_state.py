@@ -15,6 +15,7 @@ class SymbolicState:
         self.store = {}
         self.pending_nba = {}
         self.cond = False
+        self.pc_constraint_set = set()
 
     def apply_pending_nba(self):
         """Apply pending non-blocking assignments to the store.

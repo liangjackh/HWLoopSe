@@ -134,8 +134,11 @@ class CFG:
                         if hasattr(item, 'syntax') and item.syntax is not None:
                             self.comb.append(item.syntax)
                     elif item.__class__.__name__ == "InstanceSymbol":
-                        # Recursively process child instances (submodules)
-                        self.get_always_sv(m, s, item)
+                        # Do NOT recurse into child instances — each instance
+                        # gets its own CFGs built separately in execute_sv().
+                        # Recursing here would duplicate CFGs under the wrong
+                        # module context, causing signal lookup mismatches.
+                        pass
             return
 
         if (ast != None and isinstance(ast, ps.DefinitionSymbol)):
