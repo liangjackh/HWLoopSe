@@ -3,6 +3,7 @@ are some other methods here that may be helpful, too."""
 
 import z3
 from z3 import Solver, Int, BitVec, BitVecSort
+import logging
 
 class SymbolicState:
     sort = BitVecSort(32)
@@ -19,12 +20,12 @@ class SymbolicState:
         """Apply pending non-blocking assignments to the store.
         This should be called at the beginning of each new cycle."""
         if self.pending_nba:
-            print(f"[NBA-DEBUG] Applying {sum(len(updates) for updates in self.pending_nba.values())} pending NBA(s)")
+            logging.debug(f"[NBA] Applying {sum(len(updates) for updates in self.pending_nba.values())} pending NBA(s)")
         for module_name, updates in self.pending_nba.items():
             if module_name not in self.store:
                 self.store[module_name] = {}
             for var_name, value in updates.items():
-                print(f"[NBA-DEBUG]   {module_name}.{var_name} <= {value}")
+                logging.debug(f"[NBA]   {module_name}.{var_name} <= {value}")
                 self.store[module_name][var_name] = value
         # Clear pending assignments after applying
         self.pending_nba = {}
@@ -34,7 +35,7 @@ class SymbolicState:
         if module_name not in self.pending_nba:
             self.pending_nba[module_name] = {}
         self.pending_nba[module_name][var_name] = value
-        print(f"[NBA-DEBUG] Queued NBA: {module_name}.{var_name} <= {value}")
+        logging.debug(f"[NBA] Queued NBA: {module_name}.{var_name} <= {value}")
 
     def get_symbolic_expr(self, module_name: str, var_name: str) -> str:
         """Just looks up a symbolic expression associated with a specific variable name

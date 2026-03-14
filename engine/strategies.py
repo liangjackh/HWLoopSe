@@ -10,6 +10,7 @@ from itertools import product
 from copy import deepcopy
 import heapq
 import time
+import logging
 
 from z3 import Solver, sat, BitVec
 
@@ -467,7 +468,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         visitor.dfs(node)
 
         # Evaluate combinational logic using evaluate_comb (handles syntax nodes)
-        print(f"Initializing state: evaluating combinational logic for all modules...")
+        logging.debug("Initializing state: evaluating combinational logic for all modules...")
         for module_name in manager.names_list:
             manager.curr_module = module_name
             for node in self._comb_by_module.get(module_name, []):
@@ -651,10 +652,10 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         manager.curr_module = saved_module
 
         # 2. 周期结束：处理所有存活的平行宇宙，检查里程碑，然后推入全局队列
-        print(f"  [CycleEnd] active_states={len(active_states)}")
+        logging.debug(f"  [CycleEnd] active_states={len(active_states)}")
         for i, state in enumerate(active_states):
             sat_result = state.pc.check()
-            print(f"  [CycleEnd] state[{i}] pc.check()={sat_result} assertions={len(list(state.pc.assertions()))}")
+            logging.debug(f"  [CycleEnd] state[{i}] pc.check()={sat_result} assertions={len(list(state.pc.assertions()))}")
         for state in active_states:
             current_progress = item.milestones_completed
 

@@ -31,6 +31,7 @@ class EngineConfig:
     use_cache: bool = False
     strategy: str = "blind"
     auto_plan: bool = False
+    milestone_file: Optional[str] = None
     llm_api_key: Optional[str] = None
     llm_provider: str = "auto"
     llm_base_url: Optional[str] = None
@@ -58,6 +59,7 @@ class EngineConfig:
             use_cache=options.use_cache or False,
             strategy=options.strategy or "blind",
             auto_plan=options.auto_plan or False,
+            milestone_file=getattr(options, 'milestone_file', None),
             llm_api_key=options.llm_api_key,
             llm_provider=options.llm_provider or "auto",
             llm_base_url=options.llm_base_url,

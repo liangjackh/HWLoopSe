@@ -7,6 +7,7 @@ from engine.symbolic_state import SymbolicState
 from helpers.rvalue_to_z3 import solve_pc, parse_verilog_literal, _match_bv_widths
 from helpers.rvalue_parser import conjunction_with_pointers
 from z3 import Not, is_bool, BoolVal, ExprRef, BitVecRef, BitVecVal
+from helpers.debug import debug_print, DEBUG_ENABLED
 
 
 def normalize_verilog_literal(val_str: str) -> str:
@@ -877,7 +878,7 @@ class SymbolicDFS:
                 cname = node.__class__.__name__
 
         # DEBUG
-        print(f"[EVAL-COMB] module={m.curr_module} cname={cname}")
+        debug_print("EVAL-COMB", f"module={m.curr_module} cname={cname}")
 
         # Handle ContinuousAssignSyntax: assign lhs = rhs;
         if cname == 'ContinuousAssignSyntax':
@@ -985,7 +986,7 @@ class SymbolicDFS:
 
         # DEBUG: log assertion-related nodes
         if 'Assert' in cname or 'Assertion' in cname:
-            print(f"[VISIT-STMT-DEBUG] module={m.curr_module} class={cname} kind={kind}")
+            debug_print("VISIT-STMT", f"module={m.curr_module} class={cname} kind={kind}")
 
         # Handle SyntaxList by iterating through children
         if kind == ps.SyntaxKind.SyntaxList:
@@ -1058,10 +1059,10 @@ class SymbolicDFS:
 
             if cond_expr:
                 # DEBUG: trace condition extraction
-                print(f"[COND-DEBUG] module={m.curr_module} dir={direction} cond_expr={cond_expr} class={cond_expr.__class__.__name__} kind={getattr(cond_expr, 'kind', 'N/A')}")
+                debug_print("COND", f"module={m.curr_module} dir={direction} cond_expr={cond_expr} class={cond_expr.__class__.__name__} kind={getattr(cond_expr, 'kind', 'N/A')}")
                 if m.curr_module in s.store:
                     rst = s.store[m.curr_module].get('rst_n', 'MISSING')
-                    print(f"[COND-DEBUG]   store[{m.curr_module}].rst_n = {rst} (type={type(rst).__name__})")
+                    debug_print("COND", f"store[{m.curr_module}].rst_n = {rst} (type={type(rst).__name__})")
                 self.visit_expr(m, s, cond_expr)
                 s.assertion_counter += 1
                 cond_z3 = self.expr_to_z3(m, s, cond_expr)
@@ -1431,13 +1432,14 @@ class SymbolicDFS:
             cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size()) if hasattr(cond_z3, 'size') else cond_z3
 
         # DEBUG
-        print(f"[ASSERT-SYNTAX-DEBUG] cycle={m.cycle} module={m.curr_module} cond_z3={cond_z3}")
-        print(f"[ASSERT-SYNTAX-DEBUG] store:")
-        for k, v in s.store.get(m.curr_module, {}).items():
-            print(f"[ASSERT-SYNTAX-DEBUG]   {k} = {v} ({type(v).__name__})")
-        print(f"[ASSERT-SYNTAX-DEBUG] pc assertions ({len(list(s.pc.assertions()))}):")
-        for a in s.pc.assertions():
-            print(f"[ASSERT-SYNTAX-DEBUG]   {a}")
+        debug_print("ASSERT", f"cycle={m.cycle} module={m.curr_module} cond_z3={cond_z3}")
+        if DEBUG_ENABLED:
+            debug_print("ASSERT", "store:")
+            for k, v in s.store.get(m.curr_module, {}).items():
+                debug_print("ASSERT", f"  {k} = {v} ({type(v).__name__})")
+            debug_print("ASSERT", f"pc assertions ({len(list(s.pc.assertions()))}):")
+            for a in s.pc.assertions():
+                debug_print("ASSERT", f"  {a}")
 
         # Push a new context for checking
         s.pc.push()

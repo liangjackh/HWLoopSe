@@ -80,6 +80,8 @@ def create_option_parser() -> OptionParser:
                       help="Exploration strategy: blind, directed, or lookahead, Default=blind")
     parser.add_option("--auto-plan", action="store_true", dest="auto_plan",
                       default=False, help="Enable LLM-based milestone generation from assertions")
+    parser.add_option("--milestone-file", dest="milestone_file",
+                      help="Path to a JSON milestone file (skips LLM generation)")
     parser.add_option("--llm-api-key", dest="llm_api_key",
                       help="API key for LLM (OpenAI, Anthropic, or DeepSeek)")
     parser.add_option("--llm-provider", dest="llm_provider", default="auto",

@@ -55,6 +55,7 @@ class ExecutionEngine:
 
     # Auto-plan configuration
     auto_plan_enabled: bool = False  # Enable LLM-based milestone generation
+    milestone_file: Optional[str] = None  # Path to JSON milestone file (skips LLM)
     llm_api_key: Optional[str] = None  # API key for LLM provider
     llm_provider: str = "auto"  # LLM provider: openai, anthropic, deepseek, or auto
     llm_mock: bool = False  # Use mock LLM responses for testing
@@ -78,6 +79,7 @@ class ExecutionEngine:
         self.cache = None
         self.strategy = None
         self.auto_plan_enabled = False
+        self.milestone_file = None
         self.llm_api_key = None
         self.llm_provider = "auto"
         self.llm_mock = False
@@ -259,6 +261,7 @@ class ExecutionEngine:
         """
         self.debug = config.debug
         self.auto_plan_enabled = config.auto_plan
+        self.milestone_file = config.milestone_file
         self.llm_api_key = config.llm_api_key
         self.llm_provider = config.llm_provider
         self.llm_mock = config.llm_mock
@@ -274,6 +277,9 @@ class ExecutionEngine:
 
         if config.auto_plan:
             print(f"[ExecutionEngine] Auto-plan enabled (provider={config.llm_provider}, mock={config.llm_mock})")
+
+        if config.milestone_file:
+            print(f"[ExecutionEngine] Milestone file: {config.milestone_file}")
 
         if config.coi:
             self.coi_enabled = True
@@ -856,8 +862,39 @@ class ExecutionEngine:
                 else:
                     print("[ExecutionEngine] No seed signals found for COI, skipping pruning")
 
-        # Step 4: Auto-plan milestone generation (if enabled)
-        if self.auto_plan_enabled:
+        # Step 4: Load milestones from file (if provided, skips auto-plan)
+        if self.milestone_file:
+            from engine.milestone import Milestone, MilestoneManager
+            from engine.strategies import MilestoneDirectedStrategy
+
+            print(f"[ExecutionEngine] Loading milestones from {self.milestone_file}")
+            with open(self.milestone_file, "r") as f:
+                milestone_data = json.load(f)
+
+            milestone_list = milestone_data.get("milestones", [])
+            all_milestones = []
+            for m in milestone_list:
+                try:
+                    desc = m.get('description', m.get('desc', f"Step {m.get('step', '?')}"))
+                    cond = m.get('condition', m.get('cond', None))
+                    if cond is None:
+                        print(f"[ExecutionEngine] Warning: Skipping milestone without condition: {m}")
+                        continue
+                    milestone = Milestone(desc, cond)
+                    all_milestones.append(milestone)
+                    print(f"[ExecutionEngine]   Step {m.get('step', '?')}: {desc} ({cond})")
+                except (ValueError, KeyError) as e:
+                    print(f"[ExecutionEngine] Warning: Skipping invalid milestone: {e}")
+
+            if all_milestones:
+                milestone_manager = MilestoneManager(all_milestones)
+                self.strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles))
+                print(f"[ExecutionEngine] Loaded {len(all_milestones)} milestones from {self.milestone_file}")
+            else:
+                print("[ExecutionEngine] No valid milestones in file, using existing strategy")
+
+        # Step 4b: Auto-plan milestone generation (if enabled and milestone-file not provided)
+        elif self.auto_plan_enabled:
             print("[ExecutionEngine] Auto-plan mode enabled")
 
             # Check if driver and compilation are available

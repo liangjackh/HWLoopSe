@@ -1,14 +1,20 @@
 #!/bin/bash
 
 #git pull
+find . -name '*.pyc' -delete && find . -name '__pycache__' -type d -exec rm -rf {} +
+
 rm -f out.txt
-#python3 -m main 2 designs/test-designs/test_2.v --sv -t place_holder_2
+#test_2
 #python3 -m main 6 designs/test-designs/test_2.v --sv  --auto-plan --llm-provider deepseek --coi --strategy directed
+#python3 -m main 6 designs/test-designs/test_2.v --sv --milestone-file milestones/test_2.json --coi --strategy directed
 
+#or1200
 #python3 -m main 3 or1200.F --sv  --auto-plan --llm-provider deepseek --coi --strategy directed -t or1200_top
-python3 -m main 30 or1200_subset.F --sv  --auto-plan --llm-provider deepseek --coi --strategy directed -t or1200_top
+python3 -m main 30 or1200_subset.F --sv  --auto-plan --milestone-file milestones/or1200_subset.json --coi --strategy directed -t or1200_top
 
+#sub-test
 #python3 -m main 5 designs/test-designs/sub-test/sub.F --sv --auto-plan --llm-provider deepseek --coi --strategy directed -t top
+#python3 -m main 6 designs/test-designs/sub-test/sub.F --sv --milestone-file milestones/sub-test.json --coi --strategy directed
 
 
 #python3 -m main 16 designs/test-designs/new_test/top_compat.sv --sv  -I designs/test-designs/new_test/include/ --auto-plan --llm-provider deepseek --coi --strategy directed
