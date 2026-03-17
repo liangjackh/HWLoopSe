@@ -1,0 +1,222 @@
+Now I understand the design clearly:
+
+  Data path:
+  - module_a: pipe[0] <= in_a + 1; pipe[1] <= pipe[0]; out_a = pipe[1] — 2-cycle pipeline delay, output = in_a(2 cycles ago) + 1
+  - module_c: out_c = in_c << 1 — combinational, left shift
+  - module_b:
+    - If orig_in_a > THRESHOLD: out_b <= c_out = in_b << 1 = (pipe[1]) << 1 = (in_a(2 cycles ago) + 1) << 1
+    - Else: out_b <= in_b = pipe[1] = in_a(2 cycles ago) + 1
+
+  The core issue is that orig_in_a represents the current cycle's input while the conditional branches on it, but in_b carries data
+  from 2 cycles prior through the pipeline, creating a temporal mismatch where the branch decision and the data being processed are
+  completely out of sync. The assertion module is tracking the input history to verify this behavior.
+
+  Now I'm setting up the assertion to capture inputs across 3 pipeline stages and checking that when an old input was below the
+  threshold, the output matches that old input plus one. When the bug triggers, it's because the current cycle receives a new input
+  above the threshold that causes the branch to switch, but the pipeline is still processing the previous input from 2 cycles ago, so
+   the output doesn't match what the assertion expects for that older data. _b takes c_out = (Y+1) << 1 instead of in_b = Y+1
+  - So b_out = (Y+1) << 1, but assertion expects Y+1 → VIOLATION!
+
+  So for the symbolic execution to catch this, it needs:
+  - Cycle 0: reset
+  - Cycle 1: input Y <= 255 (triggers in_a_history[0] = Y)
+  - Cycle 2: module_a: pipe[0] = Y+1; in_a_history[1] = Y, in_a_history[0] = Z
+  - Cycle 3: module_a: pipe[1] = Y+1, wire_a_to_b = Y+1; in_a_history[2] = Y
+    - Input at cycle 3: X > 255 → module_b takes shift path → out_b = (Y+1)<<1
+  - Cycle 4: check_en=1, past_3_in_a = in_a_c1 (input from 3 cycles ago = Y)
+    - b_out = (Y+1)<<1 from the registered output, but the assertion expects Y+1 → violation detected
+
+Tracing through module_b's always block to confirm the registered output gets the shifted value... Tracing through the timing more
+  carefully—during cycle 1 when the first input arrives, the combinational assignment out_a = pipe[1] reflects pipe[1]'s value before
+   the clock edge updates it, so out_a still reads as 0 even though pipe[1] is being loaded with the new input value.
+
+  Following the data through module_b, the input is 0 regardless of whether the condition branches, so out_b gets assigned 0 as well.
+   The valid pipeline shifts in a new bit and the history register captures the current input, with all updates taking effect after
+  the clock edge. After the non-blocking assignments, the pipeline registers update with the new values, and now in cycle 3 I'm
+  seeing the first meaningful output emerge—module_a's previous result flows through to module_b, which begins computing the
+  left-shifted value based on that piped input. Continuing through cycle 4, I'm checking that the valid signal is set and retrieving
+  the input from three cycles back to verify the output matches the conditional logic from the previous cycle—either shifted left by
+  one if the value exceeded 255, or incremented by one otherwise.
+
+  The violation occurs when the input three cycles ago was within bounds, triggering the no-shift assertion, but the input at cycle 3
+   exceeded the threshold and took the shift path instead, producing a mismatched output. This requires a specific sequence: reset at
+   cycle 0, no resets through cycle 4, the early input staying under 255, and the later input exceeding 255 to cause the wrong
+  branch.
+
+  All these constraints are satisfiable simultaneously, so the verification engine should be able to construct a counterexample with
+  these exact conditions. Now I'm tracing through how the engine handles the preferred path selection for the module's conditional
+  logic based on the input threshold. Looking at the CFG structure, I can see how the paths are formed through the nested
+  conditionals. The reset path takes direction [1] at the first branch, while the shift and no-shift paths both take direction [0] at
+   the first branch but diverge at the second condition with directions [1] and [0] respectively. When checking the preferred path at
+   cycle > 0, I'm comparing the first direction values to find the first non-reset path, which would be whichever comes first in the
+  path ordering—either shift or no-shift depending on how NetworkX orders the simple paths through the graph. cycles. The no-shift
+  alternative is only available as a fork.
+
+For the bug to surface, I need a work item where cycle 1 takes the no-shift fork (keeping in_a_c1 <= 255), then cycles 2 and 3 both
+   take the preferred shift path (in_a_c2 > 255 and in_a_c3 > 255), which should trigger the assertion at cycle 4. The problem is
+  that the assertion's preferred path at each cycle tries to pass, making it harder for the bug condition to actually fire.
+
+  Actually, I think I see the issue now—when the fork happens at cycle 1, the assertion's cfg1 tries its path 0 with check_en=0,
+  which causes the work item to be abandoned and killed. But the forking mechanism pushes alternative paths (path 1 and 2, which skip
+   the assertion) before execution, so those alternatives survive and continue with the no-shift state from the fork.
+
+  At cycle 2, the valid_pipe is 001 at the start (only one non-reset cycle so far), so check_en is still 0, and cfg1/path0 gets
+  abandoned again. The alternatives keep advancing. By cycle 3, valid_pipe becomes 011 after the cycle 2 NBA update, so check_en
+  finally becomes 1 and the assertion can actually execute.
+
+  Now at cycle 4, I need to trace what b_out symbolically represents. The assertion checks if b_out equals past_3_in_a plus one, but
+  I need to figure out what value b_out actually holds at this point. Since b_out is connected through the port hierarchy to u_b's
+  out_b, I need to track what u_b computed at cycle 3 when it executed the shift operation.
+
+  At the start of cycle 4, the pending NBA updates from cycle 3 get applied first, so u_b.out_b gets its new symbolic value. Then the
+   port propagation should move that value to u_assert.b_out through the wire connections. I'm trying to understand the exact order
+  of operations in the symbolic execution—specifically whether _propagate_ports runs inside the combinational fixedpoint loop and
+  when exactly the port connections get unified. At cycle 4, u_assert.b_out receives the shifted value (in_a_c1 + 1) << 1, but the
+  assertion expects it to equal in_a_c1 + 1—these are only equal in the overflow case, so the assertion fails for normal input
+  values.
+
+  Now I'm tracing through the verification engine's worklist to see if it actually explores the path that would trigger this
+  violation, checking whether the constraints (in_a_c1 ≤ 255, in_a_c3 > 255, reset inactive, check enabled) get queued and processed
+  through the cycles. Now I'm working through cycle 1 on the main line, building the remaining configurations and figuring out which
+  paths are preferred for each module. For u_a, there are two branches depending on the reset signal, and I need to determine which
+  one gets prioritized based on the direction counts and path ordering logic. _count=1: preferred is first with d[0]=0 → path 1
+  (non-reset) ✓
+- u_b/cfg0: preferred shift (path 1, direction[0]=0, direction[1]=1)
+    - Fork: reset path (path 0), no-shift path (path 2)
+  - u_assert/cfg0: preferred non-reset
+    - Fork: reset path
+  - u_assert/cfg1: preferred path 0 (assertion path, direction[0]=1)
+    - Fork: path 1 and path 2 (non-assertion paths)
+
+  Now, processing sequentially:
+  1. Execute u_a/cfg0/path1 (non-reset): adds rst_n_c1 != 0
+    - Forks u_a reset alternative (path 0, with rst_n_c1 = 0)
+  2. Execute u_b/cfg0/path1 (shift): adds in_a_c1 > 255 (orig_in_a > THRESHOLD). I need to verify the actual condition for module
+  b—it branches on reset first, then checks if the input exceeds the threshold for the shift path, so I'm confirming the constraint
+  at the basic block level.
+
+  The symbolic variable here is likely top_in_c1 since orig_in_a connects through the wire group to in_a and top_in, making them all
+  equivalent signals.
+
+  Now I'm tracing through the execution paths: the reset fork for u_b contradicts the already-added constraint and gets pruned as
+  unsatisfiable, while the no-shift path adds in_a_c1 <= 255. Then u_assert advances with valid_pipe, and when checking the assertion
+   at cycle 1, the check_en signal is 0, so the condition fails and the main work item gets killed before forking the remaining
+  paths.
+
+  The critical fork here is the u_b no-shift branch that survives—it carries forward the rst_n_c1 != 0 constraint from u_a but hasn't
+   yet added the upper bound on in_a_c1, so it still has work to do through the remaining u_b and u_assert configurations.
+
+  When this fork processes through u_b/cfg0 with the no-shift path, it adds the constraint that in_a_c1 <= 255, then u_assert/cfg0
+  advances the pipeline, but u_assert/cfg1 hits the check_en=0 condition and gets killed. However, the cfg1 path forks were already
+  queued before execution, so there's still a surviving work item combining the u_b no-shift state with the cfg1 skip condition.
+
+The score accounting gets tricky here—each fork increments the score, so the original cycle 1 item has score S, the u_b fork jumps
+  to S+1, and within that fork the cfg1 branch would be S+2, but I need to reconsider whether that's actually how the scoring works
+  for nested forks. So the u_b fork item itself continues processing its remaining CFGs, and when it hits cfg1, it forks off
+  alternatives with score S+2 before attempting the preferred path. But if that assertion path gets abandoned, the u_b fork item dies
+   too—meaning every work item at cycle 1 that tries the assertion path ends up killed, even though they've already enqueued their
+  alternatives.
+
+  Only the cfg1-fork items survive: the main line's fork with in_a_c1 > 255 (score S+1) and the u_b fork's cfg1 fork with in_a_c1 <=
+  255 (score S+2). At cycle 2, the main line survivor processes first due to its lower score, and the same pattern repeats—u_b takes
+  the shift path again.
+
+  The u_b fork survivor from cycle 1 processes later at cycle 2, building fresh remaining_cfgs and again taking the preferred shift.
+  This pattern continues through subsequent cycles, eventually producing an item that has in_a_c1 <= 255 from the initial u_b fork,
+  followed by in_a_c2 > 255 and in_a_c3 > 255 from the preferred shifts in cycles 2 and 3, with rst_n remaining non-zero throughout.
+
+  Now I'm tracking how the score accumulates across these cycles. At each cycle, cfg1 forks off alternatives while the main line
+  continues, so the score grows incrementally. At cycle 1 I get the u_b fork plus cfg1 fork for +2, then at cycle 2 the u_b takes the
+   preferred path without forking while cfg1 forks again, pushing the score higher. I need to carefully count which work item
+  survives each cycle and what its accumulated score becomes by cycle 4.
+
+  Actually, I'm realizing the scoring works differently than I thought—when a work item completes a cycle, it doesn't carry its score
+   forward. Instead, the next cycle creates a fresh work item with a score computed stateless from the current progress and next
+  cycle, using the milestone manager to calculate it.
+
+  The fork bonus of +1 only applies to alternative branches within the same cycle, not across cycle boundaries. Once we move to the
+  next cycle, we're working with a completely fresh score based on milestones.
+
+  Let me trace through what actually happens at cycle 0 to understand the work item explosion—the main item forks at each multi-path
+  CFG node, creating additional items for each alternative path.
+
+  The real problem is that at cycles 1-3, when cfg1/path0 (the assertion path) executes with check_en=0, the work item gets killed
+  entirely. The alternatives that skip the assertion survive as intra-cycle forks with +1 score, but the main path is gone. Since the
+   fork at cfg1 happens before execution, alternatives exist—but once the main item is killed, only the alternatives continue
+  processing cfg1.
+The solution is to treat assertion CFGs differently: when an assertion is abandoned because check_en=0, that just means the
+  assertion doesn't fire at that cycle, not that the entire execution should stop. The assertion is passive and doesn't affect the
+  data path state, so skipping it is correct behavior. Instead of killing the work item when abandon happens, I should skip the
+  assertion CFG and let the data path continue unchanged. So the real solution is simpler: when a CFG path gets abandoned, just skip
+  it and move to the next one instead of killing the entire work item. This works because abandoned assertion paths don't need to
+  execute (the assertion didn't fire), and for data paths with unsatisfiable constraints, the forked alternative already handles the
+  other case. Since the abandoned path didn't modify any state, reverting and continuing is safe.
+
+  But I need to be careful—an abandoned path might have partially modified state before the abandon was detected. Looking at the
+  assertion CFG, the condition check happens right at the start of the first basic block with no prior statements, so there's nothing
+   to revert. For data path CFGs though, there could be statements before the condition that changed the store, so I need to check
+  whether the first basic block contains only the condition or has statements before it.
+
+  The key question is whether _try_add_constraint actually modifies the solver when it tests a constraint, or if it just checks
+  satisfiability without committing anything. Let me trace through the actual implementation to understand what happens when a
+  constraint is found to be unsatisfiable.
+
+  Now I'm working through the execution trace to see which work items survive the early cycles and eventually reach the point where
+  the violation is detected. For the promising path where in_a_c1 <= 255, I'm tracking how it progresses through cycle 1 and
+  beyond—the shift operation gets abandoned due to the assertion, but the no-shift fork continues processing through the remaining
+  operations, advancing the valid_pipe state. abandoned (check_en=0) → killed
+      - But pushes cfg1 alternatives before dying
+  - The cfg1 alternatives survive, complete cycle 1, enqueue cycle 2
+
+Cycle 2: (the in_a_c1 <= 255 work item from cycle 1's cfg1 fork)
+  - Builds fresh remaining_cfgs
+  - u_a, u_b (preferred shift → in_a_c2 > 255), u_assert/cfg0, u_assert/cfg1
+  - At u_assert/cfg1: check_en=0 → abandoned → killed
+    - cfg1 alternatives pushed
+    - The cfg1 alternative survives, completes cycle 2, enqueues cycle 3
+
+  Cycle 3:
+  - Same: check_en=0, cfg1 abandoned, alternative survives
+
+  Cycle 4:
+  - check_en=1, so cfg1/path0 proceeds through BB[0]
+  - BB[1] checks if past_3_in_a <= 255, which reduces to the in_a_c1 <= 255 constraint from cycle 1 and evaluates to SAT
+  - BB[2] hits the assertion check
+  - Now I need to figure out what b_out is at this point. Tracing back: at cycle 3, u_b took the shift path since in_a_c3 > 255, so
+  in_b came from u_a's output, which after cycle 2's NBA was in_a_c1 + 1.
+  - c_out becomes (in_a_c1 + 1) << 1, and this gets assigned to out_b via NBA
+  - At cycle 4 start, out_b = (in_a_c1 + 1) << 1, which propagates to u_assert.b_out
+  - The assertion expects b_out == past_3_in_a + 1, but I'm getting (in_a_c1 + 1) << 1, which for in_a_c1 = 10 gives 22 instead of
+  11, so the assertion fails
+
+  The engine should catch this violation, but something's preventing the work item from reaching cycle 4. I'm considering a few
+  possibilities: the work item might have a high score and get deprioritized, there could be an unsatisfiable constraint at cycle 4,
+  the symbolic state tracking for b_out might be incorrect across cycles, or the search space could be exploding with too many forks.
+   Let me examine the scoring milestones to understand what's happening.
+
+Looking at the milestone progression for the "good" work item, I need to trace when each milestone is actually checked—specifically
+   whether the milestone validation happens before or after the CFG fork at cycle 1, since that timing affects whether the item
+  advances properly through the search. I'm realizing there's a timing issue with how milestones are evaluated. The NBA updates to
+  valid_pipe are queued but not yet applied to the store when the milestone check runs at the end of cycle 1, so valid_pipe would
+  still be 0 and the milestone wouldn't pass even though the NBA is pending. The milestone check is looking at the current store
+  state before those pending updates take effect. Now I'm tracing through the exact timing of when valid_pipe gets updated versus
+  when milestones are checked. The key insight is that NBA (non-blocking assignments) are applied at the start of the next cycle, so
+  during the current cycle, valid_pipe still holds its old value even after combinational logic re-evaluation. This means milestone
+  checks in the current cycle will fail because they're reading the stale value, but once we move to the next cycle and NBA is
+  applied, valid_pipe updates and the milestone can finally pass. At cycle 2, the NBA from the previous cycle gets applied so
+  valid_pipe becomes 001, and the assertion shifts in another bit to queue up 011 for the next cycle. The milestone check now sees
+  valid_pipe as 001, which satisfies milestone 1, so progress advances to 2, but milestone 2 fails since 001 doesn't equal 3 yet.
+
+  Moving into cycle 3, valid_pipe is now 011 (which is 3), and the assertion queues up 111 for cycle 4. This time milestone 2 passes
+  since valid_pipe equals 3, advancing progress to 3, but milestone 3 fails because check_en is still 0. Cycle 4 begins with
+  valid_pipe shifting to 111, and I'm tracking whether the remaining milestones will be satisfied.
+
+  Now I'm realizing the core issue: when checking milestones against symbolic values, Z3 needs to determine if a symbolic expression
+  actually equals a concrete milestone value. If valid_pipe is computed as a concrete BitVecVal, the comparison works fine, but if
+  it's a symbolic expression, the equality check might not simplify to true or false—it could remain undecidable without additional
+  constraints.
+
+  The real problem is that _execute_cycle terminates the entire work item whenever any CFG path becomes unsatisfiable, which is too
+  harsh. Instead, when a path is abandoned, I should let the alternative forked paths continue and just move on to the next CFG
+  without killing the work item. The tricky part is that _try_add_constraint might be poisoning the solver state with an UNSAT
+  constraint, so I need to verify whether it's actually modifying the solver or just testing the constraint.

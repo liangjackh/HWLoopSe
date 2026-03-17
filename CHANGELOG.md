@@ -1,5 +1,98 @@
 # Changelog
 
+## 2026-03-17 - Fix Assertion Violation Detection: Skip Abandoned CFGs + Alternate Preferred Paths
+
+### Problem
+
+Running `python3 -m main 6 designs/test-designs/sub-test/sub.F --sv --milestone-file milestones/sub-test.json --coi --strategy directed` on a multi-module SystemVerilog design. Simulation (iverilog) found assertion violations at times 75000 and 85000, but the symbolic execution engine explored 90K+ work items without ever finding them.
+
+The hardware bug scenario: module_b selects between a shifted value (`c_out = in_b << 1`) and the direct value (`in_b`) based on `orig_in_a > THRESHOLD`. The assertion checks `b_out == past_3_in_a + 1`. When `orig_in_a > 255` at cycle K but the pipelined `in_b` carries a value from a cycle where `orig_in_a <= 255`, `b_out` gets the wrong (shifted) value, violating the assertion.
+
+### Root Cause
+
+Two interacting issues prevented the engine from constructing the right constraint combination:
+
+**Problem A — Abandoned CFGs killed entire work items**: In `_execute_cycle`, when any CFG path was abandoned (e.g., assertion guard `rst_n && check_en` was UNSAT because `check_en=0` at early cycles), `return None` killed the entire work item. The assertion module's CFGs are passive (don't modify data-path state), so killing the work item was unnecessarily aggressive. The forked else-branch alternative survived but incurred a `score+1` penalty, deprioritizing it.
+
+**Problem B — Fixed preferred path caused uniform constraints**: `_preferred_path_idx` always returned the first non-reset path for u_b at cycle > 0, which was always the SHIFT path (`orig_in_a > 255`). This meant ALL work items accumulated `top_in_c1 > 255` from cycle 1. The assertion violation requires `top_in_c1 <= 255` (no-shift at cycle 1) AND `top_in_c3 > 255` (shift at cycle 3). The no-shift forks existed but were deprioritized by ID ordering (lower IDs processed first at equal scores), so after 90K items, none had been explored.
+
+### Solution
+
+**Fix A — Skip abandoned CFGs instead of killing work items** (`strategies.py:_execute_cycle`):
+- Before executing each CFG, snapshot `state.store` and `state.pending_nba` via `deepcopy`
+- If the CFG path is abandoned, restore the snapshot and `continue` to the next CFG
+- Safe because `_try_add_constraint` uses push/pop and never permanently adds UNSAT constraints to the Z3 solver
+- The work item survives to the next cycle with its original score (no fork penalty)
+
+**Fix B — Alternate preferred non-reset paths by cycle** (`strategies.py:_preferred_path_idx`):
+- When multiple non-reset paths exist (e.g., shift vs no-shift in u_b), rotate among them using `(cycle - 1) % len(non_reset_indices)`
+- Cycle 1: no-shift (path 2), Cycle 2: shift (path 1), Cycle 3: no-shift, Cycle 4: shift
+- Creates diverse constraint combinations across cycles as the main (un-penalized) path
+- The critical combination (no-shift at cycle 1, shift at cycle 3) now appears naturally
+
+### Changes Made
+
+#### `engine/strategies.py`
+
+**`_execute_cycle()` (lines 730-753)**:
+```python
+# Before:
+if manager.abandon or manager.ignore:
+    return None  # Killed entire work item
+
+# After:
+pre_cfg_store = deepcopy(state.store)
+pre_cfg_nba = deepcopy(state.pending_nba)
+# ... execute path ...
+if manager.abandon or manager.ignore:
+    state.store = pre_cfg_store
+    state.pending_nba = pre_cfg_nba
+    manager.abandon = False
+    manager.ignore = False
+    continue  # Skip this CFG, proceed to next
+```
+
+**`_preferred_path_idx()` (lines 525-528)**:
+```python
+# Before:
+for i, d in enumerate(first_dirs):
+    if d == 0:
+        return i  # Always returned first non-reset path
+
+# After:
+non_reset_indices = [i for i, d in enumerate(first_dirs) if d == 0]
+return non_reset_indices[(cycle - 1) % len(non_reset_indices)]
+```
+
+### Debug Print Cleanup
+
+Removed all debug prints added during investigation across multiple files:
+- `helpers/slang_helpers.py`: Removed `[DECL-COMB-DEBUG]`, `[DECL-RESOLVE-DEBUG]`, `[CFG1-COND-DEBUG]`, `[INNER-COND-DEBUG]`, `[ASSERT-VISIT-DEBUG]`, `[ASSERT-DEBUG]`, `[HANDLER-MATCH]` prints
+- `engine/strategies.py`: Removed `[EXEC-PATH-DEBUG]` prints
+- `helpers/rvalue_to_z3.py`: Removed `[INTVEC-DEBUG]`, `[BINEXPR-LESSEQ-DEBUG]` prints; replaced verbose `solve_pc` UNSAT dump with `logging.debug`
+- `frontend/coi_analyzer.py`: Removed `[COI-DEBUG]` prints
+
+### Results
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Work items explored | 90,000+ (no result) | **8** |
+| Execution time | Ran indefinitely | **0.079 seconds** |
+| Assertion violation | Never found | **Found at cycle 4** |
+
+**Counterexample**:
+```
+rst_n_c0 = 0       (reset)
+rst_n_c1..c4 = 1   (non-reset)
+top_in_a_c1 = 255  (input <= threshold, enters no-shift data path)
+top_in_a_c3 = 256  (input > threshold, triggers shift, wrong data latch)
+```
+
+This matches the simulation-observed violations at times 75000 and 85000.
+
+### PySlang Library Usage
+- No new pyslang API usage in this change.
+
 ## 2026-03-14 - Concrete Short-Circuit & Constraint Deduplication
 
 ### Problem

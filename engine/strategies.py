@@ -496,6 +496,42 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         return new_state
 
+    def _preferred_path_idx(self, cfg, cycle: int) -> int:
+        """Choose the preferred default path for a CFG at a given cycle.
+
+        For cycle 0: use path 0 (typically the reset path).
+        For cycle > 0: prefer a non-reset path. When multiple non-reset
+        paths exist (e.g., shift vs no-shift), alternate among them by
+        cycle number to ensure diverse constraint combinations are explored
+        as the main (un-penalized) path.
+
+        This avoids both the cascade forking problem (always picking reset)
+        and the single-path bias problem (always picking the same non-reset
+        path, causing all work items to accumulate the same data-path
+        constraints).
+        """
+        if cycle == 0 or len(cfg.paths) <= 1:
+            return 0
+
+        first_dirs = []
+        for path in cfg.paths:
+            directions = cfg.compute_direction(path)
+            first_dirs.append(directions[0] if directions else None)
+
+        dir_1_count = sum(1 for d in first_dirs if d == 1)
+        dir_0_count = sum(1 for d in first_dirs if d == 0)
+
+        # If exactly 1 path takes the true branch at the first conditional,
+        # it's likely the single reset path (no further branching inside reset).
+        # Prefer a non-reset path (direction[0]==0) for cycle > 0.
+        if dir_1_count == 1 and dir_0_count >= 1:
+            non_reset_indices = [i for i, d in enumerate(first_dirs) if d == 0]
+            # Alternate among non-reset paths by cycle to create diverse
+            # constraint combinations across cycles
+            return non_reset_indices[(cycle - 1) % len(non_reset_indices)]
+
+        return 0
+
     def _propagate_ports(self, state: SymbolicState, module_name: str = None):
         """Propagate values through wire equivalence groups.
 
@@ -646,7 +682,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                     remaining_cfgs.append({
                         'module': module_name,
                         'cfg_idx': cfg_idx,
-                        'path_idx': 0,  # default: first path
+                        'path_idx': self._preferred_path_idx(cfg, cycle),
                     })
 
         # Step 3: Execute CFGs sequentially, lazy-fork at branches
@@ -699,6 +735,10 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             manager.ignore = False
             manager.abandon = False
 
+            # Snapshot store & pending_nba so we can rollback on abandon
+            pre_cfg_store = deepcopy(state.store)
+            pre_cfg_nba = deepcopy(state.pending_nba)
+
             result = self._execute_path(
                 engine, visitor, modules_dict, cfg, cfg_path,
                 module_name, manager, state, cfg_idx, chosen_path_idx
@@ -708,8 +748,15 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 return "VIOLATION"
 
             if manager.abandon or manager.ignore:
-                print(f"  [Pruned] {module_name}/cfg{cfg_idx}/path{chosen_path_idx}: abandoned/ignore")
-                return None
+                # Restore state to pre-CFG snapshot and skip this CFG.
+                # This is safe because _try_add_constraint uses push/pop
+                # and does NOT permanently add UNSAT constraints.
+                state.store = pre_cfg_store
+                state.pending_nba = pre_cfg_nba
+                print(f"  [Skip] {module_name}/cfg{cfg_idx}/path{chosen_path_idx}: abandoned/ignore, rolling back and continuing")
+                manager.abandon = False
+                manager.ignore = False
+                continue
 
         # Step 4: Re-evaluate comb after sequential logic
         self._evaluate_comb_fixedpoint(visitor, manager, state)

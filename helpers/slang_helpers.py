@@ -968,19 +968,10 @@ class SymbolicDFS:
             lhs_name = getattr(name_node, 'valueText', str(name_node))
             init_expr = getattr(init, 'expr', getattr(init, 'expression', init))
             if init_expr is not None:
-                # DEBUG
-                if m.curr_module == 'u_assert' and lhs_name in ('check_en', 'past_3_in_a'):
-                    print(f"[DECL-COMB-DEBUG] {m.curr_module}.{lhs_name} init_expr={init_expr} class={init_expr.__class__.__name__} kind={getattr(init_expr, 'kind', 'N/A')}")
-                    vp = s.store.get(m.curr_module, {}).get('valid_pipe', 'MISSING')
-                    vp2 = s.store.get(m.curr_module, {}).get('valid_pipe[2]', 'MISSING')
-                    iah = s.store.get(m.curr_module, {}).get('in_a_history', 'MISSING')
-                    iah2 = s.store.get(m.curr_module, {}).get('in_a_history[2]', 'MISSING')
-                    print(f"[DECL-COMB-DEBUG]   valid_pipe={vp} ({type(vp).__name__}), valid_pipe[2]={vp2}")
-                    print(f"[DECL-COMB-DEBUG]   in_a_history={iah} ({type(iah).__name__}), in_a_history[2]={iah2}")
                 try:
                     rhs_z3 = self.expr_to_z3(m, s, init_expr)
                     s.store[m.curr_module][lhs_name] = rhs_z3
-                except Exception:
+                except Exception as _exc:
                     rhs_str = conjunction_with_pointers(init_expr, s, m)
                     rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
                     s.store[m.curr_module][lhs_name] = rhs_with_symbols
@@ -1015,10 +1006,6 @@ class SymbolicDFS:
         kind = stmt.kind
         cname = stmt.__class__.__name__
 
-        # DEBUG: log assertion-related nodes
-        if 'Assert' in cname or 'Assertion' in cname:
-            debug_print("VISIT-STMT", f"module={m.curr_module} class={cname} kind={kind}")
-
         # Handle SyntaxList by iterating through children
         if kind == ps.SyntaxKind.SyntaxList:
             for child in stmt:
@@ -1049,6 +1036,8 @@ class SymbolicDFS:
                 self.visit_stmt(m, s, substmt, modules, direction)
 
         elif kind == ps.StatementKind.Conditional or isinstance(stmt, ps.ConditionalStatementSyntax):
+            if 'Assert' in cname or 'assert' in str(kind).lower():
+                print(f"[HANDLER-BUG] Assertion node MATCHED Conditional handler! kind={kind} class={cname} module={m.curr_module}")
             #print(f"[visiting statement: Conditional]")  # DEBUG
             # Track unique branch points by syntax source location (start line/column)
             if hasattr(stmt, 'syntax') and stmt.syntax is not None:
@@ -1326,16 +1315,6 @@ class SymbolicDFS:
 
         # Get assertion kind (assert, assume, cover)
         assertion_kind = getattr(stmt, 'assertionKind', None)
-
-        # DEBUG: dump u_assert store on first assertion check
-        if m.curr_module == 'u_assert':
-            print(f"[ASSERT-DEBUG] cycle={m.cycle} module={m.curr_module} cond={cond}")
-            print(f"[ASSERT-DEBUG] store keys: {list(s.store.get('u_assert', {}).keys())}")
-            for k, v in list(s.store.get('u_assert', {}).items())[:15]:
-                print(f"[ASSERT-DEBUG]   {k} = {v} (type={type(v).__name__})")
-            print(f"[ASSERT-DEBUG] pc assertions count: {len(list(s.pc.assertions()))}")
-            for a in s.pc.assertions():
-                print(f"[ASSERT-DEBUG]   pc: {a}")
 
         # Visit the condition expression to update symbolic state
         self.visit_expr(m, s, cond)

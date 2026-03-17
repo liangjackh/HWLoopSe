@@ -1,0 +1,295 @@
+   ## Overview
+   The symbolic execution engine handles non-blocking assignments (NBA) across multiple clock cycles. This document traces the complete flow of NBA handling from
+   assignment to application.
+
+   ## Key Components
+
+   ### 1. SymbolicState (engine/symbolic_state.py)
+   **Lines 11-39: NBA Storage and Application**
+
+   ```python
+   def __init__(self):
+       self.pc = Solver()
+       self.assertion_counter = 0
+       self.clock_cycle = 0
+       self.store = {}
+       self.pending_nba = {}  # Dictionary: {module_name: {var_name: value}}
+       self.cond = False
+       self.pc_constraint_set = set()
+
+   def apply_pending_nba(self):
+       """Apply pending non-blocking assignments to the store.
+       This should be called at the beginning of each new cycle."""
+       if self.pending_nba:
+           logging.debug(f"[NBA] Applying {sum(len(updates) for updates in self.pending_nba.values())} pending NBA(s)")
+       for module_name, updates in self.pending_nba.items():
+           if module_name not in self.store:
+               self.store[module_name] = {}
+           for var_name, value in updates.items():
+               logging.debug(f"[NBA]   {module_name}.{var_name} <= {value}")
+               self.store[module_name][var_name] = value
+       # Clear pending assignments after applying
+       self.pending_nba = {}
+
+   def add_pending_nba(self, module_name: str, var_name: str, value):
+       """Add a non-blocking assignment to the pending queue."""
+       if module_name not in self.pending_nba:
+           self.pending_nba[module_name] = {}
+       self.pending_nba[module_name][var_name] = value
+       logging.debug(f"[NBA] Queued NBA: {module_name}.{var_name} <= {value}")
+   ```
+
+   **Key Points:**
+   - `pending_nba` is a nested dictionary: `{module_name: {var_name: z3_value}}`
+   - `apply_pending_nba()` moves all pending assignments into the main store
+   - After applying, `pending_nba` is cleared
+   - `add_pending_nba()` queues assignments for later application
+
+   ### 2. NBA Assignment Handling (helpers/slang_helpers.py)
+   **Lines 778-833: NonblockingAssignmentExpression Processing**
+
+   ```python
+   elif kind == ps.SyntaxKind.NonblockingAssignmentExpression:
+       # Get LHS variable name (handle array element selects)
+       lhs_var = None
+       lhs = expr.left
+       # ... (complex LHS parsing for array indices, etc.)
+
+       if lhs_var is not None:
+           # Convert RHS to Z3 expression and use pending NBA queue
+           try:
+               rhs_z3 = self.expr_to_z3(m, s, expr.right)
+           except Exception:
+               # Fall back to string-based representation
+               rhs_str = conjunction_with_pointers(expr.right, s, m)
+               rhs_z3 = substitute_symbols(rhs_str, s.store[m.curr_module])
+           s.add_pending_nba(m.curr_module, lhs_var, rhs_z3)
+   ```
+
+   **Key Points:**
+   - NBA expressions are identified by `ps.SyntaxKind.NonblockingAssignmentExpression`
+   - RHS is converted to Z3 expression
+   - Assignment is queued via `add_pending_nba()`, NOT immediately applied to store
+   - Blocking assignments (line 768-776) directly update `s.store[m.curr_module][lhs_var]`
+
+   ### 3. Cycle Execution Flow
+
+   #### BlindSearchStrategy (engine/strategies.py, lines 71-226)
+   **Lines 158-188: Cycle Loop**
+
+   ```python
+   manager.cycle = 0
+   for complete_single_cycle_path in curr_path[module_name]:
+       if manager.cycle > 0:
+           state.apply_pending_nba()  # Apply NBA at START of cycle > 0
+
+       for cfg_idx, cfg_path in enumerate(complete_single_cycle_path):
+           # Skip initial blocks after cycle 0
+           if manager.cycle > 0 and getattr(cfgs_by_module[module_name][cfg_idx], 'is_initial', False):
+               continue
+
+           # Execute CFG path
+           for stmt in basic_block:
+               visitor.visit_stmt(manager, state, stmt, modules_dict, direction)
+
+       manager.cycle += 1
+   ```
+
+   **Timing:**
+   - Cycle 0: No NBA application (initial state)
+   - Cycle 1+: `apply_pending_nba()` called BEFORE executing any statements
+   - Statements execute and may queue new NBAs
+   - Cycle increments at END of loop
+
+   #### MilestoneDirectedStrategy (engine/strategies.py, lines 308-750)
+   **Lines 625-631: Cycle Execution**
+
+   ```python
+   cycle = item.cycle
+
+   # Step 1: Apply NBA and refresh inputs (if cycle > 0)
+   if cycle > 0:
+       item.state.apply_pending_nba()
+       self._refresh_primary_inputs(item.state, cycle)
+       self._evaluate_comb_fixedpoint(visitor, manager, item.state)
+   ```
+
+   **Timing:**
+   - Same pattern: NBA applied at START of cycle > 0
+   - After NBA application, primary inputs are refreshed with fresh symbols
+   - Combinational logic is re-evaluated to fixed-point
+
+   **Lines 735-745: Next Cycle Enqueuing**
+
+   ```python
+   next_cycle = cycle + 1
+   if next_cycle < self.max_cycles:
+       new_item = WorkItem(
+           score=new_score,
+           cycle=next_cycle,
+           milestones_completed=current_progress,
+           state=state,  # State passed directly (with pending_nba intact)
+           execution_context={'remaining_cfgs': None}
+       )
+       heapq.heappush(worklist, new_item)
+   ```
+
+   **Key Point:**
+   - State is passed directly to next cycle (NOT cloned)
+   - `pending_nba` from current cycle is preserved for next cycle
+   - When next cycle pops from worklist, `apply_pending_nba()` is called
+
+   ### 4. State Cloning (engine/strategies.py, lines 478-497)
+
+   ```python
+   def _clone_state(self, state: SymbolicState) -> SymbolicState:
+       """Create a deep copy of the symbolic state."""
+       new_state = SymbolicState()
+       new_state.store = deepcopy(state.store)
+       new_state.pending_nba = deepcopy(state.pending_nba)  # NBA also cloned
+
+       # Copy Z3 solver assertions
+       new_state.pc = Solver()
+       for assertion in state.pc.assertions():
+           new_state.pc.add(assertion)
+
+       new_state.pc_constraint_set = set(state.pc_constraint_set)
+       return new_state
+   ```
+
+   **Key Point:**
+   - When state is cloned (for branch exploration), `pending_nba` is also deep-copied
+   - Each branch gets its own copy of pending assignments
+
+   ## Execution Timeline Example
+
+   ### Cycle 0 (Initial)
+   1. State initialized with `pending_nba = {}`
+   2. Statements execute:
+      - Blocking assignments: `a <= 5` → `store['mod']['a'] = 5`
+      - Non-blocking assignments: `b <= 10` → `pending_nba['mod']['b'] = 10`
+   3. End of cycle 0: `pending_nba = {'mod': {'b': 10}}`
+
+   ### Cycle 1 (Start)
+   1. `apply_pending_nba()` called:
+      - `store['mod']['b'] = 10` (from pending)
+      - `pending_nba = {}` (cleared)
+   2. Statements execute:
+      - Read `b` → gets value 10 (from previous cycle's NBA)
+      - New NBA: `c <= 20` → `pending_nba['mod']['c'] = 20`
+   3. End of cycle 1: `pending_nba = {'mod': {'c': 20}}`
+
+   ### Cycle 2 (Start)
+   1. `apply_pending_nba()` called:
+      - `store['mod']['c'] = 20` (from pending)
+      - `pending_nba = {}` (cleared)
+   2. Statements execute...
+
+   ## Critical Timing Points
+
+   ### When NBA is Applied
+   - **Location:** Start of each cycle > 0
+   - **Function:** `SymbolicState.apply_pending_nba()`
+   - **Strategies:** Both BlindSearchStrategy and MilestoneDirectedStrategy
+
+   ### When NBA is Queued
+   - **Location:** During statement execution in `visit_expr()`
+   - **Function:** `SymbolicState.add_pending_nba()`
+   - **Trigger:** NonblockingAssignmentExpression encountered
+
+   ### State Transitions
+   1. **Cycle N execution:** NBAs queued in `pending_nba`
+   2. **Cycle N → N+1 transition:** State passed to next WorkItem
+   3. **Cycle N+1 start:** `apply_pending_nba()` moves pending to store
+
+   ## Potential Timing Issues
+
+   ### Issue 1: NBA Application Timing
+   **Location:** strategies.py, line 161 (BlindSearchStrategy) and line 629 (MilestoneDirectedStrategy)
+
+   ```python
+   if manager.cycle > 0:
+       state.apply_pending_nba()
+   ```
+
+   **Concern:** NBA is applied BEFORE any statements execute in the cycle. This means:
+   - Values written via NBA in cycle N are visible in cycle N+1
+   - This is correct Verilog semantics (NBA updates take effect at end of cycle)
+
+   ### Issue 2: State Passing Between Cycles
+   **Location:** strategies.py, line 742 (MilestoneDirectedStrategy)
+
+   ```python
+   state=state,  # Direct reference, not cloned
+   ```
+
+   **Concern:** State is passed by reference to next cycle. If state is modified after enqueuing, it affects the next cycle. However, this appears intentional since:
+   - The state is modified during execution
+   - Pending NBAs are preserved for next cycle
+   - This is the expected behavior
+
+   ### Issue 3: Initial Block Skipping
+   **Location:** strategies.py, lines 168 and 641
+
+   ```python
+   if manager.cycle > 0 and getattr(cfgs_by_module[module_name][cfg_idx], 'is_initial', False):
+       continue
+   ```
+
+   **Concern:** Initial blocks are skipped after cycle 0. This is correct, but ensures:
+   - Initial blocks only execute once at cycle 0
+   - Any NBAs from initial blocks are applied starting at cycle 1
+
+   ### Issue 4: Primary Input Refresh
+   **Location:** strategies.py, line 630 (MilestoneDirectedStrategy only)
+
+   ```python
+   if cycle > 0:
+       item.state.apply_pending_nba()
+       self._refresh_primary_inputs(item.state, cycle)  # Fresh symbols per cycle
+       self._evaluate_comb_fixedpoint(visitor, manager, item.state)
+   ```
+
+   **Concern:** Primary inputs get fresh symbols each cycle (e.g., `rst_n_c0`, `rst_n_c1`). This allows:
+   - Different input values per cycle
+   - Solver to explore different reset sequences
+   - But BlindSearchStrategy doesn't do this refresh!
+
+   ## Key Differences Between Strategies
+
+   ### BlindSearchStrategy
+   - Applies NBA at cycle start
+   - Does NOT refresh primary inputs
+   - Does NOT re-evaluate combinational logic
+   - Simpler but may miss some behaviors
+
+   ### MilestoneDirectedStrategy
+   - Applies NBA at cycle start
+   - Refreshes primary inputs with fresh symbols
+   - Re-evaluates combinational logic to fixed-point
+   - More sophisticated state management
+
+   ## Summary
+
+   **NBA Timing is Correct:**
+   1. NBAs are queued during execution (not immediately applied)
+   2. Applied at START of next cycle (before any statements)
+   3. This matches Verilog semantics where NBA updates take effect at end of cycle
+
+   **Potential Bug Areas:**
+   1. BlindSearchStrategy doesn't refresh primary inputs between cycles
+   2. State passing by reference could cause issues if not carefully managed
+   3. Combinational logic re-evaluation only in MilestoneDirectedStrategy
+
+   **Critical Code Paths:**
+   - `SymbolicState.add_pending_nba()` - queues NBA
+   - `SymbolicState.apply_pending_nba()` - applies NBA at cycle start
+   - `BlindSearchStrategy.run()` line 161 - cycle loop with NBA application
+   - `MilestoneDirectedStrategy._execute_cycle()` line 629 - cycle execution with NBA
+   EOF
+   cat /tmp/nba_analysis.md
+
+   Run shell command
+
+ Contains brace with quote character (expansion obfuscation)
+

@@ -9,23 +9,23 @@
     },
     {
       "step": 1,
-      "description": "Reset released, counter starts incrementing from 0",
+      "description": "Reset released, counter starts at 0",
       "condition": "RST == 0 && test_1.out == 0"
     },
     {
       "step": 2,
       "description": "Counter increments to 1",
-      "condition": "test_1.out == 1"
+      "condition": "RST == 0 && test_1.out == 1"
     },
     {
       "step": 3,
       "description": "Counter increments to 2",
-      "condition": "test_1.out == 2"
+      "condition": "RST == 0 && test_1.out == 2"
     },
     {
       "step": 4,
       "description": "Counter increments to 3",
-      "condition": "test_1.out == 3"
+      "condition": "RST == 0 && test_1.out == 3"
     },
     {
       "step": 5,

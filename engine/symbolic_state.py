@@ -21,11 +21,15 @@ class SymbolicState:
         """Apply pending non-blocking assignments to the store.
         This should be called at the beginning of each new cycle."""
         if self.pending_nba:
-            logging.debug(f"[NBA] Applying {sum(len(updates) for updates in self.pending_nba.values())} pending NBA(s)")
+            total = sum(len(updates) for updates in self.pending_nba.values())
+            print(f"[NBA-APPLY] Applying {total} pending NBA(s)")
+            logging.debug(f"[NBA] Applying {total} pending NBA(s)")
         for module_name, updates in self.pending_nba.items():
             if module_name not in self.store:
                 self.store[module_name] = {}
             for var_name, value in updates.items():
+                if 'valid_pipe' in var_name or 'in_a_history' in var_name:
+                    print(f"[NBA-APPLY]   {module_name}.{var_name} <= {value}")
                 logging.debug(f"[NBA]   {module_name}.{var_name} <= {value}")
                 self.store[module_name][var_name] = value
         # Clear pending assignments after applying
@@ -36,6 +40,8 @@ class SymbolicState:
         if module_name not in self.pending_nba:
             self.pending_nba[module_name] = {}
         self.pending_nba[module_name][var_name] = value
+        if 'valid_pipe' in var_name or 'in_a_history' in var_name:
+            print(f"[NBA-QUEUE] {module_name}.{var_name} <= {value}")
         logging.debug(f"[NBA] Queued NBA: {module_name}.{var_name} <= {value}")
 
     def get_symbolic_expr(self, module_name: str, var_name: str) -> str:

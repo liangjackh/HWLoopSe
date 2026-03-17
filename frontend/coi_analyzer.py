@@ -337,15 +337,11 @@ class COIAnalyzer:
 
     def _extract_port_connections(self):
         """Build port mapping between parent and child instances."""
-        print(f"[COI-DEBUG] modules_dict keys: {list(self.modules_dict.keys())}")
         for instance_name, module in self.modules_dict.items():
             if not hasattr(module, 'body'):
-                print(f"[COI-DEBUG] {instance_name}: no body attribute")
                 continue
 
             # Look for child InstanceSymbol nodes in this instance's body
-            children_found = []
-            children_skipped = []
             for child in module.body:
                 if child.kind != ps.SymbolKind.Instance:
                     continue
@@ -353,20 +349,14 @@ class COIAnalyzer:
                 child_name = child.name
                 # Check if this child is one of our tracked instances
                 if child_name not in self.modules_dict:
-                    children_skipped.append(child_name)
                     continue
 
-                children_found.append(child_name)
                 # Get port connections from the syntax node
                 syntax = getattr(child, 'syntax', None)
                 if syntax is None:
-                    print(f"[COI-DEBUG]   {instance_name} -> {child_name}: no syntax node")
                     continue
 
                 self._extract_ports_from_syntax(instance_name, child_name, syntax)
-
-            if children_found or children_skipped:
-                print(f"[COI-DEBUG] {instance_name}: children_in_dict={children_found}, children_NOT_in_dict={children_skipped}")
 
     def _extract_ports_from_syntax(self, parent_inst: str, child_inst: str, syntax):
         """Extract named port connections from an instance syntax node."""

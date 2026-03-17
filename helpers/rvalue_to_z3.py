@@ -3,6 +3,7 @@ Z3 expressions and solving for assertion violations."""
 
 import z3
 import re
+import logging
 from z3 import Solver, Int, BitVec, Context, BitVecSort, ExprRef, BitVecRef, If, BitVecVal, And, IntVal, Int2BV, Or, Not, ULT, UGT, Z3Exception, BoolRef
 from z3 import is_and, is_app_of, Z3_OP_EXTRACT, is_eq, is_distinct
 from helpers.rvalue_parser import parse_tokens, tokenize
@@ -457,6 +458,18 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
             rhs = parse_expr_to_Z3(e.right, s, m)
             op = str(e.op) if hasattr(e, 'op') else ""
             debug_print("BinaryOp", f"lhs={lhs}, rhs={rhs}, op={op}")
+            # DEBUG: trace LessEq comparisons in u_assert
+            if ("LessThanEqual" in op or "LessEq" in op) and m is not None and getattr(m, 'curr_module', '') == 'u_assert':
+                print(f"[LESSEQ-DEBUG] lhs={lhs} rhs={rhs} op={op}")
+                print(f"[LESSEQ-DEBUG]   e.left={e.left} kind={getattr(e.left, 'kind', '?')} type={type(e.left).__name__}")
+                print(f"[LESSEQ-DEBUG]   e.right={e.right} kind={getattr(e.right, 'kind', '?')} type={type(e.right).__name__}")
+                r = e.right
+                if hasattr(r, 'operand'):
+                    print(f"[LESSEQ-DEBUG]   e.right.operand={r.operand} kind={getattr(r.operand, 'kind', '?')} value={getattr(r.operand, 'value', 'N/A')}")
+                if hasattr(r, 'value'):
+                    print(f"[LESSEQ-DEBUG]   e.right.value={r.value}")
+                if hasattr(r, 'constantValue'):
+                    print(f"[LESSEQ-DEBUG]   e.right.constantValue={r.constantValue}")
 
             lhs, rhs = _match_bv_widths(lhs, rhs)
 
@@ -797,8 +810,21 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
         if hasattr(e, 'size') and hasattr(e, 'value'):
             try:
                 width = int(str(e.size))
-                val = int(str(e.value))
-                return BitVecVal(val, width)
+                val_str = str(e.value).replace('_', '')
+                # Determine base from the full node string (e.g., "32'h0000_00FF")
+                full_str = str(e).strip()
+                if "'" in full_str:
+                    base_char = full_str.split("'")[1][0].lower() if len(full_str.split("'")[1]) > 0 else 'd'
+                    if base_char == 'h':
+                        return BitVecVal(int(val_str, 16), width)
+                    elif base_char == 'b':
+                        return BitVecVal(int(val_str, 2), width)
+                    elif base_char == 'o':
+                        return BitVecVal(int(val_str, 8), width)
+                    else:
+                        return BitVecVal(int(val_str), width)
+                else:
+                    return BitVecVal(int(val_str), width)
             except (ValueError, TypeError):
                 pass
         return BitVecVal(0, 32)
@@ -1110,6 +1136,17 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
                     return BitVecVal(0, 32)
                 lhs = parse_expr_to_Z3(lhs_node, s, m)
                 rhs = parse_expr_to_Z3(rhs_node, s, m)
+                # DEBUG: trace LessEq in syntax-level handler
+                if 'LessThanEqual' in kind_str and m is not None and getattr(m, 'curr_module', '') == 'u_assert':
+                    print(f"[LESSEQ-SYNTAX-DEBUG] lhs={lhs} rhs={rhs} kind_str={kind_str}")
+                    print(f"[LESSEQ-SYNTAX-DEBUG]   lhs_node={lhs_node} type={type(lhs_node).__name__} kind={getattr(lhs_node, 'kind', '?')}")
+                    print(f"[LESSEQ-SYNTAX-DEBUG]   rhs_node={rhs_node} type={type(rhs_node).__name__} kind={getattr(rhs_node, 'kind', '?')}")
+                    if hasattr(rhs_node, 'value'):
+                        print(f"[LESSEQ-SYNTAX-DEBUG]   rhs_node.value={rhs_node.value}")
+                    if hasattr(rhs_node, 'literal'):
+                        print(f"[LESSEQ-SYNTAX-DEBUG]   rhs_node.literal={rhs_node.literal} value={getattr(rhs_node.literal, 'value', 'N/A')}")
+                    if hasattr(rhs_node, 'constantValue'):
+                        print(f"[LESSEQ-SYNTAX-DEBUG]   rhs_node.constantValue={rhs_node.constantValue}")
 
                 def _to_bv(x):
                     if hasattr(x, 'size'):
@@ -1571,24 +1608,7 @@ def solve_pc(s: Solver) -> bool:
         model = s.model()
         return True
     else:
-        # Print unsat constraints with better formatting
-        assertions = s.assertions()
-        print(f"unsat: {len(assertions)} constraint(s), unsat core: {s.unsat_core()}")
-
-        # Print each assertion using sexpr for better readability
-        for i, assertion in enumerate(assertions):
-            try:
-                assertion_str = assertion.sexpr()
-                # Truncate very long expressions (increased limit to 500)
-                if len(assertion_str) > 500:
-                    print(f"  [{i}] {assertion_str[:500]}... (truncated, total length: {len(assertion_str)})")
-                else:
-                    print(f"  [{i}] {assertion_str}")
-            except:
-                # Fallback to str if sexpr fails
-                print(f"  [{i}] {str(assertion)[:500]}")
-
-        print(s.unsat_core())
+        logging.debug(f"UNSAT: {len(s.assertions())} constraint(s)")
         return False
 
 def evaluate_expr(parsedList, s: SymbolicState, m: ExecutionManager):

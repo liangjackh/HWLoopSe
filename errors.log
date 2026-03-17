@@ -6,247 +6,1010 @@ DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1 + 1 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1 + 1
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1 + 1 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1 + 1 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
 DEBUG:root:  [Comb] Evaluated 2 pass(es)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1 + 1 + 1 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= out_wire_c0 + 1
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:  [Comb] Evaluated 2 pass(es)
