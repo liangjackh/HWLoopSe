@@ -352,6 +352,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         self._comb_by_module = comb_by_module or {}
         self._wire_groups = wire_groups or []
         self._primary_input_flags = primary_input_flags or []
+        self._active_instances = set(manager.names_list)
 
         # Reset milestone progress
         self.milestone_manager.reset()
@@ -536,10 +537,13 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         """Propagate values through wire equivalence groups.
 
         If module_name is given, propagate FROM that module's signals TO other
-        members of each group. Otherwise propagate all groups (pick any source).
+        members of each group. Otherwise propagate all groups (pick any source
+        from an active instance — i.e., not pruned by COI).
         """
         if not self._wire_groups:
             return
+
+        active = getattr(self, '_active_instances', None)
 
         for group in self._wire_groups:
             if module_name is not None:
@@ -552,9 +556,11 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 if source_value is None:
                     continue  # This module has no signal in this group
             else:
-                # No specific source module — pick any member that has a value
+                # No specific source module — pick any active member that has a value
                 source_value = None
                 for inst, sig in group:
+                    if active and inst not in active:
+                        continue  # Skip COI-pruned instances
                     if inst in state.store and sig in state.store[inst]:
                         source_value = state.store[inst][sig]
                         break

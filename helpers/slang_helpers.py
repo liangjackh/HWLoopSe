@@ -1027,7 +1027,6 @@ class SymbolicDFS:
             return
 
         if kind == ps.SyntaxKind.ExpressionStatement:
-            #print(f"[visiting statement: ExpressionStatement]")  # DEBUG
             self.visit_expr(m, s, stmt.expr)
 
         elif kind == ps.StatementKind.Block and hasattr(stmt, "body"):

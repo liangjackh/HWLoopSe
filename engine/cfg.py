@@ -389,7 +389,13 @@ class CFG:
                     self.curr_idx += 1
                     self.basic_blocks_sv(m, s, item.statement) 
                 elif isinstance(item, ps.BlockStatementSyntax):
+                    self.block_stmt_depth += 1
+                    self.block_smt.append(True)
                     self.basic_blocks_sv(m, s, item.items)
+                    if self.block_stmt_depth in self.ind_branch_points:
+                        self.resolve_independent_branch_pts(self.block_stmt_depth)
+                    self.block_smt.pop()
+                    self.block_stmt_depth -= 1
                 elif isinstance(item, ps.ProceduralBlockSyntax):
                     self.all_nodes.append(item)
                     self.curr_idx += 1

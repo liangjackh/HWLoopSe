@@ -1,5 +1,69 @@
 # Changelog
 
+## 2026-03-18 - Fix Initial Block + Sequential If Statements in CFG
+
+### Problem
+
+Running `python3 -m main 7 designs/test-designs/test_2.v --sv --milestone-file milestones/test_2.json --coi --strategy directed` on a simple counter design with `initial begin out = 0; end` and `assert(out <= 3)`. The engine either found a spurious violation at cycle 2 (with `out` as a free symbolic variable instead of 0) or exhausted all paths without finding the real violation at cycle 6.
+
+### Root Cause
+
+Two independent bugs:
+
+**Bug A — Port propagation overwrites register values after COI pruning** (`strategies.py:_propagate_ports`):
+- COI pruning removed `place_holder` from `manager.names_list` but left its store entry intact
+- Wire group 2 `{('place_holder', 'out_wire'), ('test_1', 'out')}` is a non-primary-input group
+- `_propagate_ports` picked `place_holder.out_wire` (a stale free symbol from initialization) as the source and overwrote `test_1.out`, destroying the value set by the initial block and NBA
+- This caused `out` to appear as a free symbolic variable instead of 0
+
+**Bug B — CFG didn't connect sequential if statements** (`cfg.py:basic_blocks_sv`):
+- The always block contains two sequential `if` statements inside `begin...end`:
+  ```verilog
+  always @(posedge CLK) begin
+      if (RST) out <= 0; else out <= out + 1;
+      if (!RST) assert(out <= 3);  // never reached
+  end
+  ```
+- The `BlockStatementSyntax` handler at line 391 recursed into `item.items` but never incremented `block_stmt_depth` or pushed to `block_smt`
+- Without proper depth tracking, the two `if` statements weren't recognized as independent branch points at the same block level
+- `resolve_independent_branch_pts` never ran, so no edge connected the first `if`'s branches to the second `if`
+- CFG paths stopped at BB[1]/BB[2] and never reached BB[3] (assertion guard) or BB[4] (assertion)
+
+### Solution
+
+**Fix A** (`strategies.py:_propagate_ports`):
+- Store `_active_instances = set(manager.names_list)` after COI pruning
+- In `_propagate_ports`, skip COI-pruned instances when picking a source value for non-directed propagation
+
+**Fix B** (`cfg.py:basic_blocks_sv`):
+- Updated the existing `BlockStatementSyntax` handler (line 391) to properly track block depth:
+  ```python
+  # Before:
+  elif isinstance(item, ps.BlockStatementSyntax):
+      self.basic_blocks_sv(m, s, item.items)
+
+  # After:
+  elif isinstance(item, ps.BlockStatementSyntax):
+      self.block_stmt_depth += 1
+      self.block_smt.append(True)
+      self.basic_blocks_sv(m, s, item.items)
+      if self.block_stmt_depth in self.ind_branch_points:
+          self.resolve_independent_branch_pts(self.block_stmt_depth)
+      self.block_smt.pop()
+      self.block_stmt_depth -= 1
+  ```
+- This creates the edge `(2, 5)` connecting the first `if`'s condition to the second `if`, producing 4 CFG paths instead of 2
+
+### Results
+
+| Metric | Before | After |
+|--------|--------|-------|
+| test_2 result | Spurious violation or exhausted | Correct violation at cycle 6 |
+| test_2 counterexample | `out_wire_c0 = 4` (free symbol) | `RST_c0=1, RST_c1..c6=0` (counter reaches 4) |
+| test_2 paths | 254 (exhausted) | 21 |
+| test_2 time | 0.31s (no result) | 0.05s |
+| sub-test (regression) | 8 paths, 0.08s | 8 paths, 0.07s (unchanged) |
+
 ## 2026-03-17 - Fix Assertion Violation Detection: Skip Abandoned CFGs + Alternate Preferred Paths
 
 ### Problem
