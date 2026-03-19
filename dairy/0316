@@ -1,0 +1,24 @@
+The only output is DECL-COMB-DEBUG (from comb evaluation) and 
+  milestone checking. No CFG execution happens. This means the path was likely a continuation from a previous cycle where 
+  cfg1 was already pruned, and the remaining_cfgs list doesn't include cfg1.                                              
+                                                                                                                          
+  Let me look at a path where cfg1 IS attempted and trace why it's pruned even when valid_pipe[2] should be 1.
+
+
+  ● Confirmed: check_en is always ZeroExt(31, Extract(2, 2, 0)) = 0, across all 3900 paths and all cycles. The combinational
+   wire check_en = valid_pipe[2] never picks up the updated valid_pipe value.                                             
+                                                                                                                          
+  The root cause is clear: the evaluate_comb reads valid_pipe from the store, but valid_pipe is only updated via NBA
+  (nonblocking assignment) in cfg0. The comb evaluation at cycle start (step 1, line 631) runs AFTER apply_pending_nba(), 
+  so valid_pipe in the store should be updated. But the comb evaluation reads valid_pipe as the base variable, while the
+  NBA updates go to individual array elements like valid_pipe[0], valid_pipe[1], etc. — or possibly the whole valid_pipe
+  is being stored differently.
+
+  ● Now I see the full picture. At cycle=3, valid_pipe=0 in the store and pending_nba pipe={'valid_pipe': 0}. The valid_pipe
+   is never being updated to a non-zero value in the store. Let me understand why — the NBA should have applied the
+  previous cycle's update.
+
+  The issue is that this particular path (Path 24) at cycle=3 has milestones=1/5, meaning it only passed milestone 0
+  (reset). This path likely took rst_n=0 at cycle 0, then rst_n!=0 at cycle 1, but then took reset again at some point,
+  resetting valid_pipe back to 0.
+

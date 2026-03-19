@@ -7,7 +7,6 @@ from the execution mechanism.
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Dict, List, Any, Optional, Tuple, Union
 from itertools import product
-from copy import deepcopy
 import heapq
 import time
 import logging
@@ -477,25 +476,8 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         self._evaluate_comb_fixedpoint(visitor, manager, state)
 
     def _clone_state(self, state: SymbolicState) -> SymbolicState:
-        """
-        Create a deep copy of the symbolic state.
-
-        Z3 Solvers cannot be deep-copied, so we create a new solver
-        and copy assertions.
-        """
-        new_state = SymbolicState()
-        new_state.store = deepcopy(state.store)
-        new_state.pending_nba = deepcopy(state.pending_nba)
-
-        # Copy Z3 solver assertions
-        new_state.pc = Solver()
-        for assertion in state.pc.assertions():
-            new_state.pc.add(assertion)
-
-        # Copy constraint dedup set
-        new_state.pc_constraint_set = set(state.pc_constraint_set)
-
-        return new_state
+        """Create an efficient shallow clone of the symbolic state."""
+        return state.clone()
 
     def _preferred_path_idx(self, cfg, cycle: int) -> int:
         """Choose the preferred default path for a CFG at a given cycle.
@@ -742,8 +724,8 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             manager.abandon = False
 
             # Snapshot store & pending_nba so we can rollback on abandon
-            pre_cfg_store = deepcopy(state.store)
-            pre_cfg_nba = deepcopy(state.pending_nba)
+            pre_cfg_store = {mod: sigs.copy() for mod, sigs in state.store.items()}
+            pre_cfg_nba = {mod: sigs.copy() for mod, sigs in state.pending_nba.items()}
 
             result = self._execute_path(
                 engine, visitor, modules_dict, cfg, cfg_path,

@@ -44,6 +44,22 @@ class SymbolicState:
             print(f"[NBA-QUEUE] {module_name}.{var_name} <= {value}")
         logging.debug(f"[NBA] Queued NBA: {module_name}.{var_name} <= {value}")
 
+    def clone(self):
+        """Efficient shallow clone. Safe because Z3 ExprRef values are immutable."""
+        new_state = SymbolicState()
+        new_state.assertion_counter = self.assertion_counter
+        new_state.clock_cycle = self.clock_cycle
+        new_state.cond = self.cond
+        # 1-level shallow copy for dict-of-dicts (Z3 values are immutable)
+        new_state.store = {mod: sigs.copy() for mod, sigs in self.store.items()}
+        new_state.pending_nba = {mod: sigs.copy() for mod, sigs in self.pending_nba.items()}
+        new_state.pc_constraint_set = self.pc_constraint_set.copy()
+        # Reconstruct Z3 Solver (Solver objects cannot be shallow-copied)
+        new_state.pc = z3.Solver()
+        for a in self.pc.assertions():
+            new_state.pc.add(a)
+        return new_state
+
     def get_symbolic_expr(self, module_name: str, var_name: str) -> str:
         """Just looks up a symbolic expression associated with a specific variable name
         in that particular module."""

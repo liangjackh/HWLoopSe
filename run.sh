@@ -13,7 +13,7 @@ python3 -m main 7 designs/test-designs/test_2.v --sv --milestone-file milestones
 #python3 -m main 30 or1200_subset.F --sv  --auto-plan --milestone-file milestones/or1200_subset.json --coi --strategy directed -t or1200_top
 
 #sub-test
-#python3 -m main 5 designs/test-designs/sub-test/sub.F --sv --auto-plan --llm-provider deepseek --coi --strategy directed -t top
+#python3 -m main 100 designs/test-designs/sub-test/sub.F --sv --auto-plan --llm-provider deepseek --coi --strategy directed -t top
 #python3 -m main 6 designs/test-designs/sub-test/sub.F --sv --milestone-file milestones/sub-test.json --coi --strategy directed
 
 
