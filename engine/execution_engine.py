@@ -3,7 +3,7 @@
 import z3
 from z3 import Solver, Int, BitVec, Context, BitVecSort, ExprRef, BitVecRef, If, BitVecVal, And
 from .execution_manager import ExecutionManager
-from .symbolic_state import SymbolicState
+from .symbolic_state import SymbolicState, smt_stats
 from .cfg import CFG
 import re
 import os
@@ -316,6 +316,7 @@ class ExecutionEngine:
         print(f"[ExecutionEngine] Using {config.strategy} search strategy")
 
         explore_time = time.process_time()
+        smt_stats.reset()
         # Step 4: Execute
         self.execute_sv(visitor, modules, None, config.num_cycles, driver, compilation)
 
@@ -323,6 +324,8 @@ class ExecutionEngine:
         print(f"Execution time {end_time - explore_time}")
         print(f"Frontend time {explore_time - start_time}")
         print(f"Total time {end_time - start_time}")
+        print(f"SMT queries {smt_stats.query_count}")
+        print(f"SMT solver time {smt_stats.total_time:.4f}s")
 
     def set_strategy(self, strategy: 'ExplorationStrategy') -> None:
         """Set the exploration strategy to use."""
@@ -334,8 +337,8 @@ class ExecutionEngine:
         # the push adds a backtracking point if unsat
         s.push()
         s.add(constraint)
-        result = s.check()
-        if str(result) == "sat":
+        result = smt_stats.timed_check(s)
+        if result == z3.sat:
             return True
         else:
             s.pop()
@@ -350,8 +353,7 @@ class ExecutionEngine:
 
     def solve_pc(self, s: Solver) -> bool:
         """Solves path condition using Z3"""
-        from z3 import sat as z3_sat
-        if s.check() == z3_sat:
+        if smt_stats.timed_check(s) == z3.sat:
             model = s.model()
             return True
         else:

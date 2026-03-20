@@ -1,173 +1,33 @@
 DEBUG:root:Starting over
-DEBUG:root:  [TopoSort] or1200_immu_top: 48 nodes sorted
-DEBUG:root:  [TopoSort] or1200_cpu: 235 nodes sorted
-DEBUG:root:  [TopoSort] or1200_genpc: 34 nodes sorted
-DEBUG:root:  [TopoSort] or1200_if: 32 nodes sorted
-DEBUG:root:  [TopoSort] or1200_ctrl: 66 nodes sorted
-DEBUG:root:  [TopoSort] or1200_rf: 56 nodes sorted
-DEBUG:root:  [TopoSort] rf_a: 10 nodes sorted
-DEBUG:root:  [TopoSort] rf_b: 10 nodes sorted
-DEBUG:root:  [TopoSort] or1200_operandmuxes: 11 nodes sorted
-DEBUG:root:  [TopoSort] or1200_alu: 30 nodes sorted
-DEBUG:root:  [TopoSort] or1200_mult_mac: 46 nodes sorted
-DEBUG:root:  [TopoSort] or1200_gmultp2_32x32: 6 nodes sorted
-DEBUG:root:  [TopoSort] or1200_sprs: 152 nodes sorted
-DEBUG:root:  [TopoSort] or1200_lsu: 40 nodes sorted
-DEBUG:root:  [TopoSort] or1200_mem2reg: 3 nodes sorted
-DEBUG:root:  [TopoSort] or1200_reg2mem: 5 nodes sorted
-DEBUG:root:  [TopoSort] or1200_wbmux: 9 nodes sorted
-DEBUG:root:  [TopoSort] or1200_freeze: 30 nodes sorted
-DEBUG:root:  [TopoSort] or1200_except: 76 nodes sorted
-DEBUG:root:  [TopoSort] u_assertions: 36 nodes sorted
-DEBUG:root:  [TopoSort] or1200_dmmu_top: 42 nodes sorted
-DEBUG:root:  [TopoSort] or1200_du: 119 nodes sorted
-DEBUG:root:  [TopoSort] or1200_pic: 17 nodes sorted
-DEBUG:root:  [TopoSort] or1200_tt: 19 nodes sorted
+DEBUG:root:  [TopoSort] test_1: 2 nodes sorted
 DEBUG:root:Initializing state: evaluating combinational logic to fixed-point...
-DEBUG:root:[NBA] Queued NBA: or1200_immu_top.icpu_adr_default <= 256
-DEBUG:root:[NBA] Queued NBA: or1200_immu_top.icpu_adr_select <= 1
-DEBUG:root:[NBA] Queued NBA: or1200_cpu.sp_assertion_violated_reg <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_cpu.sp_assertions_violated_reg <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_cpu.sp_assertion_violated_reg <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_genpc.pcreg_default <= If(UGT(0, 2), 1, 0) - 4
-DEBUG:root:[NBA] Queued NBA: or1200_genpc.pcreg_select <= 1
-DEBUG:root:[NBA] Queued NBA: or1200_ctrl.sp_return_counter <= 50
-DEBUG:root:[NBA] Queued NBA: or1200_ctrl.id_insn <= Concat(5, 4259840)
-DEBUG:root:[NBA] Queued NBA: or1200_ctrl.spr_read <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_ctrl.spr_write <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_ctrl.comp_op <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_operandmuxes.operand_a <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_operandmuxes.saved_a <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_operandmuxes.operand_b <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_operandmuxes.saved_b <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_mult_mac.mul_prod_r <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_mult_mac.div_quot_r <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_mult_mac.div_free <= 1
-DEBUG:root:[NBA] Queued NBA: or1200_mult_mac.div_cntr <= 0
-DEBUG:root:UNSAT: 81 constraint(s)
-DEBUG:root:[NBA] Queued NBA: or1200_sprs.sr_reg <= Extract(31, 0, Concat(Concat(Concat(1, 0), 0), 1))
-DEBUG:root:[NBA] Queued NBA: or1200_sprs.sp_already_attacked <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_sprs.sr_reg_bit_eph <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_sprs.sr_reg_bit_eph_select <= 1
-DEBUG:root:[NBA] Queued NBA: or1200_wbmux.muxreg <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_wbmux.muxreg_valid <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.trace_trap <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.id_pc <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.id_pc_val <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.id_exceptflags <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.ex_dslot <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.ex_pc <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.ex_pc_val <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.ex_exceptflags <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.delayed1_ex_dslot <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.delayed2_ex_dslot <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.wb_pc <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.dl_pc <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.state <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.except_type <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.extend_flush <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.epcr <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.eear <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.esr <= Extract(31, 0, Concat(Concat(1, 0), 1))
-DEBUG:root:[NBA] Queued NBA: or1200_except.sp_epcr_ghost <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.sp_eear_ghost <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.sp_esr_ghost <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.extend_flush_last <= 0
-DEBUG:root:UNSAT: 99 constraint(s)
-DEBUG:root:[NBA] Queued NBA: or1200_du.ex_freeze_q <= ex_freeze_c0
-DEBUG:root:[NBA] Applying 48 pending NBA(s)
-DEBUG:root:[NBA]   or1200_immu_top.icpu_adr_default <= 256
-DEBUG:root:[NBA]   or1200_immu_top.icpu_adr_select <= 1
-DEBUG:root:[NBA]   or1200_cpu.sp_assertion_violated_reg <= 0
-DEBUG:root:[NBA]   or1200_cpu.sp_assertions_violated_reg <= 0
-DEBUG:root:[NBA]   or1200_genpc.pcreg_default <= If(UGT(0, 2), 1, 0) - 4
-DEBUG:root:[NBA]   or1200_genpc.pcreg_select <= 1
-DEBUG:root:[NBA]   or1200_ctrl.sp_return_counter <= 50
-DEBUG:root:[NBA]   or1200_ctrl.id_insn <= Concat(5, 4259840)
-DEBUG:root:[NBA]   or1200_ctrl.spr_read <= 0
-DEBUG:root:[NBA]   or1200_ctrl.spr_write <= 0
-DEBUG:root:[NBA]   or1200_ctrl.comp_op <= 0
-DEBUG:root:[NBA]   or1200_operandmuxes.operand_a <= 0
-DEBUG:root:[NBA]   or1200_operandmuxes.saved_a <= 0
-DEBUG:root:[NBA]   or1200_operandmuxes.operand_b <= 0
-DEBUG:root:[NBA]   or1200_operandmuxes.saved_b <= 0
-DEBUG:root:[NBA]   or1200_mult_mac.mul_prod_r <= 0
-DEBUG:root:[NBA]   or1200_mult_mac.div_quot_r <= 0
-DEBUG:root:[NBA]   or1200_mult_mac.div_free <= 1
-DEBUG:root:[NBA]   or1200_mult_mac.div_cntr <= 0
-DEBUG:root:[NBA]   or1200_sprs.sr_reg <= Extract(31, 0, Concat(Concat(Concat(1, 0), 0), 1))
-DEBUG:root:[NBA]   or1200_sprs.sp_already_attacked <= 0
-DEBUG:root:[NBA]   or1200_sprs.sr_reg_bit_eph <= 0
-DEBUG:root:[NBA]   or1200_sprs.sr_reg_bit_eph_select <= 1
-DEBUG:root:[NBA]   or1200_wbmux.muxreg <= 0
-DEBUG:root:[NBA]   or1200_wbmux.muxreg_valid <= 0
-DEBUG:root:[NBA]   or1200_except.trace_trap <= 0
-DEBUG:root:[NBA]   or1200_except.id_pc <= 0
-DEBUG:root:[NBA]   or1200_except.id_pc_val <= 0
-DEBUG:root:[NBA]   or1200_except.id_exceptflags <= 0
-DEBUG:root:[NBA]   or1200_except.ex_dslot <= 0
-DEBUG:root:[NBA]   or1200_except.ex_pc <= 0
-DEBUG:root:[NBA]   or1200_except.ex_pc_val <= 0
-DEBUG:root:[NBA]   or1200_except.ex_exceptflags <= 0
-DEBUG:root:[NBA]   or1200_except.delayed1_ex_dslot <= 0
-DEBUG:root:[NBA]   or1200_except.delayed2_ex_dslot <= 0
-DEBUG:root:[NBA]   or1200_except.wb_pc <= 0
-DEBUG:root:[NBA]   or1200_except.dl_pc <= 0
-DEBUG:root:[NBA]   or1200_except.state <= 0
-DEBUG:root:[NBA]   or1200_except.except_type <= 0
-DEBUG:root:[NBA]   or1200_except.extend_flush <= 0
-DEBUG:root:[NBA]   or1200_except.epcr <= 0
-DEBUG:root:[NBA]   or1200_except.eear <= 0
-DEBUG:root:[NBA]   or1200_except.esr <= Extract(31, 0, Concat(Concat(1, 0), 1))
-DEBUG:root:[NBA]   or1200_except.sp_epcr_ghost <= 0
-DEBUG:root:[NBA]   or1200_except.sp_eear_ghost <= 0
-DEBUG:root:[NBA]   or1200_except.sp_esr_ghost <= 0
-DEBUG:root:[NBA]   or1200_except.extend_flush_last <= 0
-DEBUG:root:[NBA]   or1200_du.ex_freeze_q <= ex_freeze_c0
-DEBUG:root:[NBA] Queued NBA: or1200_immu_top.icpu_adr_default <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_immu_top.icpu_adr_select <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_cpu.sp_assertion_violated_reg <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_cpu.sp_assertions_violated_reg <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_cpu.sp_assertion_violated_reg <= 0 == 0
-DEBUG:root:[NBA] Queued NBA: or1200_genpc.pcreg_default <= Extract(31, 2, 0)
-DEBUG:root:[NBA] Queued NBA: or1200_genpc.pcreg_select <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_ctrl.ex_simm <= id_simm_c0
-DEBUG:root:UNSAT: 113 constraint(s)
-DEBUG:root:[NBA] Queued NBA: or1200_ctrl.spr_read <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_ctrl.spr_write <= 0
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: or1200_operandmuxes.operand_a <= muxed_a_c0
-DEBUG:root:[NBA] Queued NBA: or1200_operandmuxes.saved_a <= 1
-DEBUG:root:[NBA] Queued NBA: or1200_operandmuxes.operand_b <= muxed_b_c0
-DEBUG:root:[NBA] Queued NBA: or1200_operandmuxes.saved_b <= 1
-DEBUG:root:[NBA] Queued NBA: or1200_mult_mac.mul_prod_r <= Extract(31, 0, mul_prod_c0)
-DEBUG:root:UNSAT: 119 constraint(s)
-DEBUG:root:UNSAT: 119 constraint(s)
-DEBUG:root:[NBA] Queued NBA: or1200_sprs.sr_reg_bit_eph <= boot_adr_sel_i_c0
-DEBUG:root:[NBA] Queued NBA: or1200_sprs.sr_reg_bit_eph_select <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_wbmux.muxreg <= rf_dataw_c0
-DEBUG:root:[NBA] Queued NBA: or1200_wbmux.muxreg_valid <= ZeroExt(31, Extract(0, 0, rfwb_op_c0))
-DEBUG:root:UNSAT: 122 constraint(s)
-DEBUG:root:UNSAT: 122 constraint(s)
-DEBUG:root:[NBA] Queued NBA: or1200_except.trace_trap <= And(And(And(And(0 == ex_freeze_c0, 0 == ex_void_c0),
-            Or(Or(0 != ZeroExt(31, 0),
-                  0 != ( 0 ? 0 :  0[22])),
-               And(0 !=
-                   If(And(ex_branch_op_c0 != ZeroExt(29, 0),
-                          ex_branch_op_c0 != ZeroExt(29, 6)),
-                      1,
-                      0),
-                   0 != ( 0 ? 0 :  0[23])))),
-        0 == ( 0 ? 0 :  du_dsr_c0[13])),
-    0 == ( 0 ? 0 :  sr_c0[16]))
-DEBUG:root:[NBA] Queued NBA: or1200_except.id_pc_val <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.id_exceptflags <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.ex_dslot <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.ex_pc_val <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.ex_exceptflags <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.delayed1_ex_dslot <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.delayed2_ex_dslot <= 0
-DEBUG:root:[NBA] Queued NBA: or1200_except.wb_pc <= muxin_d_c0
-DEBUG:root:[NBA] Queued NBA: or1200_except.dl_pc <= except_wb_pc_c0
-DEBUG:root:UNSAT: 125 constraint(s)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0 + 1
+DEBUG:root:UNSAT: 4 constraint(s)
+DEBUG:root:UNSAT: 5 constraint(s)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:UNSAT: 5 constraint(s)
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1 + 1
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1 + 1
+DEBUG:root:UNSAT: 7 constraint(s)
+DEBUG:root:UNSAT: 8 constraint(s)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1 + 1 + 1
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:UNSAT: 8 constraint(s)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1 + 1 + 1
+DEBUG:root:[NBA] Applying 1 pending NBA(s)
+DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1 + 1 + 1
+DEBUG:root:UNSAT: 8 constraint(s)

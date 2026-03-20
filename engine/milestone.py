@@ -3,7 +3,7 @@
 import re
 from typing import List, Optional, Tuple, Any, Union
 from z3 import Solver, sat, ExprRef, BitVecVal, ULE, ULT, UGE, UGT, And, Or, Not, Extract, ZeroExt, is_bv
-from .symbolic_state import SymbolicState
+from .symbolic_state import SymbolicState, smt_stats
 from frontend.condition_parser import (
     parse_compound_condition, SimpleCondition, CompoundCondition, Condition
 )
@@ -531,7 +531,7 @@ class MilestoneManager:
         # Check satisfiability with push/pop to avoid polluting solver
         solver.push()
         solver.add(condition)
-        result = solver.check()
+        result = smt_stats.timed_check(solver)
         solver.pop()
 
         if result == sat:

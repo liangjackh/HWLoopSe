@@ -4,6 +4,28 @@ are some other methods here that may be helpful, too."""
 import z3
 from z3 import Solver, Int, BitVec, BitVecSort
 import logging
+import time as _time
+
+
+class SMTStats:
+    """Global SMT query counter and timer. Strategy-agnostic."""
+    def __init__(self):
+        self.query_count = 0
+        self.total_time = 0.0
+
+    def reset(self):
+        self.query_count = 0
+        self.total_time = 0.0
+
+    def timed_check(self, solver):
+        """Call solver.check(), record count and elapsed time."""
+        t0 = _time.perf_counter()
+        result = solver.check()
+        self.total_time += _time.perf_counter() - t0
+        self.query_count += 1
+        return result
+
+smt_stats = SMTStats()   # module-level singleton
 
 
 class _LazyPC:
@@ -45,7 +67,7 @@ class _LazyPC:
             self._s._pc_solver = solver   # restore instead of invalidate
 
     def check(self):
-        return self._build_solver().check()
+        return smt_stats.timed_check(self._build_solver())
 
     def model(self):
         return self._build_solver().model()

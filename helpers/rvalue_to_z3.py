@@ -8,7 +8,7 @@ from z3 import Solver, Int, BitVec, Context, BitVecSort, ExprRef, BitVecRef, If,
 from z3 import is_and, is_app_of, Z3_OP_EXTRACT, is_eq, is_distinct
 from helpers.rvalue_parser import parse_tokens, tokenize
 from engine.execution_manager import ExecutionManager
-from engine.symbolic_state import SymbolicState
+from engine.symbolic_state import SymbolicState, smt_stats
 import pyslang as ps
 import networkx as nx
 import ast
@@ -1341,7 +1341,7 @@ def _fallback_dispatch(e, s, m):
 def solve_pc(s: Solver) -> bool:
     """Solve path condition."""
     from z3 import sat as z3_sat
-    if s.check() == z3_sat:
+    if smt_stats.timed_check(s) == z3_sat:
         model = s.model()
         return True
     else:
