@@ -5,17 +5,81 @@ import z3
 from z3 import Solver, Int, BitVec, BitVecSort
 import logging
 
+
+class _LazyPC:
+    """Thin wrapper that makes SymbolicState._pc_assertions look like a z3.Solver.
+
+    Supports: add(), push()/pop(), check(), model(), assertions(), reset()
+    push/pop are implemented with a stack of list snapshots — no real Solver
+    is constructed until check() or model() is actually called.
+    """
+    __slots__ = ('_s', '_stack')
+
+    def __init__(self, state):
+        self._s = state
+        self._stack = []
+
+    def add(self, *args):
+        from z3 import AstVector
+        self._s._pc_solver = None   # invalidate cached solver
+        for arg in args:
+            if isinstance(arg, AstVector):
+                self._s._pc_assertions.extend(arg)
+            elif hasattr(arg, '__iter__') and not hasattr(arg, 'as_ast'):
+                self._s._pc_assertions.extend(arg)
+            else:
+                self._s._pc_assertions.append(arg)
+
+    def push(self):
+        self._stack.append((
+            list(self._s._pc_assertions),
+            self._s.pc_constraint_set.copy(),
+            self._s._pc_solver,   # save solver reference — valid for this assertion snapshot
+        ))
+
+    def pop(self):
+        if self._stack:
+            assertions, constraint_set, solver = self._stack.pop()
+            self._s._pc_assertions = assertions
+            self._s.pc_constraint_set = constraint_set
+            self._s._pc_solver = solver   # restore instead of invalidate
+
+    def check(self):
+        return self._build_solver().check()
+
+    def model(self):
+        return self._build_solver().model()
+
+    def assertions(self):
+        return list(self._s._pc_assertions)
+
+    def reset(self):
+        self._s._pc_assertions = []
+        self._s._pc_solver = None
+        self._stack.clear()
+
+    def _build_solver(self):
+        if self._s._pc_solver is None:
+            s = Solver()
+            for a in self._s._pc_assertions:
+                s.add(a)
+            self._s._pc_solver = s
+        return self._s._pc_solver
+
+
 class SymbolicState:
     sort = BitVecSort(32)
 
     def __init__(self):
-        self.pc = Solver()
+        self._pc_assertions = []   # plain Python list of Z3 ExprRef (cheap to copy)
+        self._pc_solver = None     # lazily built Solver; invalidated on add/reset
         self.assertion_counter = 0
         self.clock_cycle = 0
         self.store = {}
         self.pending_nba = {}
         self.cond = False
         self.pc_constraint_set = set()
+        self.pc = _LazyPC(self)    # stable instance — push/pop stack survives across accesses
 
     def apply_pending_nba(self):
         """Apply pending non-blocking assignments to the store.
@@ -32,7 +96,6 @@ class SymbolicState:
                     print(f"[NBA-APPLY]   {module_name}.{var_name} <= {value}")
                 logging.debug(f"[NBA]   {module_name}.{var_name} <= {value}")
                 self.store[module_name][var_name] = value
-        # Clear pending assignments after applying
         self.pending_nba = {}
 
     def add_pending_nba(self, module_name: str, var_name: str, value):
@@ -50,14 +113,11 @@ class SymbolicState:
         new_state.assertion_counter = self.assertion_counter
         new_state.clock_cycle = self.clock_cycle
         new_state.cond = self.cond
-        # 1-level shallow copy for dict-of-dicts (Z3 values are immutable)
         new_state.store = {mod: sigs.copy() for mod, sigs in self.store.items()}
         new_state.pending_nba = {mod: sigs.copy() for mod, sigs in self.pending_nba.items()}
         new_state.pc_constraint_set = self.pc_constraint_set.copy()
-        # Reconstruct Z3 Solver (Solver objects cannot be shallow-copied)
-        new_state.pc = z3.Solver()
-        for a in self.pc.assertions():
-            new_state.pc.add(a)
+        # O(n) list copy — no Solver construction at all
+        new_state._pc_assertions = list(self._pc_assertions)
         return new_state
 
     def get_symbolic_expr(self, module_name: str, var_name: str) -> str:
@@ -73,8 +133,7 @@ class SymbolicState:
         return self.store[module_name][var_name]
 
     def get_symbols(self):
-        """Returns a list of all the symbols present in the symbolic state.
-        This is useful in the parsing to z3 phase because we need to know what symbols to declare as constants."""
+        """Returns a list of all the symbols present in the symbolic state."""
         symbols_list = []
         for module in self.store:
             for signal in self.store[module]:

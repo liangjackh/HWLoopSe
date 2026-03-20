@@ -72,11 +72,14 @@ def substitute_symbols(expr_str: str, store: dict) -> str:
 
     result = expr_str
     for var_name in sorted_vars:
-        sym_val = store[var_name]
-        # Use word boundary regex to avoid partial matches
-        # Match variable name that is not part of a larger identifier
-        pattern = r'\b' + re.escape(var_name) + r'\b'
-        result = re.sub(pattern, str(sym_val), result)
+        # Fast pre-check: only do expensive regex/str operations if var_name might be in the string
+        if var_name in result:
+            pattern = r'\b' + re.escape(var_name) + r'\b'
+            # Strict check to ensure it matches a whole word
+            if re.search(pattern, result):
+                sym_val = store[var_name]
+                # Only call str() on the Z3 object if we absolutely have to replace it
+                result = re.sub(pattern, str(sym_val), result)
 
     return result
 
@@ -607,11 +610,13 @@ class SymbolicDFS:
         """Main DFS traversal of symbols"""
         #print("DFS visiting symbol:", getattr(symbol, "name", str(symbol)))  # DEBUG
         if not isinstance(symbol, ps.Symbol):
-            print(f"- not a Symbol, skipping: {symbol}")  # DEBUG
+            if DEBUG_ENABLED:
+                print(f"- not a Symbol, skipping: {symbol}")
             return
 
         if symbol is None or symbol in self.visited:
-            print("- already visited or None, skipping.")  # DEBUG
+            if DEBUG_ENABLED:
+                print("- already visited or None, skipping.")
             return
         self.visited.add(symbol)
 
@@ -909,7 +914,8 @@ class SymbolicDFS:
                 cname = node.__class__.__name__
 
         # DEBUG
-        debug_print("EVAL-COMB", f"module={m.curr_module} cname={cname}")
+        if DEBUG_ENABLED:
+            debug_print("EVAL-COMB", f"module={m.curr_module} cname={cname}")
 
         # Handle ContinuousAssignSyntax: assign lhs = rhs;
         if cname == 'ContinuousAssignSyntax':
@@ -1029,7 +1035,7 @@ class SymbolicDFS:
         if kind == ps.SyntaxKind.ExpressionStatement:
             self.visit_expr(m, s, stmt.expr)
 
-        elif kind == ps.StatementKind.Block and hasattr(stmt, "body"):
+        elif kind == ps.StatementKind.Block and getattr(stmt, "body", None) is not None:
             #print(f"[visiting statement: Block]")  # DEBUG
             for substmt in stmt.body:
                 self.visit_stmt(m, s, substmt, modules, direction)
@@ -1039,49 +1045,48 @@ class SymbolicDFS:
                 print(f"[HANDLER-BUG] Assertion node MATCHED Conditional handler! kind={kind} class={cname} module={m.curr_module}")
             #print(f"[visiting statement: Conditional]")  # DEBUG
             # Track unique branch points by syntax source location (start line/column)
-            if hasattr(stmt, 'syntax') and stmt.syntax is not None:
-                sr = stmt.syntax.sourceRange()
-                branch_id = (m.curr_module, sr.start.offset if hasattr(sr.start, 'offset') else str(sr.start))
-            elif hasattr(stmt, 'sourceRange'):
-                sr = stmt.sourceRange
-                branch_id = (m.curr_module, sr.start.offset if hasattr(sr, 'start') and hasattr(sr.start, 'offset') else str(sr))
+            _syn = getattr(stmt, 'syntax', None)
+            if _syn is not None:
+                sr = _syn.sourceRange()
+                _start = sr.start
+                branch_id = (m.curr_module, getattr(_start, 'offset', None) or str(_start))
             else:
-                branch_id = (m.curr_module, str(stmt))
+                _sr = getattr(stmt, 'sourceRange', None)
+                if _sr is not None:
+                    _start = getattr(_sr, 'start', None)
+                    branch_id = (m.curr_module, (getattr(_start, 'offset', None) or str(_sr)) if _start else str(_sr))
+                else:
+                    branch_id = (m.curr_module, str(stmt))
             if branch_id not in m.branch_points_seen:
                 m.branch_points_seen.add(branch_id)
                 m.branch_count += 1
             #print("[slang_helper] branch_count: Conditional Statement:", m.branch_count, "branch_id:", branch_id)  # DEBUG
             # Extract condition expression (handle both semantic and syntax nodes)
             cond_expr = None
-            if hasattr(stmt, 'conditions') and stmt.conditions:
+            _conditions = getattr(stmt, 'conditions', None)
+            if _conditions:
                 # Semantic node: ConditionalStatement with conditions list
-                cond_expr = stmt.conditions[0].expr
-            elif hasattr(stmt, 'predicate'):
-                # Syntax node: ConditionalStatementSyntax with predicate
-                predicate = stmt.predicate
-                # predicate is ConditionalPredicateSyntax, extract the expression
-                if hasattr(predicate, 'expr'):
-                    cond_expr = predicate.expr
-                elif hasattr(predicate, 'expression'):
-                    cond_expr = predicate.expression
-                elif hasattr(predicate, 'conditions'):
-                    # Try conditions list within predicate
-                    conditions = predicate.conditions
-                    if hasattr(conditions, '__iter__'):
-                        for cond in conditions:
-                            if hasattr(cond, 'expr'):
-                                cond_expr = cond.expr
-                                break
-                            elif hasattr(cond, 'expression'):
-                                cond_expr = cond.expression
-                                break
+                cond_expr = _conditions[0].expr
+            else:
+                predicate = getattr(stmt, 'predicate', None)
+                if predicate is not None:
+                    # Syntax node: ConditionalStatementSyntax with predicate
+                    cond_expr = getattr(predicate, 'expr', None) or getattr(predicate, 'expression', None)
+                    if cond_expr is None:
+                        _pconds = getattr(predicate, 'conditions', None)
+                        if _pconds is not None:
+                            for cond in _pconds:
+                                cond_expr = getattr(cond, 'expr', None) or getattr(cond, 'expression', None)
+                                if cond_expr is not None:
+                                    break
 
             if cond_expr:
                 # DEBUG: trace condition extraction
-                debug_print("COND", f"module={m.curr_module} dir={direction} cond_expr={cond_expr} class={cond_expr.__class__.__name__} kind={getattr(cond_expr, 'kind', 'N/A')}")
-                if m.curr_module in s.store:
-                    rst = s.store[m.curr_module].get('rst_n', 'MISSING')
-                    debug_print("COND", f"store[{m.curr_module}].rst_n = {rst} (type={type(rst).__name__})")
+                if DEBUG_ENABLED:
+                    debug_print("COND", f"module={m.curr_module} dir={direction} cond_expr={cond_expr} class={cond_expr.__class__.__name__} kind={getattr(cond_expr, 'kind', 'N/A')}")
+                    if m.curr_module in s.store:
+                        rst = s.store[m.curr_module].get('rst_n', 'MISSING')
+                        debug_print("COND", f"store[{m.curr_module}].rst_n = {rst} (type={type(rst).__name__})")
                 self.visit_expr(m, s, cond_expr)
                 s.assertion_counter += 1
                 cond_z3 = self.expr_to_z3(m, s, cond_expr)
@@ -1106,73 +1111,84 @@ class SymbolicDFS:
                 self.visit_stmt(m, s, s_sub, modules, direction)
 
         elif kind == ps.StatementKind.ForLoop:
-            if hasattr(stmt, "init"):
-                self.visit_stmt(m, s, stmt.init, modules, direction)
-            if hasattr(stmt, "cond"):
-                self.visit_expr(m, s, stmt.cond)
-            if hasattr(stmt, "body"):
-                self.visit_stmt(m, s, stmt.body, modules, direction)
-            if hasattr(stmt, "incr"):
-                self.visit_stmt(m, s, stmt.incr, modules, direction)
+            _v = getattr(stmt, "init", None)
+            if _v is not None: self.visit_stmt(m, s, _v, modules, direction)
+            _v = getattr(stmt, "cond", None)
+            if _v is not None: self.visit_expr(m, s, _v)
+            _v = getattr(stmt, "body", None)
+            if _v is not None: self.visit_stmt(m, s, _v, modules, direction)
+            _v = getattr(stmt, "incr", None)
+            if _v is not None: self.visit_stmt(m, s, _v, modules, direction)
 
         elif kind == ps.StatementKind.WhileLoop:
             # print("whileloop")  # DEBUG
             # Track unique branch points by syntax source location (start offset)
-            if hasattr(stmt, 'syntax') and stmt.syntax is not None:
-                sr = stmt.syntax.sourceRange()
-                branch_id = (m.curr_module, sr.start.offset if hasattr(sr.start, 'offset') else str(sr.start))
-            elif hasattr(stmt, 'sourceRange'):
-                sr = stmt.sourceRange
-                branch_id = (m.curr_module, sr.start.offset if hasattr(sr, 'start') and hasattr(sr.start, 'offset') else str(sr))
+            _syn = getattr(stmt, 'syntax', None)
+            if _syn is not None:
+                sr = _syn.sourceRange(); _st = sr.start
+                branch_id = (m.curr_module, getattr(_st, 'offset', None) or str(_st))
             else:
-                branch_id = (m.curr_module, str(stmt))
+                _sr = getattr(stmt, 'sourceRange', None)
+                if _sr is not None:
+                    _st = getattr(_sr, 'start', None)
+                    branch_id = (m.curr_module, (getattr(_st, 'offset', None) or str(_sr)) if _st else str(_sr))
+                else:
+                    branch_id = (m.curr_module, str(stmt))
             if branch_id not in m.branch_points_seen:
                 m.branch_points_seen.add(branch_id)
                 m.branch_count += 1
-            if hasattr(stmt, "cond"):
-                self.visit_expr(m, s, stmt.cond)
+            _cond = getattr(stmt, "cond", None)
+            if _cond is not None:
+                self.visit_expr(m, s, _cond)
                 s.assertion_counter += 1
-                cond_z3 = self.expr_to_z3(m, s, stmt.cond)
+                cond_z3 = self.expr_to_z3(m, s, _cond)
                 constraint = cond_z3 if direction else Not(cond_z3)
                 self.branch = bool(direction)
                 if not _try_add_constraint(constraint, s, m):
                     m.abandon = True
                     m.ignore = True
                     return
-            if hasattr(stmt, "body"):
-                self.visit_stmt(m, s, stmt.body, modules, direction)
+            _body = getattr(stmt, "body", None)
+            if _body is not None:
+                self.visit_stmt(m, s, _body, modules, direction)
 
         elif kind == ps.StatementKind.DoWhileLoop:
             # print("dowhile")  # DEBUG
-            # Track unique branch points by syntax source location (start offset)
-            if hasattr(stmt, 'syntax') and stmt.syntax is not None:
-                sr = stmt.syntax.sourceRange()
-                branch_id = (m.curr_module, sr.start.offset if hasattr(sr.start, 'offset') else str(sr.start))
-            elif hasattr(stmt, 'sourceRange'):
-                sr = stmt.sourceRange
-                branch_id = (m.curr_module, sr.start.offset if hasattr(sr, 'start') and hasattr(sr.start, 'offset') else str(sr))
+            _syn = getattr(stmt, 'syntax', None)
+            if _syn is not None:
+                sr = _syn.sourceRange(); _st = sr.start
+                branch_id = (m.curr_module, getattr(_st, 'offset', None) or str(_st))
             else:
-                branch_id = (m.curr_module, str(stmt))
+                _sr = getattr(stmt, 'sourceRange', None)
+                if _sr is not None:
+                    _st = getattr(_sr, 'start', None)
+                    branch_id = (m.curr_module, (getattr(_st, 'offset', None) or str(_sr)) if _st else str(_sr))
+                else:
+                    branch_id = (m.curr_module, str(stmt))
             if branch_id not in m.branch_points_seen:
                 m.branch_points_seen.add(branch_id)
                 m.branch_count += 1
-            if hasattr(stmt, "body"):
-                self.visit_stmt(m, s, stmt.body, modules, direction)
-            if hasattr(stmt, "cond"):
-                self.visit_expr(m, s, stmt.cond)
+            _body = getattr(stmt, "body", None)
+            if _body is not None:
+                self.visit_stmt(m, s, _body, modules, direction)
+            _cond = getattr(stmt, "cond", None)
+            if _cond is not None:
+                self.visit_expr(m, s, _cond)
 
         #elif kind == ps.StatementKind.Case:
         elif stmt.__class__.__name__ == "CaseStatementSyntax":
             # print("case")  # DEBUG
-            # Track unique branch points by syntax source location (start offset)
-            if hasattr(stmt, 'syntax') and stmt.syntax is not None:
-                sr = stmt.syntax.sourceRange()
-                branch_id = (m.curr_module, sr.start.offset if hasattr(sr.start, 'offset') else str(sr.start))
-            elif hasattr(stmt, 'sourceRange'):
-                sr = stmt.sourceRange
-                branch_id = (m.curr_module, sr.start.offset if hasattr(sr, 'start') and hasattr(sr.start, 'offset') else str(sr))
+            _syn = getattr(stmt, 'syntax', None)
+            if _syn is not None:
+                sr = _syn.sourceRange(); _st = sr.start
+                branch_id = (m.curr_module, getattr(_st, 'offset', None) or str(_st))
             else:
-                branch_id = (m.curr_module, str(stmt))
+                _sr = getattr(stmt, 'sourceRange', None)
+                if _sr is not None:
+                    _st = getattr(_sr, 'start', None)
+                    branch_id = (m.curr_module, (getattr(_st, 'offset', None) or str(_sr)) if _st else str(_sr))
+                else:
+                    branch_id = (m.curr_module, str(stmt))
             if branch_id not in m.branch_points_seen:
                 m.branch_points_seen.add(branch_id)
                 m.branch_count += 1
@@ -1396,8 +1412,8 @@ class SymbolicDFS:
             cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size()) if hasattr(cond_z3, 'size') else cond_z3
 
         # DEBUG
-        debug_print("ASSERT", f"cycle={m.cycle} module={m.curr_module} cond_z3={cond_z3}")
         if DEBUG_ENABLED:
+            debug_print("ASSERT", f"cycle={m.cycle} module={m.curr_module} cond_z3={cond_z3}")
             debug_print("ASSERT", "store:")
             for k, v in s.store.get(m.curr_module, {}).items():
                 debug_print("ASSERT", f"  {k} = {v} ({type(v).__name__})")

@@ -1,5 +1,67 @@
 # Changelog
 
+## 2026-03-20 [Performance] Round 3 Optimization: 10x Speedup on or1200_subset
+
+### Summary
+
+Profiling after Round 2 revealed a new dominant bottleneck: 95.5% of runtime (82s out of 85s) was spent inside Z3's C++ AST pretty-printer (`z3printer.py`). Root cause was two Python performance traps — eager f-string evaluation in debug prints, and blind `str(z3_val)` calls in `substitute_symbols`. Fixing both reduced execution time from 18.06s to 1.77s — a **10.2x speedup** — with identical counterexample output.
+
+### Profiling Findings (after Round 2)
+
+| Bottleneck | Time | Calls | % Total |
+|---|---|---|---|
+| Z3 `__str__` / `z3printer.py` | 82s | 16,050 | 95.5% |
+| `substitute_symbols` (blind `str(z3_val)`) | 47s | 152 | 55% |
+| `_syntax_binary_expression` (via z3printer) | 35s | 1,336 | 41% |
+
+### Root Cause Analysis
+
+**Trap 1 — Eager f-string evaluation**: Python evaluates f-string arguments at the call site, before the called function runs. So `debug_print("TAG", f"...{z3_obj}...")` always calls `str(z3_obj)` — which triggers Z3's recursive C++ AST printer — even when `DEBUG_ENABLED = False`. The `debug_print` function's internal `if DEBUG_ENABLED:` check fires too late.
+
+**Trap 2 — Blind `str()` in `substitute_symbols`**: The function iterated all variables in the store and called `str(sym_val)` unconditionally, even for variables that don't appear in the target expression string. With ~100 variables and 152 calls, this produced ~15,000 unnecessary Z3 printer invocations.
+
+### Changes Made
+
+#### Task 1: Guard debug_print f-strings (`helpers/slang_helpers.py`, `helpers/rvalue_to_z3.py`)
+
+Wrapped every `debug_print` call containing Z3 objects in an explicit `if DEBUG_ENABLED:` block so the f-string is never constructed during normal execution:
+
+- `slang_helpers.py` line 912: `evaluate_comb` EVAL-COMB trace (3,399 calls/run)
+- `slang_helpers.py` lines 1081-1084: COND trace with `cond_expr` and `rst` (Z3 value)
+- `slang_helpers.py` line 1399: ASSERT trace with `cond_z3` — **critical hot path**
+- `rvalue_to_z3.py` line 488: `_kind_named_value` NamedValue trace (materializes store key list)
+- `rvalue_to_z3.py` line 509: `_kind_integer_literal` IntegerLiteral trace
+- `rvalue_to_z3.py` line 644: `_syntax_parenthesized` unwrap trace
+- `rvalue_to_z3.py` line 654: `_syntax_binary_expression` trace with `lhs`/`rhs` (Z3 exprs) — **35s eliminated**
+
+#### Task 2: Fast pre-check in `substitute_symbols` (`helpers/slang_helpers.py`)
+
+Added `if var_name in result:` substring check before the regex and `str()` operations. Only variables that actually appear in the expression string trigger the expensive Z3 printer:
+
+```python
+for var_name in sorted_vars:
+    if var_name in result:                          # fast O(n) substring check
+        pattern = r'\b' + re.escape(var_name) + r'\b'
+        if re.search(pattern, result):              # confirm whole-word match
+            sym_val = store[var_name]
+            result = re.sub(pattern, str(sym_val), result)  # str() only when needed
+```
+
+### Results
+
+| Metric | Before (Round 2) | After (Round 3) | Speedup |
+|---|---|---|---|
+| Execution time | 18.06s | 1.77s | **10.2x** |
+| Total time | 18.31s | 2.03s | **9.0x** |
+
+Cumulative speedup across all three rounds: **82.66s → 1.77s (~47x)**.
+
+### PySlang Library Usage
+
+No new PySlang API usage in this round. All changes are in Python-level debug/string handling.
+
+---
+
 ## 2026-03-20 [Performance] Round 2 Optimization: 4.6x Speedup on or1200_subset
 
 ### Summary

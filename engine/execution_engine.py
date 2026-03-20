@@ -496,7 +496,11 @@ class ExecutionEngine:
         for parent_inst, parent_module in modules_dict.items():
             if not hasattr(parent_module, 'body'):
                 continue
-            for child in parent_module.body:
+            # Fast pre-check: skip leaf modules with no Instance children
+            body_list = list(parent_module.body)
+            if not any(child.kind == ps.SymbolKind.Instance for child in body_list):
+                continue
+            for child in body_list:
                 if child.kind != ps.SymbolKind.Instance:
                     continue
                 child_name = child.name

@@ -480,12 +480,13 @@ def _kind_binary_op(e, s, m):
 
 
 def _kind_named_value(e, s, m):
-    from helpers.debug import debug_print
+    from helpers.debug import debug_print, DEBUG_ENABLED
     symbol = getattr(e, 'symbol', None)
     if symbol is not None:
         var_name = symbol.name
         module_name = m.curr_module
-        debug_print("NamedValue", f"var_name={var_name}, module={module_name}, store keys={list(s.store.get(module_name, {}).keys())}")
+        if DEBUG_ENABLED:
+            debug_print("NamedValue", f"var_name={var_name}, module={module_name}, store keys={list(s.store.get(module_name, {}).keys())}")
         if module_name in s.store and var_name in s.store[module_name]:
             sym_val = s.store[module_name][var_name]
             if isinstance(sym_val, str):
@@ -502,11 +503,12 @@ def _kind_named_value(e, s, m):
 
 
 def _kind_integer_literal(e, s, m):
-    from helpers.debug import debug_print
+    from helpers.debug import debug_print, DEBUG_ENABLED
     val = getattr(e, 'value', 0)
     if hasattr(val, 'value'):
         val = val.value
-    debug_print("IntegerLiteral", f"val={val}")
+    if DEBUG_ENABLED:
+        debug_print("IntegerLiteral", f"val={val}")
     return BitVecVal(int(val), 32)
 
 
@@ -638,20 +640,22 @@ def _kind_replication(e, s, m):
 
 
 def _syntax_parenthesized(e, s, m):
-    from helpers.debug import debug_print
+    from helpers.debug import debug_print, DEBUG_ENABLED
     inner_expr = getattr(e, 'expression', None)
     if inner_expr is not None:
-        debug_print("ParenthesizedExpressionSyntax", f"unwrapping to: {inner_expr}")
+        if DEBUG_ENABLED:
+            debug_print("ParenthesizedExpressionSyntax", f"unwrapping to: {inner_expr}")
         return parse_expr_to_Z3(inner_expr, s, m)
     return BitVecVal(0, 32)
 
 
 def _syntax_binary_expression(e, s, m):
-    from helpers.debug import debug_print
+    from helpers.debug import debug_print, DEBUG_ENABLED
     lhs = parse_expr_to_Z3(e.left, s, m)
     rhs = parse_expr_to_Z3(e.right, s, m)
     op_token = str(getattr(e, 'operatorToken', ''))
-    debug_print("BinaryExpressionSyntax", f"lhs={lhs}, rhs={rhs}, op_token={op_token}")
+    if DEBUG_ENABLED:
+        debug_print("BinaryExpressionSyntax", f"lhs={lhs}, rhs={rhs}, op_token={op_token}")
     lhs, rhs = _match_bv_widths(lhs, rhs)
     if "<=" in op_token:
         return z3.ULE(lhs, rhs)
