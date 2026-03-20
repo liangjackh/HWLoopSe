@@ -6,11 +6,11 @@ find . -name '*.pyc' -delete && find . -name '__pycache__' -type d -exec rm -rf 
 rm -f out.txt
 #test_2
 #python3 -m main 6 designs/test-designs/test_2.v --sv  --auto-plan --llm-provider deepseek --coi --strategy directed
-python3 -m main 7 designs/test-designs/test_2.v --sv --milestone-file milestones/test_2.json --coi --strategy directed
+#python3 -m main 7 designs/test-designs/test_2.v --sv --milestone-file milestones/test_2.json --coi --strategy directed
 
 #or1200
 #python3 -m main 3 or1200.F --sv  --auto-plan --llm-provider deepseek --coi --strategy directed -t or1200_top
-#python3 -m main 30 or1200_subset.F --sv  --auto-plan --milestone-file milestones/or1200_subset.json --coi --strategy directed -t or1200_top
+python3 -m main 30 or1200_subset.F --sv  --auto-plan --milestone-file milestones/or1200_subset.json --coi --strategy directed -t or1200_top
 
 #sub-test
 #python3 -m main 100 designs/test-designs/sub-test/sub.F --sv --auto-plan --llm-provider deepseek --coi --strategy directed -t top

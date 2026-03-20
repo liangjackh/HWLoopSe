@@ -23,12 +23,20 @@ def _bool_to_bv(expr, width=1):
 
 def _match_bv_widths(lhs, rhs):
     """Coerce BoolRef to BitVec if needed, then zero-extend the narrower operand (Verilog semantics)."""
+    # Fast path: both are BitVecRef with same width (most common case)
+    if isinstance(lhs, BitVecRef) and isinstance(rhs, BitVecRef):
+        lw, rw = lhs.size(), rhs.size()
+        if lw == rw:
+            return lhs, rhs
+        if lw < rw:
+            return z3.ZeroExt(rw - lw, lhs), rhs
+        return lhs, z3.ZeroExt(lw - rw, rhs)
+
     # Convert BoolRef operands to 1-bit BitVec so they can participate in bitwise ops
     lhs_is_bool = isinstance(lhs, BoolRef) and not isinstance(lhs, BitVecRef)
     rhs_is_bool = isinstance(rhs, BoolRef) and not isinstance(rhs, BitVecRef)
 
     if lhs_is_bool and rhs_is_bool:
-        # Both bools — leave as-is (caller will use And/Or/== which accept BoolRef)
         return lhs, rhs
 
     if lhs_is_bool:
@@ -38,7 +46,7 @@ def _match_bv_widths(lhs, rhs):
         target_w = lhs.size() if isinstance(lhs, BitVecRef) else 1
         rhs = _bool_to_bv(rhs, target_w)
 
-    # Now reconcile BitVec widths
+    # Reconcile BitVec widths after bool coercion
     if isinstance(lhs, BitVecRef) and isinstance(rhs, BitVecRef):
         lw, rw = lhs.size(), rhs.size()
         if lw < rw:
@@ -358,7 +366,7 @@ class Z3Visitor():
         # issue
         print((left_expr))
         print(node.left)
-        if str(left_expr.sort()) == "Bool" and str(right_expr.sort()) != "Bool":
+        if z3.is_bool(left_expr) and not z3.is_bool(right_expr):
             right_expr = UGT(right_expr, BitVecVal(0, 32)) 
             print(f"Converted Right Expression to Bool: {right_expr}")
 
@@ -424,69 +432,51 @@ def parse_concat_to_Z3(concat, s: SymbolicState, m: ExecutionManager):
     return res
 
 
+_BINARY_OP_DISPATCH = {
+    ps.BinaryOperator.LessThanEqual:      lambda l, r: z3.ULE(l, r),
+    ps.BinaryOperator.LessThan:           lambda l, r: ULT(l, r),
+    ps.BinaryOperator.GreaterThanEqual:   lambda l, r: z3.UGE(l, r),
+    ps.BinaryOperator.GreaterThan:        lambda l, r: UGT(l, r),
+    ps.BinaryOperator.Equality:           lambda l, r: l == r,
+    ps.BinaryOperator.CaseEquality:       lambda l, r: l == r,
+    ps.BinaryOperator.Inequality:         lambda l, r: l != r,
+    ps.BinaryOperator.CaseInequality:     lambda l, r: l != r,
+    ps.BinaryOperator.Add:                lambda l, r: l + r,
+    ps.BinaryOperator.Subtract:           lambda l, r: l - r,
+    ps.BinaryOperator.Multiply:           lambda l, r: l * r,
+    ps.BinaryOperator.Divide:             lambda l, r: z3.UDiv(l, r),
+    ps.BinaryOperator.Mod:                lambda l, r: z3.URem(l, r),
+    ps.BinaryOperator.BinaryAnd:          lambda l, r: l & r,
+    ps.BinaryOperator.BinaryOr:           lambda l, r: l | r,
+    ps.BinaryOperator.BinaryXor:          lambda l, r: l ^ r,
+    ps.BinaryOperator.LogicalShiftLeft:   lambda l, r: l << r,
+    ps.BinaryOperator.LogicalShiftRight:  lambda l, r: z3.LShR(l, r),
+    ps.BinaryOperator.ArithmeticShiftLeft:  lambda l, r: l << r,
+    ps.BinaryOperator.ArithmeticShiftRight: lambda l, r: l >> r,
+}
+
 def _kind_binary_op(e, s, m):
     from helpers.debug import debug_print
     lhs = parse_expr_to_Z3(e.left, s, m)
     rhs = parse_expr_to_Z3(e.right, s, m)
-    op = str(e.op) if hasattr(e, 'op') else ""
-    debug_print("BinaryOp", f"lhs={lhs}, rhs={rhs}, op={op}")
-    if ("LessThanEqual" in op or "LessEq" in op) and m is not None and getattr(m, 'curr_module', '') == 'u_assert':
-        print(f"[LESSEQ-DEBUG] lhs={lhs} rhs={rhs} op={op}")
-        print(f"[LESSEQ-DEBUG]   e.left={e.left} kind={getattr(e.left, 'kind', '?')} type={type(e.left).__name__}")
-        print(f"[LESSEQ-DEBUG]   e.right={e.right} kind={getattr(e.right, 'kind', '?')} type={type(e.right).__name__}")
-        r = e.right
-        if hasattr(r, 'operand'):
-            print(f"[LESSEQ-DEBUG]   e.right.operand={r.operand} kind={getattr(r.operand, 'kind', '?')} value={getattr(r.operand, 'value', 'N/A')}")
-        if hasattr(r, 'value'):
-            print(f"[LESSEQ-DEBUG]   e.right.value={r.value}")
-        if hasattr(r, 'constantValue'):
-            print(f"[LESSEQ-DEBUG]   e.right.constantValue={r.constantValue}")
+    op = e.op if hasattr(e, 'op') else None
     lhs, rhs = _match_bv_widths(lhs, rhs)
-    if "LessThanEqual" in op or "LessEq" in op:
-        return z3.ULE(lhs, rhs)
-    elif "LessThan" in op and "Equal" not in op:
-        return ULT(lhs, rhs)
-    elif "GreaterThanEqual" in op or "GreaterEq" in op:
-        return z3.UGE(lhs, rhs)
-    elif "GreaterThan" in op and "Equal" not in op:
-        return UGT(lhs, rhs)
-    elif "Equality" in op or op == "BinaryOperator.Eq":
-        return lhs == rhs
-    elif "Inequality" in op or "NotEq" in op:
-        return lhs != rhs
-    elif "Add" in op or "Plus" in op:
-        return lhs + rhs
-    elif "Subtract" in op or "Sub" in op or "Minus" in op:
-        return lhs - rhs
-    elif "Multiply" in op or "Mul" in op or "Times" in op:
-        return lhs * rhs
-    elif "Divide" in op or "Div" in op:
-        return z3.UDiv(lhs, rhs)
-    elif "Mod" in op:
-        return z3.URem(lhs, rhs)
-    elif "BinaryAnd" in op:
-        return lhs & rhs
-    elif "BinaryOr" in op:
-        return lhs | rhs
-    elif "BinaryXor" in op or "Xor" in op:
-        return lhs ^ rhs
-    elif "LogicalAnd" in op or "Land" in op:
-        lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
-        rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
-        return And(lhs_bool, rhs_bool)
-    elif "LogicalOr" in op or "Lor" in op:
-        lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
-        rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
-        return Or(lhs_bool, rhs_bool)
-    elif "LogicalShiftLeft" in op or "Sll" in op:
-        return lhs << rhs
-    elif "LogicalShiftRight" in op or "Srl" in op:
-        return z3.LShR(lhs, rhs)
-    elif "ArithmeticShiftRight" in op or "Sra" in op:
-        return lhs >> rhs
-    else:
-        print(f"[Warning] Unhandled binary operator: {op}")
-        return BitVecVal(0, 32)
+    # Fast path: direct enum dispatch (no str() conversion)
+    if op is not None:
+        handler = _BINARY_OP_DISPATCH.get(op)
+        if handler is not None:
+            return handler(lhs, rhs)
+        # LogicalAnd / LogicalOr need bool coercion
+        if op == ps.BinaryOperator.LogicalAnd:
+            lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
+            rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
+            return And(lhs_bool, rhs_bool)
+        if op == ps.BinaryOperator.LogicalOr:
+            lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
+            rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
+            return Or(lhs_bool, rhs_bool)
+    print(f"[Warning] Unhandled binary operator: {op}")
+    return BitVecVal(0, 32)
 
 
 def _kind_named_value(e, s, m):
@@ -529,16 +519,16 @@ def _kind_conversion(e, s, m):
 
 def _kind_unary_op(e, s, m):
     operand = parse_expr_to_Z3(e.operand, s, m)
-    op = str(e.op) if hasattr(e, 'op') else ""
-    if "Not" in op or "LogicalNot" in op:
+    op = e.op if hasattr(e, 'op') else None
+    if op == ps.UnaryOperator.LogicalNot:
         if hasattr(operand, 'size'):
             return operand == BitVecVal(0, 32)
         return Not(operand)
-    elif "BitwiseNot" in op:
+    elif op == ps.UnaryOperator.BitwiseNot:
         return ~operand
-    elif "Minus" in op:
+    elif op == ps.UnaryOperator.Minus:
         return -operand
-    elif "Plus" in op:
+    elif op == ps.UnaryOperator.Plus:
         return operand
     else:
         print(f"[Warning] Unhandled unary operator: {op}")
@@ -1346,8 +1336,8 @@ def _fallback_dispatch(e, s, m):
 
 def solve_pc(s: Solver) -> bool:
     """Solve path condition."""
-    result = str(s.check())
-    if str(result) == "sat":
+    from z3 import sat as z3_sat
+    if s.check() == z3_sat:
         model = s.model()
         return True
     else:

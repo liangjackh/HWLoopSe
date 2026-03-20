@@ -353,6 +353,9 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         self._primary_input_flags = primary_input_flags or []
         self._active_instances = set(manager.names_list)
 
+        # Build topologically sorted comb nodes (single-pass instead of 2-pass fixedpoint)
+        self._sorted_comb_by_module = self._topo_sort_comb(cfgs_by_module, manager)
+
         # Reset milestone progress
         self.milestone_manager.reset()
         manager.branch_count = 0
@@ -473,7 +476,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         # Evaluate combinational logic to fixed-point (Sylvia-style)
         logging.debug("Initializing state: evaluating combinational logic to fixed-point...")
-        self._evaluate_comb_fixedpoint(visitor, manager, state)
+        self._evaluate_comb_topo(visitor, manager, state)
 
     def _clone_state(self, state: SymbolicState) -> SymbolicState:
         """Create an efficient shallow clone of the symbolic state."""
@@ -597,6 +600,153 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 if inst in state.store:
                     state.store[inst][sig] = shared_bv
 
+    def _topo_sort_comb(self, cfgs_by_module, manager) -> Dict[str, List[Any]]:
+        """Topologically sort combinational logic nodes per module.
+
+        Uses write/read dependency analysis: if node A writes signal X and
+        node B reads signal X, then A must be evaluated before B.
+
+        Returns sorted_comb_by_module with nodes in dependency order.
+        Falls back to original order if a cycle is detected.
+        """
+        import networkx as nx
+
+        sorted_comb = {}
+        for module_name in manager.names_list:
+            nodes = self._comb_by_module.get(module_name, [])
+            if len(nodes) <= 1:
+                sorted_comb[module_name] = list(nodes)
+                continue
+
+            # Build write->node and read sets per node
+            node_writes = {}   # node_idx -> set of written signal names
+            node_reads = {}    # node_idx -> set of read signal names
+            signal_writer = {} # signal_name -> node_idx that writes it
+
+            for idx, node in enumerate(nodes):
+                writes, reads = self._extract_comb_node_signals(node)
+                node_writes[idx] = writes
+                node_reads[idx] = reads
+                for sig in writes:
+                    signal_writer[sig] = idx
+
+            # Build dependency DAG: edge from writer to reader
+            G = nx.DiGraph()
+            G.add_nodes_from(range(len(nodes)))
+            for idx in range(len(nodes)):
+                for sig in node_reads[idx]:
+                    writer_idx = signal_writer.get(sig)
+                    if writer_idx is not None and writer_idx != idx:
+                        G.add_edge(writer_idx, idx)
+
+            try:
+                order = list(nx.topological_sort(G))
+                sorted_comb[module_name] = [nodes[i] for i in order]
+                logging.debug(f"  [TopoSort] {module_name}: {len(nodes)} nodes sorted")
+            except nx.NetworkXUnfeasible:
+                print(f"[TopoSort] Warning: cycle detected in {module_name}, using original order")
+                sorted_comb[module_name] = list(nodes)
+
+        return sorted_comb
+
+    def _extract_comb_node_signals(self, node):
+        """Extract (writes, reads) signal name sets from a comb node."""
+        import pyslang as ps
+        writes = set()
+        reads = set()
+
+        if node is None:
+            return writes, reads
+
+        cname = node.__class__.__name__
+        # Unwrap symbol wrappers
+        if cname in ('ContinuousAssignSymbol', 'NetSymbol'):
+            syntax = getattr(node, 'syntax', None)
+            if syntax is not None:
+                node = syntax
+                cname = node.__class__.__name__
+
+        if cname == 'ContinuousAssignSyntax':
+            assigns = getattr(node, 'assigns', None)
+            if assigns:
+                for assign in assigns:
+                    lhs = getattr(assign, 'left', None)
+                    rhs = getattr(assign, 'right', None)
+                    if lhs:
+                        name = self._get_signal_name(lhs)
+                        if name:
+                            writes.add(name)
+                    if rhs:
+                        self._collect_read_names(rhs, reads)
+
+        elif cname in ('NetDeclarationSyntax', 'DataDeclarationSyntax'):
+            declarators = getattr(node, 'declarators', None)
+            if declarators:
+                for decl in declarators:
+                    name_node = getattr(decl, 'name', None)
+                    init = getattr(decl, 'initializer', None)
+                    if name_node:
+                        name = getattr(name_node, 'valueText', str(name_node))
+                        writes.add(name)
+                    if init:
+                        init_expr = getattr(init, 'expr', getattr(init, 'expression', init))
+                        self._collect_read_names(init_expr, reads)
+
+        return writes, reads
+
+    @staticmethod
+    def _get_signal_name(node):
+        """Extract signal name from an LHS syntax node."""
+        if hasattr(node, 'identifier'):
+            ident = node.identifier
+            return getattr(ident, 'valueText', getattr(ident, 'value', str(ident)))
+        if hasattr(node, 'valueText'):
+            return node.valueText
+        return None
+
+    @staticmethod
+    def _collect_read_names(node, reads):
+        """Recursively collect signal names read by an expression node."""
+        if node is None:
+            return
+        cname = node.__class__.__name__
+        if cname == 'IdentifierNameSyntax':
+            if hasattr(node, 'identifier'):
+                name = getattr(node.identifier, 'valueText', getattr(node.identifier, 'value', None))
+                if name:
+                    reads.add(name)
+            return
+        if cname == 'IdentifierSelectNameSyntax':
+            if hasattr(node, 'identifier'):
+                name = getattr(node.identifier, 'valueText', getattr(node.identifier, 'value', None))
+                if name:
+                    reads.add(name)
+            return
+        # Recurse into children
+        for attr in ('left', 'right', 'operand', 'expression', 'expr'):
+            child = getattr(node, attr, None)
+            if child is not None:
+                MilestoneDirectedStrategy._collect_read_names(child, reads)
+        # Handle lists (e.g., concatenation operands)
+        for attr in ('expressions', 'operands', 'items', 'assigns'):
+            children = getattr(node, attr, None)
+            if children is not None and hasattr(children, '__iter__'):
+                for child in children:
+                    MilestoneDirectedStrategy._collect_read_names(child, reads)
+
+    def _evaluate_comb_topo(
+        self,
+        visitor: Any,
+        manager: ExecutionManager,
+        state: SymbolicState
+    ):
+        """Single-pass combinational evaluation in topological order."""
+        for module_name in manager.names_list:
+            manager.curr_module = module_name
+            for node in self._sorted_comb_by_module.get(module_name, []):
+                visitor.evaluate_comb(manager, state, node)
+        self._propagate_ports(state)
+
 # engine/strategies.py (截取 MilestoneDirectedStrategy 的修改部分)
     def _evaluate_comb_fixedpoint(
         self,
@@ -652,7 +802,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         if cycle > 0:
             item.state.apply_pending_nba()
             self._refresh_primary_inputs(item.state, cycle)
-            self._evaluate_comb_fixedpoint(visitor, manager, item.state)
+            self._evaluate_comb_topo(visitor, manager, item.state)
 
         # Step 2: Build CFG list if not already in context
         remaining_cfgs = item.execution_context.get('remaining_cfgs', None)
@@ -747,7 +897,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 continue
 
         # Step 4: Re-evaluate comb after sequential logic
-        self._evaluate_comb_fixedpoint(visitor, manager, state)
+        self._evaluate_comb_topo(visitor, manager, state)
 
         # Step 5: Check SAT
         if state.pc.check() != sat:

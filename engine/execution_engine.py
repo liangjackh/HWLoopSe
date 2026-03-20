@@ -350,8 +350,8 @@ class ExecutionEngine:
 
     def solve_pc(self, s: Solver) -> bool:
         """Solves path condition using Z3"""
-        result = str(s.check())
-        if str(result) == "sat":
+        from z3 import sat as z3_sat
+        if s.check() == z3_sat:
             model = s.model()
             return True
         else:

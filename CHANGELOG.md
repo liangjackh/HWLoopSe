@@ -1,5 +1,58 @@
 # Changelog
 
+## 2026-03-20 [Performance] Round 2 Optimization: 4.6x Speedup on or1200_subset
+
+### Summary
+
+Two rounds of profiling-driven optimization reduced or1200_subset (30 cycles, directed strategy) execution time from 82.66s to 18.06s — a **4.6x speedup** — while producing identical counterexample output.
+
+### Profiling Findings (after Round 1 deepcopy elimination)
+
+| Bottleneck | Time | Calls | % Total |
+|---|---|---|---|
+| `_evaluate_comb_fixedpoint` | 227s | 3 | 98% |
+| `parse_expr_to_Z3` | 182s | 134M (1.1M primitive) | 80% |
+| `_match_bv_widths` | 58s | 20M | 25% |
+| Z3 printer (`str()` on Z3 objects) | 15s | 1.5M | 7% |
+
+### Changes Made
+
+#### Task 1: Eliminate `str()` on Z3 objects (`helpers/rvalue_to_z3.py`, `engine/execution_engine.py`)
+
+- Replaced `str(e.op)` string-matching if-elif chain in `_kind_binary_op` with a module-level `_BINARY_OP_DISPATCH` dict keyed by `ps.BinaryOperator` enum values — O(1) dict lookup, no string conversion
+- Replaced `str(e.op)` in `_kind_unary_op` with direct `ps.UnaryOperator` enum comparison
+- Replaced `str(s.check()) == "sat"` with `s.check() == z3.sat` in both `solve_pc` functions
+- Replaced `str(left_expr.sort()) == "Bool"` with `z3.is_bool(left_expr)` in `Z3Visitor`
+
+#### Task 2: Topological sort for combinational logic (`engine/strategies.py`)
+
+- Added `_topo_sort_comb()`: builds a write/read dependency DAG per module using signal name extraction, then calls `networkx.topological_sort` to produce a single-pass evaluation order. Falls back to original order if a cycle is detected.
+- Added `_evaluate_comb_topo()`: single-pass evaluation in topological order (replaces 2-pass `_evaluate_comb_fixedpoint`)
+- Replaced all 3 `_evaluate_comb_fixedpoint` calls with `_evaluate_comb_topo`
+- The 2-pass fixedpoint was the dominant bottleneck: it drove 134M recursive calls to `parse_expr_to_Z3` by evaluating every comb node twice per cycle per work item
+
+#### Task 3: Fast-path `_match_bv_widths` (`helpers/rvalue_to_z3.py`)
+
+- Added early return for the common case: when both operands are `BitVecRef` with equal width, return immediately without any bool coercion or ZeroExt logic
+- This function was called ~20M times; the fast path avoids two `isinstance` checks and a `.size()` call in the majority of cases
+
+#### Task 4: Post-sequential comb evaluation (audited, kept)
+
+- Confirmed that the 3rd `_evaluate_comb_topo` call (after sequential logic, before milestone check) is necessary: milestones reference combinational wires whose values depend on register updates from the always blocks
+
+### Results
+
+| Metric | Before | After | Speedup |
+|---|---|---|---|
+| Execution time | 82.66s | 18.06s | **4.6x** |
+| Total time | 82.86s | 18.31s | **4.5x** |
+
+Counterexample output is identical — same signals, same violation detected.
+
+### PySlang Library Usage
+
+- No new PySlang API usage. `ps.BinaryOperator` and `ps.UnaryOperator` enum members used directly for O(1) dispatch instead of `str(e.op)` substring matching.
+
 ## 2026-03-18 - Fix Initial Block + Sequential If Statements in CFG
 
 ### Problem
