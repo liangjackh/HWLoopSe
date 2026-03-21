@@ -77,6 +77,45 @@ def parse_value(value_str: str) -> int:
     return int(value_str)
 
 
+def _find_top_level_comparison(condition: str) -> Optional[Tuple[str, int]]:
+    """Find the first comparison operator at the top paren level.
+
+    Returns (operator, index) or None.  Correctly distinguishes:
+      ==  !=  >=  <=   (2-char comparison operators)
+      >   <            (1-char, but NOT >> or <<)
+    """
+    depth = 0
+    i = 0
+    while i < len(condition):
+        c = condition[i]
+        if c == '(':
+            depth += 1
+            i += 1
+            continue
+        elif c == ')':
+            depth -= 1
+            i += 1
+            continue
+
+        if depth != 0:
+            i += 1
+            continue
+
+        # Check 2-char operators first
+        two = condition[i:i+2]
+        if two in ('==', '!=', '>=', '<='):
+            return (two, i)
+        # Check single-char > but not >> or >=
+        if c == '>' and two not in ('>>', '>='):
+            return ('>', i)
+        # Check single-char < but not << or <=
+        if c == '<' and two not in ('<<', '<='):
+            return ('<', i)
+
+        i += 1
+    return None
+
+
 def parse_simple_condition(condition: str) -> SimpleCondition:
     """
     Parse a simple condition string into a SimpleCondition.
@@ -87,9 +126,10 @@ def parse_simple_condition(condition: str) -> SimpleCondition:
         "sig_a != sig_b" -> SimpleCondition("sig_a", "!=", "sig_b")
         "out > `THRESHOLD" -> SimpleCondition("out", ">", "`THRESHOLD")
         "a == (b + 1)" -> SimpleCondition("a", "==", "(b + 1)")
+        "((sig & 32'hFF) >> 4) == 2" -> SimpleCondition("((sig & 32'hFF) >> 4)", "==", 2)
 
     Args:
-        condition: A string like "signal_name op value" or "signal_name op signal_name"
+        condition: A string like "signal_name op value" or "expression op value"
 
     Returns:
         SimpleCondition object
@@ -97,35 +137,38 @@ def parse_simple_condition(condition: str) -> SimpleCondition:
     Raises:
         ValueError: If the condition cannot be parsed
     """
-    # Supported operators (order matters - check longer ones first)
-    operators = ['==', '!=', '>=', '<=', '>', '<']
-
     condition = condition.strip()
 
-    for op in operators:
-        if op in condition:
-            parts = condition.split(op, 1)  # Split only on first occurrence
-            if len(parts) == 2:
-                signal_path = parts[0].strip()
-                value_str = parts[1].strip()
+    # Find the comparison operator at the top paren level
+    match = _find_top_level_comparison(condition)
+    if match is None:
+        raise ValueError(
+            f"Cannot parse simple condition: {condition}. "
+            "Expected format: 'signal op value' or 'signal op signal'"
+        )
 
-                if not value_str:
-                    continue  # Empty RHS, try next operator
+    op, idx = match
+    signal_path = condition[:idx].strip()
+    value_str = condition[idx + len(op):].strip()
 
-                # Try to parse as a numeric value first
-                try:
-                    value = parse_value(value_str)
-                    return SimpleCondition(signal_path, op, value)
-                except (ValueError, AttributeError):
-                    # If parsing as value fails, treat as signal path or expression
-                    # Accept: signal names, hierarchical paths, backtick macros, arithmetic expressions
-                    # Includes: +, -, *, /, <<, >>, &, |, ^, ~, parens, backtick
-                    if re.match(r'^[`a-zA-Z_(][\w.\[\]:+\-*/<>&|^~ `()]*$', value_str):
-                        return SimpleCondition(signal_path, op, value_str)
-                    else:
-                        raise ValueError(f"Cannot parse value '{value_str}' in condition: {condition}")
+    if not signal_path or not value_str:
+        raise ValueError(
+            f"Cannot parse simple condition: {condition}. "
+            "Expected format: 'signal op value' or 'signal op signal'"
+        )
 
-    raise ValueError(f"Cannot parse simple condition: {condition}. Expected format: 'signal op value' or 'signal op signal'")
+    # Try to parse RHS as a numeric value first
+    try:
+        value = parse_value(value_str)
+        return SimpleCondition(signal_path, op, value)
+    except (ValueError, AttributeError):
+        # If parsing as value fails, treat as signal path or expression
+        # Accept: signal names, hierarchical paths, backtick macros, arithmetic expressions
+        # Includes: +, -, *, /, <<, >>, &, |, ^, ~, parens, backtick, Verilog literals
+        if re.match(r'^[`a-zA-Z_(][\w.\[\]:+\-*/<>&|^~ `()\'h]*$', value_str):
+            return SimpleCondition(signal_path, op, value_str)
+        else:
+            raise ValueError(f"Cannot parse value '{value_str}' in condition: {condition}")
 
 
 def _has_comparison_operator(text: str) -> bool:
@@ -142,15 +185,119 @@ def _has_comparison_operator(text: str) -> bool:
     return False
 
 
+def _find_matching_paren(text: str, start: int) -> int:
+    """Find the index of the closing ')' matching the '(' at `start`.
+    Returns -1 if not found."""
+    depth = 1
+    i = start + 1
+    while i < len(text):
+        if text[i] == '(':
+            depth += 1
+        elif text[i] == ')':
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return -1
+
+
+def _has_top_level_logical_op(text: str) -> bool:
+    """Check if text contains a top-level (outside parens) logical operator (&&, ||)."""
+    depth = 0
+    i = 0
+    while i < len(text):
+        if text[i] == '(':
+            depth += 1
+        elif text[i] == ')':
+            depth -= 1
+        elif depth == 0 and text[i:i+2] in ('&&', '||'):
+            return True
+        i += 1
+    return False
+
+
+def _is_arithmetic_paren(condition: str, paren_start: int) -> bool:
+    """Determine if the '(' at paren_start is arithmetic (part of an expression
+    on the LHS or RHS of a comparison) rather than logical grouping.
+
+    Heuristic: find the matching ')'. If the text *after* the closing paren
+    (at the same nesting level) contains a comparison operator before any
+    logical operator, then this paren group is the LHS of a comparison —
+    i.e. arithmetic, not logical.  Also, if the content inside has no
+    top-level logical operators AND no top-level comparison operators, it's
+    arithmetic (e.g. "(sig & mask)").
+    """
+    close = _find_matching_paren(condition, paren_start)
+    if close == -1:
+        return False
+
+    # Check what follows the closing paren (skip whitespace)
+    rest = condition[close + 1:].lstrip()
+
+    # If a comparison operator follows, this whole paren group is the LHS
+    # of a comparison — definitely arithmetic.
+    for op in ('==', '!=', '>=', '<=', '>', '<'):
+        if rest.startswith(op):
+            return True
+
+    # If a bitwise/shift/arithmetic operator follows (and eventually a
+    # comparison), this paren is part of a larger arithmetic expression.
+    # E.g. "(sig & mask) >> 30" which later gets "== 2"
+    # We scan the rest for a comparison at depth-0.
+    # But exclude logical operators && and ||.
+    if rest and rest[0] in ('>', '<', '&', '|', '^', '+', '-', '*', '/'):
+        if rest[:2] not in ('&&', '||'):
+            if _has_comparison_operator(rest):
+                return True
+
+    # Check the content inside the parens
+    inner = condition[paren_start + 1:close]
+    if not _has_top_level_logical_op(inner) and not _has_comparison_operator_top_level(inner):
+        # Pure arithmetic inside (e.g. "sig & mask"), not a logical group
+        # But only if there's more after it (otherwise it could be wrapping a condition)
+        if rest and rest[0] not in (')', ''):
+            return True
+
+    return False
+
+
+def _has_comparison_operator_top_level(text: str) -> bool:
+    """Check if text contains a comparison operator at the top paren level."""
+    depth = 0
+    i = 0
+    while i < len(text):
+        if text[i] == '(':
+            depth += 1
+        elif text[i] == ')':
+            depth -= 1
+        elif depth == 0:
+            for op in ('==', '!=', '>=', '<='):
+                if text[i:i+len(op)] == op:
+                    return True
+            if text[i] == '>' and (i + 1 >= len(text) or text[i + 1] != '='):
+                # Make sure it's not >>
+                if i + 1 < len(text) and text[i + 1] == '>':
+                    pass  # This is >>, not a comparison
+                else:
+                    return True
+            if text[i] == '<' and (i + 1 >= len(text) or text[i + 1] != '='):
+                if i + 1 < len(text) and text[i + 1] == '<':
+                    pass  # This is <<, not a comparison
+                else:
+                    return True
+        i += 1
+    return False
+
+
 def tokenize_condition(condition: str) -> List[str]:
     """
     Tokenize a condition string into tokens.
 
     Handles: &&, ||, !, (, ), and simple conditions.
     Note: != is part of a comparison operator, not a NOT token.
-    Parentheses after a comparison operator are treated as arithmetic
-    grouping (part of the expression), not logical grouping.
-    E.g., "a == (b + 1)" is one token, not "a ==" + "(" + "b + 1" + ")".
+    Parentheses that are part of arithmetic expressions (e.g. on the LHS
+    of a comparison like "(sig & mask) == value") are kept as part of the
+    simple-condition token, not split into logical grouping.
     """
     tokens = []
     i = 0
@@ -180,17 +327,40 @@ def tokenize_condition(condition: str) -> List[str]:
             i += 1
             continue
 
-        # Check for ( that is logical grouping (not arithmetic)
-        # Logical grouping ( appears at the start of an expression, not after
-        # a comparison operator. We look at whether the accumulated text so far
-        # contains a comparison operator.
+        # Check for (
         if condition[i] == '(':
-            # Check if there's already a comparison in the current token being built
-            # If so, this ( is part of the RHS expression, not logical grouping
-            # For top-level: ( at position 0 or after a logical operator is grouping
-            tokens.append('(')
-            i += 1
-            continue
+            # Determine if this is arithmetic (part of a comparison expression)
+            # or logical grouping.
+            if _is_arithmetic_paren(condition, i):
+                # This paren starts an arithmetic expression that is part of
+                # a simple condition. Consume the entire simple condition as
+                # one token (including balanced parens up to a logical op).
+                j = i
+                paren_depth = 0
+                while j < len(condition):
+                    c = condition[j]
+                    if c == '(':
+                        paren_depth += 1
+                    elif c == ')':
+                        paren_depth -= 1
+                        if paren_depth < 0:
+                            break
+                    elif paren_depth == 0:
+                        if condition[j:j+2] in ('&&', '||'):
+                            break
+                        # ! but not !=
+                        if c == '!' and (j + 1 >= len(condition) or condition[j+1] != '='):
+                            break
+                    j += 1
+                token = condition[i:j].strip()
+                if token:
+                    tokens.append(token)
+                i = j
+                continue
+            else:
+                tokens.append('(')
+                i += 1
+                continue
 
         if condition[i] == ')':
             tokens.append(')')
@@ -214,8 +384,14 @@ def tokenize_condition(condition: str) -> List[str]:
                     j += 1
                     continue
                 else:
-                    # This ( is logical grouping, stop here
-                    break
+                    # Check if this ( starts an arithmetic sub-expression
+                    if _is_arithmetic_paren(condition, j):
+                        paren_depth += 1
+                        j += 1
+                        continue
+                    else:
+                        # This ( is logical grouping, stop here
+                        break
             elif c == '(':
                 paren_depth += 1
                 j += 1

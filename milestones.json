@@ -1,26 +1,16 @@
 {
-  "target": "Violate assertion 'b_out == (past_3_in_a + 1)' in u_assert",
-  "target_expr": "u_assert.b_out != (u_assert.past_3_in_a + 1)",
+  "target": "Violate assertion '(((ctrl_ex_insn & 32'hFC000000) >> 26) != 32'h1c) || (rst == 1)' in or1200_cpu.u_assertions",
+  "target_expr": "(((or1200_cpu.u_assertions.ctrl_ex_insn & 32'or1200_cpu.u_assertions.hFC000000) >> 26) != 32'or1200_cpu.u_assertions.h1c) || (or1200_cpu.u_assertions.rst != 1)",
   "milestones": [
     {
       "step": 0,
-      "description": "System Reset",
-      "condition": "rst_n == 0"
+      "description": "Initial state",
+      "condition": "RST == 1"
     },
     {
       "step": 1,
-      "description": "Reset released, wait for 3 cycles to fill the assertion pipeline",
-      "condition": "rst_n == 1 && u_assert.valid_pipe == 3'b111"
-    },
-    {
-      "step": 2,
-      "description": "Set top_in_a to a value less than or equal to BRANCH_THRESHOLD to take the 'else' branch in module_b",
-      "condition": "top_in_a <= 10 && u_assert.past_3_in_a <= 10"
-    },
-    {
-      "step": 3,
-      "description": "The condition for the target assertion is met, and the assertion fails",
-      "condition": "u_assert.b_out != (u_assert.past_3_in_a + 1)"
+      "description": "Post-reset state",
+      "condition": "RST == 0"
     }
   ]
 }

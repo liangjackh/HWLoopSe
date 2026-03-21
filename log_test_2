@@ -18,9 +18,9 @@ Setting up instance: place_holder (definition: place_holder)
 Setting up instance: test_1 (definition: place_holder_2)
 [sum] manager.names_list: ['place_holder', 'test_1']
 [PortPropagation] Built 3 wire equivalence group(s):
-  group 0: {('place_holder', 'CLK'), ('test_1', 'CLK')} [PRIMARY INPUT]
+  group 0: {('test_1', 'CLK'), ('place_holder', 'CLK')} [PRIMARY INPUT]
   group 1: {('place_holder', 'RST'), ('test_1', 'RST')} [PRIMARY INPUT]
-  group 2: {('place_holder', 'out_wire'), ('test_1', 'out')}
+  group 2: {('test_1', 'out'), ('place_holder', 'out_wire')}
 [ExecutionEngine] Running Cone of Influence analysis...
 [assertion_extractor] Searching for assertions starting from top module: place_holder (def: place_holder)
 [get_assertions] Found ImmediateAssertion in 'test_1': Expression(ExpressionKind.BinaryOp)
@@ -34,7 +34,7 @@ Setting up instance: test_1 (definition: place_holder_2)
 [COI]   seed: test_1.out
 [COI] Analysis complete:
 [COI]   Relevant instances: {'test_1'}
-[COI]   Relevant CFGs: {('test_1', 1), ('test_1', 0)}
+[COI]   Relevant CFGs: {('test_1', 0), ('test_1', 1)}
 [COI]   Cone signals: 2
 [COI] Pruned all CFGs for instance: place_holder
 [COI] Removed instances from exploration: {'place_holder'}
@@ -58,24 +58,109 @@ Starting exploration...
   [Enqueue] score=5001, next_cycle=1, milestones=1/6
 [Path 1] cycle=0, result=CONTINUE, milestones=0/6
 
---- [Path 2] Popped: score=5001, cycle=1, milestones=1/6, queue=1
+--- [Path 2] Popped: score=5001, cycle=1, milestones=1/6, queue=3
 [NBA-APPLY] Applying 1 pending NBA(s)
-[Path 2] cycle=1, result=VIOLATION, milestones=1/6
+  [Milestone] Step 1 REACHED: Reset released, counter starts at 0
+  [Enqueue] score=4002, next_cycle=2, milestones=2/6
+[Path 2] cycle=1, result=CONTINUE, milestones=1/6
+
+--- [Path 3] Popped: score=4002, cycle=2, milestones=2/6, queue=6
+[NBA-APPLY] Applying 1 pending NBA(s)
+  [Milestone] Step 2 REACHED: Counter increments to 1
+  [Enqueue] score=3003, next_cycle=3, milestones=3/6
+[Path 3] cycle=2, result=CONTINUE, milestones=2/6
+
+--- [Path 4] Popped: score=3003, cycle=3, milestones=3/6, queue=9
+  [Skip] test_1/cfg1/path3: abandoned/ignore, rolling back and continuing
+  [Enqueue] score=3004, next_cycle=4, milestones=3/6
+[Path 4] cycle=3, result=CONTINUE, milestones=3/6
+
+--- [Path 5] Popped: score=3004, cycle=3, milestones=3/6, queue=12
+  [Enqueue] score=3004, next_cycle=4, milestones=3/6
+[Path 5] cycle=3, result=CONTINUE, milestones=3/6
+
+--- [Path 6] Popped: score=3004, cycle=3, milestones=3/6, queue=12
+  [Enqueue] score=3004, next_cycle=4, milestones=3/6
+[Path 6] cycle=3, result=CONTINUE, milestones=3/6
+
+--- [Path 7] Popped: score=3004, cycle=3, milestones=3/6, queue=12
+  [Enqueue] score=3004, next_cycle=4, milestones=3/6
+[Path 7] cycle=3, result=CONTINUE, milestones=3/6
+
+--- [Path 8] Popped: score=3004, cycle=4, milestones=3/6, queue=12
+  [Enqueue] score=3005, next_cycle=5, milestones=3/6
+[Path 8] cycle=4, result=CONTINUE, milestones=3/6
+
+--- [Path 9] Popped: score=3004, cycle=4, milestones=3/6, queue=15
+[NBA-APPLY] Applying 1 pending NBA(s)
+  [Enqueue] score=3005, next_cycle=5, milestones=3/6
+[Path 9] cycle=4, result=CONTINUE, milestones=3/6
+
+--- [Path 10] Popped: score=3004, cycle=4, milestones=3/6, queue=18
+[NBA-APPLY] Applying 1 pending NBA(s)
+  [Milestone] Step 3 REACHED: Counter increments to 2
+  [Enqueue] score=2005, next_cycle=5, milestones=4/6
+[Path 10] cycle=4, result=CONTINUE, milestones=3/6
+
+--- [Path 11] Popped: score=2005, cycle=5, milestones=4/6, queue=21
+[NBA-APPLY] Applying 1 pending NBA(s)
+  [Milestone] Step 4 REACHED: Counter increments to 3
+  [Enqueue] score=1006, next_cycle=6, milestones=5/6
+[Path 11] cycle=5, result=CONTINUE, milestones=4/6
+
+--- [Path 12] Popped: score=1006, cycle=6, milestones=5/6, queue=24
+  [Skip] test_1/cfg1/path3: abandoned/ignore, rolling back and continuing
+  [MaxCycle] cycle 7 >= limit 7, not enqueued
+[Path 12] cycle=6, result=CONTINUE, milestones=5/6
+
+--- [Path 13] Popped: score=1007, cycle=6, milestones=5/6, queue=26
+  [MaxCycle] cycle 7 >= limit 7, not enqueued
+[Path 13] cycle=6, result=CONTINUE, milestones=5/6
+
+--- [Path 14] Popped: score=1007, cycle=6, milestones=5/6, queue=25
+  [MaxCycle] cycle 7 >= limit 7, not enqueued
+[Path 14] cycle=6, result=CONTINUE, milestones=5/6
+
+--- [Path 15] Popped: score=1007, cycle=6, milestones=5/6, queue=24
+  [MaxCycle] cycle 7 >= limit 7, not enqueued
+[Path 15] cycle=6, result=CONTINUE, milestones=5/6
+
+--- [Path 16] Popped: score=2006, cycle=5, milestones=4/6, queue=23
+  [Milestone] Step 4 REACHED: Counter increments to 3
+  [Enqueue] score=1006, next_cycle=6, milestones=5/6
+[Path 16] cycle=5, result=CONTINUE, milestones=4/6
+
+--- [Path 17] Popped: score=1006, cycle=6, milestones=5/6, queue=23
+[NBA-APPLY] Applying 1 pending NBA(s)
+  [Skip] test_1/cfg1/path3: abandoned/ignore, rolling back and continuing
+  [Milestone] Step 5 REACHED: Counter increments to 4, violating the assertion (target reached)
+  [MaxCycle] cycle 7 >= limit 7, not enqueued
+[Path 17] cycle=6, result=CONTINUE, milestones=5/6
+
+--- [Path 18] Popped: score=1007, cycle=6, milestones=5/6, queue=25
+[Path 18] cycle=6, result=VIOLATION, milestones=5/6
 [DirectedStrategy] Assertion violation found!
 Assertion violation detected!
 Violated assertion details:
   - condition:  (out <= 3)
-    z3_condition: (bvule out_wire_c0 #x00000003)
+    z3_condition: (bvule (bvadd #x00000000 #x00000001 #x00000001 #x00000001 #x00000001)
+       #x00000003)
     kind: 
-      assert
+    assert
 
 Counterexample (input values):
   (no matching signals found in store)
 
 All symbols in model:
-  out_wire_c0 = 4
-  RST_c0 = 1
+  RST_c0 = 4294967295
+  RST_c2 = 0
   RST_c1 = 0
-Execution time 0.019772865999999834
-Frontend time 0.011285983000000055
-Total time 0.03105884899999989
+  RST_c6 = 0
+  RST_c5 = 0
+  RST_c4 = 0
+  RST_c3 = 0
+Execution time 0.05109358499999983
+Frontend time 0.012836781999999936
+Total time 0.06393036699999977
+SMT queries 92
+SMT solver time 0.0461s
