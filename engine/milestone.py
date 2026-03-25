@@ -606,24 +606,71 @@ class MilestoneManager:
         if current_progress >= len(self.milestones):
             return False, current_progress
 
-        milestone = self.milestones[current_progress]
+        if self.check_milestone_index(state, current_progress):
+            milestone = self.milestones[current_progress]
+            print(f"  [Milestone] Step {current_progress} REACHED: {milestone.description}")
+            return True, current_progress + 1
+
+        return False, current_progress
+
+    def check_milestone_index(self, state: SymbolicState, milestone_idx: int) -> bool:
+        """Speculatively check whether a specific milestone index is satisfiable."""
+        if milestone_idx < 0 or milestone_idx >= len(self.milestones):
+            return False
+
+        milestone = self.milestones[milestone_idx]
         condition = self.build_z3_condition(milestone, state)
         if condition is None:
-            return False, current_progress
+            return False
 
         solver = state.pc
-
-        # Speculative check only — no locking
         solver.push()
         solver.add(condition)
         result = solver.check()
         solver.pop()
 
-        if result == sat:
-            print(f"  [Milestone] Step {current_progress} REACHED: {milestone.description}")
-            return True, current_progress + 1
+        return result == sat
 
-        return False, current_progress
+    def check_final_milestone(self, state: SymbolicState) -> bool:
+        """Speculatively check whether the final milestone is satisfiable."""
+        if not self.milestones:
+            return False
+        return self.check_milestone_index(state, len(self.milestones) - 1)
+
+    def advance_with_sliding_window(
+        self,
+        state: SymbolicState,
+        current_progress: int,
+        window_size: int = 1
+    ) -> Tuple[int, Optional[int]]:
+        """Advance milestone progress with a small lookahead window.
+
+        Returns:
+            (new_progress, skipped_idx). skipped_idx is the skipped milestone index
+            when lookahead succeeds past the current milestone; otherwise None.
+        """
+        total = len(self.milestones)
+        if current_progress >= total:
+            return current_progress, None
+
+        if current_progress == 0:
+            success, new_progress = self.check_and_lock_stateless(state, current_progress)
+            return (new_progress, None) if success else (current_progress, None)
+
+        last_idx = total - 1
+        furthest_idx = min(current_progress + window_size, last_idx)
+
+        for milestone_idx in range(furthest_idx, current_progress - 1, -1):
+            if not self.check_milestone_index(state, milestone_idx):
+                continue
+
+            milestone = self.milestones[milestone_idx]
+            print(f"  [Milestone] Step {milestone_idx} REACHED: {milestone.description}")
+            new_progress = milestone_idx + 1
+            skipped_idx = current_progress if milestone_idx > current_progress else None
+            return new_progress, skipped_idx
+
+        return current_progress, None
 
     def compute_score_stateless(self, current_progress: int, cycle: int) -> int:
         """无状态的评分计算"""

@@ -904,17 +904,30 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             print(f"  [Pruned] cycle {cycle}: UNSAT after execution")
             return None
 
-        # Step 6: Check milestones
-        current_progress = item.milestones_completed
-        while current_progress < len(self.milestone_manager.milestones):
-            success, new_progress = self.milestone_manager.check_and_lock_stateless(state, current_progress)
-            if success:
-                current_progress = new_progress
-            else:
-                break
-
+        # Step 6: Milestone/violation handling
         if manager.assertion_violation:
             return "VIOLATION"
+
+        current_progress = item.milestones_completed
+        total_milestones = len(self.milestone_manager.milestones)
+
+        if current_progress > 0 and self.milestone_manager.check_final_milestone(state):
+            print(
+                f"  [Preemption] Final milestone SAT after reset progress "
+                f"{current_progress}/{total_milestones}; reporting VIOLATION"
+            )
+            return "VIOLATION"
+
+        current_progress, skipped_idx = self.milestone_manager.advance_with_sliding_window(
+            state,
+            current_progress,
+            window_size=1,
+        )
+        if skipped_idx is not None:
+            print(f"  [Sliding Window] Skipped hallucinated milestone {skipped_idx} -> advanced to {current_progress}")
+
+        if current_progress >= total_milestones:
+            return "ALL_MILESTONES"
 
         # Step 7: Enqueue next cycle
         next_cycle = cycle + 1
