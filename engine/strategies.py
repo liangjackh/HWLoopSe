@@ -932,7 +932,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         # Step 7: Enqueue next cycle
         next_cycle = cycle + 1
         if next_cycle < self.max_cycles:
-            new_score = self.milestone_manager.compute_score_stateless(current_progress, next_cycle)
+            new_score = self.milestone_manager.compute_score_stateless(current_progress, next_cycle, state)
             new_item = WorkItem(
                 score=new_score,
                 cycle=next_cycle,

@@ -1,6 +1,7 @@
 """Milestone management for directed symbolic execution."""
 
 import re
+import logging
 from typing import List, Optional, Tuple, Any, Union
 from z3 import Solver, sat, ExprRef, BitVecVal, ULE, ULT, UGE, UGT, And, Or, Not, Extract, ZeroExt, is_bv
 from .symbolic_state import SymbolicState, smt_stats
@@ -672,7 +673,116 @@ class MilestoneManager:
 
         return current_progress, None
 
-    def compute_score_stateless(self, current_progress: int, cycle: int) -> int:
-        """无状态的评分计算"""
+    def compute_dataflow_distance(self, state: SymbolicState, milestone_idx: int) -> int:
+        """Compute microscopic data-flow distance from current state to a milestone's condition.
+
+        Walks the (possibly compound) condition tree and sums per-sub-condition distances.
+        Returns 0 on any error so the engine falls back to standard A* scoring.
+        """
+        if milestone_idx < 0 or milestone_idx >= len(self.milestones):
+            return 0
+        milestone = self.milestones[milestone_idx]
+        try:
+            return self._distance_recursive(milestone.condition, state)
+        except Exception:
+            return 0
+
+    def _distance_recursive(self, cond, state: SymbolicState) -> int:
+        """Recursively sum distances for compound conditions."""
+        if isinstance(cond, SimpleCondition):
+            return self._distance_simple(cond, state)
+        elif isinstance(cond, CompoundCondition):
+            total = 0
+            for operand in cond.operands:
+                total += self._distance_recursive(operand, state)
+            return total
+        return 0
+
+    def _distance_simple(self, cond: 'SimpleCondition', state: SymbolicState) -> int:
+        """Compute distance for a single SimpleCondition.
+
+        Strategy:
+        - Concretize the LHS signal value via z3.simplify, then model probing.
+        - Concretize the RHS target (constant or signal).
+        - Return abs(current - target) for multi-bit signals, or 10/0 for 1-bit.
+        """
+        import z3
+
+        # --- Resolve LHS ---
+        lhs_expr = self._get_signal_z3_value(cond.signal_path, state)
+        if lhs_expr is None:
+            return 0
+
+        # --- Resolve RHS ---
+        if isinstance(cond.value, int):
+            target_val = cond.value
+        else:
+            rhs_expr = self._get_signal_z3_value(cond.value, state)
+            if rhs_expr is None:
+                return 0
+            target_val = self._concretize(rhs_expr, state)
+            if target_val is None:
+                return 0
+
+        # --- Concretize LHS ---
+        current_val = self._concretize(lhs_expr, state)
+        if current_val is None:
+            return 0
+
+        # --- Distance math ---
+        bit_width = lhs_expr.size() if z3.is_bv(lhs_expr) else 32
+        if bit_width == 1:
+            return 0 if current_val == target_val else 10
+        else:
+            # Sign-extend: as_long() returns unsigned; convert to signed so that
+            # e.g. 0xFFFFFFFF (-1) doesn't produce a distance of ~4 billion.
+            if current_val >= (1 << (bit_width - 1)):
+                current_val -= (1 << bit_width)
+            if target_val >= (1 << (bit_width - 1)):
+                target_val -= (1 << bit_width)
+            # Cap at 999 so distance never dominates the milestone component (1000).
+            return min(abs(current_val - target_val), 999)
+
+    def _concretize(self, expr, state: SymbolicState):
+        """Try to reduce a Z3 expression to a concrete integer.
+
+        1. z3.simplify — free, no solver call.
+        2. Model probing via state.pc.check() + model() — expensive, used as fallback.
+        Returns None if concretization fails.
+        """
+        import z3
+
+        # Fast path: simplify
+        simplified = z3.simplify(expr)
+        if isinstance(simplified, z3.BitVecNumRef):
+            return simplified.as_long()
+
+        # Fallback: model probing (push/pop to avoid polluting PC)
+        try:
+            state.pc.push()
+            result = state.pc.check()
+            if result == z3.sat:
+                model = state.pc.model()
+                val = model.eval(expr, model_completion=True)
+                if isinstance(val, z3.BitVecNumRef):
+                    return val.as_long()
+        except Exception:
+            pass
+        finally:
+            state.pc.pop()
+
+        return None
+
+    def compute_score_stateless(self, current_progress: int, cycle: int,
+                                state: Optional[SymbolicState] = None) -> int:
+        """Score = (remaining * 1000) + cycle + data_flow_distance."""
         remaining = len(self.milestones) - current_progress
-        return (remaining * 1000) + cycle
+        base = (remaining * 1000) + cycle
+
+        if state is not None and current_progress < len(self.milestones):
+            d = self.compute_dataflow_distance(state, current_progress)
+            if d > 0:
+                logging.debug(f"[Data-Flow Fitness] Distance to M[{current_progress}] is {d}")
+            return base + d
+
+        return base

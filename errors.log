@@ -2,31 +2,36 @@ DEBUG:root:Starting over
 DEBUG:root:  [TopoSort] test_1: 2 nodes sorted
 DEBUG:root:Initializing state: evaluating combinational logic to fixed-point...
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:[Data-Flow Fitness] Distance to M[1] is 1
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
+DEBUG:root:[Data-Flow Fitness] Distance to M[2] is 1
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0 + 1
 DEBUG:root:UNSAT: 4 constraint(s)
+DEBUG:root:[Data-Flow Fitness] Distance to M[3] is 1
 DEBUG:root:UNSAT: 5 constraint(s)
+DEBUG:root:[Data-Flow Fitness] Distance to M[3] is 1
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:[Data-Flow Fitness] Distance to M[3] is 2
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
+DEBUG:root:[Data-Flow Fitness] Distance to M[3] is 1
 DEBUG:root:UNSAT: 5 constraint(s)
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
+DEBUG:root:[Data-Flow Fitness] Distance to M[3] is 1
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
+DEBUG:root:[Data-Flow Fitness] Distance to M[3] is 1
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1 + 1
+DEBUG:root:[Data-Flow Fitness] Distance to M[4] is 1
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1 + 1
 DEBUG:root:UNSAT: 7 constraint(s)
 DEBUG:root:UNSAT: 8 constraint(s)
-DEBUG:root:UNSAT: 8 constraint(s)
+DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1 + 1 + 1
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
+DEBUG:root:UNSAT: 8 constraint(s)
 DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1 + 1 + 1
 DEBUG:root:[NBA] Applying 1 pending NBA(s)
 DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1 + 1 + 1
