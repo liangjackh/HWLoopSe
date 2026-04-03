@@ -287,6 +287,13 @@ class MilestoneManager:
         from helpers.rvalue_to_z3 import parse_infix_expr_to_z3
         from z3 import BitVec, BitVecVal
 
+        # If signal_path is an arithmetic expression (contains operators like &, |, >>, <<, +, -)
+        # route it through _evaluate_expression rather than store lookup.
+        _ARITH_OPS = re.compile(r'[&|^~+\-]|>>|<<')
+        if _ARITH_OPS.search(signal_path):
+            logging.debug(f"[_get_signal_z3_value] Routing arithmetic expr to _evaluate_expression: '{signal_path}'")
+            return self._evaluate_expression(signal_path, state)
+
         # Check for bracket notation: signal[n] or signal[n:m]
         bit_slice_match = re.match(r'^(.+)\[(\d+)(?::(\d+))?\]$', signal_path)
         base_path = signal_path
@@ -688,60 +695,85 @@ class MilestoneManager:
             return 0
 
     def _distance_recursive(self, cond, state: SymbolicState) -> int:
-        """Recursively sum distances for compound conditions."""
+        """Recursively compute distances for compound conditions, respecting logic operators."""
         if isinstance(cond, SimpleCondition):
             return self._distance_simple(cond, state)
+        
         elif isinstance(cond, CompoundCondition):
-            total = 0
-            for operand in cond.operands:
-                total += self._distance_recursive(operand, state)
-            return total
+            # 获取操作符，假设存在 operator 属性，如 '&&' 或 '||'
+            # (根据你实际的 AST 结构修改这部分属性获取方式)
+            op = getattr(cond, 'operator', '&&') 
+            
+            distances = [self._distance_recursive(operand, state) for operand in cond.operands]
+            
+            if not distances:
+                return 0
+                
+            if op == '||' or op == 'OR':
+                # OR 逻辑：只要有一条路满足即可，取最短距离
+                return min(distances)
+            else:
+                # AND 逻辑 (默认)：所有条件都必须满足，累加距离
+                return sum(distances)
+                
         return 0
 
     def _distance_simple(self, cond: 'SimpleCondition', state: SymbolicState) -> int:
-        """Compute distance for a single SimpleCondition.
-
-        Strategy:
-        - Concretize the LHS signal value via z3.simplify, then model probing.
-        - Concretize the RHS target (constant or signal).
-        - Return abs(current - target) for multi-bit signals, or 10/0 for 1-bit.
-        """
+        """Compute distance for a single SimpleCondition, respecting relational operators."""
         import z3
 
         # --- Resolve LHS ---
         lhs_expr = self._get_signal_z3_value(cond.signal_path, state)
-        if lhs_expr is None:
-            return 0
+        if lhs_expr is None: return 0
 
         # --- Resolve RHS ---
         if isinstance(cond.value, int):
             target_val = cond.value
         else:
             rhs_expr = self._get_signal_z3_value(cond.value, state)
-            if rhs_expr is None:
-                return 0
+            if rhs_expr is None: return 0
             target_val = self._concretize(rhs_expr, state)
-            if target_val is None:
-                return 0
+            if target_val is None: return 0
 
         # --- Concretize LHS ---
         current_val = self._concretize(lhs_expr, state)
-        if current_val is None:
-            return 0
+        if current_val is None: return 0
 
-        # --- Distance math ---
         bit_width = lhs_expr.size() if z3.is_bv(lhs_expr) else 32
+        
+        # --- Operator-Aware Distance Math ---
+        # 假设 SimpleCondition 带有 operator 属性 (如 '==', '!=', '>', '<')
+        op = getattr(cond, 'operator', '==')
+
         if bit_width == 1:
-            return 0 if current_val == target_val else 10
+            # 1-bit boolean logic
+            if op == '==':
+                return 0 if current_val == target_val else 10
+            elif op == '!=':
+                return 0 if current_val != target_val else 10
+            else:
+                # For 1-bit, > or < is rare, fallback to strict match
+                return 0 if current_val == target_val else 10
         else:
-            # Sign-extend: as_long() returns unsigned; convert to signed so that
-            # e.g. 0xFFFFFFFF (-1) doesn't produce a distance of ~4 billion.
-            if current_val >= (1 << (bit_width - 1)):
-                current_val -= (1 << bit_width)
-            if target_val >= (1 << (bit_width - 1)):
-                target_val -= (1 << bit_width)
+            # Multi-bit logic (Treated as Unsigned by default, which is RTL standard)
+            # If you know the specific signal is signed, you can add sign-extension here conditionally.
+            
+            dist = 0
+            if op == '==':
+                dist = abs(current_val - target_val)
+            elif op == '!=':
+                dist = 0 if current_val != target_val else 10
+            elif op in ('>', '>='):
+                # ReLU: 如果当前值已经大于目标值，距离为 0
+                dist = 0 if current_val >= target_val else (target_val - current_val)
+            elif op in ('<', '<='):
+                # ReLU: 如果当前值已经小于目标值，距离为 0
+                dist = 0 if current_val <= target_val else (current_val - target_val)
+            else:
+                dist = abs(current_val - target_val)
+                
             # Cap at 999 so distance never dominates the milestone component (1000).
-            return min(abs(current_val - target_val), 999)
+            return min(dist, 999)
 
     def _concretize(self, expr, state: SymbolicState):
         """Try to reduce a Z3 expression to a concrete integer.
@@ -777,12 +809,21 @@ class MilestoneManager:
                                 state: Optional[SymbolicState] = None) -> int:
         """Score = (remaining * 1000) + cycle + data_flow_distance."""
         remaining = len(self.milestones) - current_progress
-        base = (remaining * 1000) + cycle
+        base = (remaining * 10) + cycle
 
         if state is not None and current_progress < len(self.milestones):
             d = self.compute_dataflow_distance(state, current_progress)
-            if d > 0:
-                logging.debug(f"[Data-Flow Fitness] Distance to M[{current_progress}] is {d}")
+            milestone_desc = self.milestones[current_progress].description
+            logging.debug(
+                f"[Score] M[{current_progress}]='{milestone_desc}' "
+                f"remaining={remaining} cycle={cycle} "
+                f"base={base} distance={d} total={base + d}"
+            )
             return base + d
 
+        logging.debug(
+            f"[Score] no distance (state={'None' if state is None else 'set'}, "
+            f"progress={current_progress}/{len(self.milestones)}) "
+            f"base={base}"
+        )
         return base

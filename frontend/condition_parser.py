@@ -1,6 +1,7 @@
 """Parse condition strings into components for Milestone creation."""
 
 import re
+import logging
 from typing import Tuple, Optional, List, Union, Dict, Any
 from dataclasses import dataclass
 
@@ -105,11 +106,11 @@ def _find_top_level_comparison(condition: str) -> Optional[Tuple[str, int]]:
         two = condition[i:i+2]
         if two in ('==', '!=', '>=', '<='):
             return (two, i)
-        # Check single-char > but not >> or >=
-        if c == '>' and two not in ('>>', '>='):
+        # Check single-char > but not >> or >= (and not the second char of >>)
+        if c == '>' and two not in ('>>', '>=') and (i == 0 or condition[i-1] != '>'):
             return ('>', i)
-        # Check single-char < but not << or <=
-        if c == '<' and two not in ('<<', '<='):
+        # Check single-char < but not << or <= (and not the second char of <<)
+        if c == '<' and two not in ('<<', '<=') and (i == 0 or condition[i-1] != '<'):
             return ('<', i)
 
         i += 1
@@ -150,6 +151,7 @@ def parse_simple_condition(condition: str) -> SimpleCondition:
     op, idx = match
     signal_path = condition[:idx].strip()
     value_str = condition[idx + len(op):].strip()
+    logging.debug(f"[ConditionParser] '{condition}' -> LHS='{signal_path}' op='{op}' RHS='{value_str}'")
 
     if not signal_path or not value_str:
         raise ValueError(
@@ -593,7 +595,7 @@ def condition_to_dict(condition: Condition) -> Dict[str, Any]:
 
 def extract_signal_name(signal_path: str) -> str:
     """
-    Extract the base signal name from a hierarchical path.
+    Extract the base signal name from a hierarchical path or expression.
 
     Examples:
         "test_1.out" -> "out"
@@ -601,21 +603,39 @@ def extract_signal_name(signal_path: str) -> str:
         "rst" -> "rst"
         "ex_insn[31:26]" -> "ex_insn"
         "module.signal[7:0]" -> "signal"
+        "((ex_insn & 32'hFC000000) >> 26)" -> "ex_insn"
+        "(sig + 1)" -> "sig"
 
     Args:
-        signal_path: A potentially hierarchical signal path with optional bit-select
+        signal_path: A potentially hierarchical signal path, bit-select, or arithmetic expression
 
     Returns:
-        The base signal name (last component, without bit-select)
+        The base signal name (first identifier found)
     """
-    # First, strip any bit-select syntax [...]
-    if '[' in signal_path:
-        signal_path = signal_path.split('[')[0]
+    # Strip outer parens and whitespace
+    signal_path = signal_path.strip()
+    while signal_path.startswith('(') and signal_path.endswith(')'):
+        signal_path = signal_path[1:-1].strip()
 
-    # Then extract the last component if hierarchical
-    if '.' in signal_path:
-        return signal_path.split('.')[-1]
-    return signal_path
+    # Extract all identifiers (signal names) from the expression
+    # Match: letter/underscore followed by alphanumeric/underscore/dot
+    identifiers = re.findall(r'[a-zA-Z_][\w.]*', signal_path)
+
+    if not identifiers:
+        return signal_path  # Fallback to original if no identifiers found
+
+    # Return the first identifier (the primary signal)
+    first_id = identifiers[0]
+
+    # Strip bit-select syntax if present
+    if '[' in first_id:
+        first_id = first_id.split('[')[0]
+
+    # Extract last component if hierarchical
+    if '.' in first_id:
+        return first_id.split('.')[-1]
+
+    return first_id
 
 
 def extract_instance_path(signal_path: str) -> Optional[str]:

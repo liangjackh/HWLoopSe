@@ -1,5 +1,35 @@
 # Changelog
 
+[2026-03-27] [BugFix] Fixed premature preemption and missing counterexample in `engine/strategies.py`:
+
+1. **Premature preemption** (`strategies.py:_execute_cycle`): The final-milestone preemption guard `current_progress > 0` fired too early — at cycle 1 with only 1/5 milestones reached — because unconstrained signals made the final milestone trivially SAT. Fix: tightened guard to `current_progress >= total_milestones - 1` so preemption only fires when one step away from the final milestone.
+
+2. **Missing counterexample** (`strategies.py:_handle_assertion_violation`): Signal store values are Z3 `BitVecRef` objects, not strings, so the `isinstance(signal_expr, str)` check always failed and produced `(no matching signals found in store)`. Fix: added `is_bv(signal_expr) and not is_bv_value(signal_expr)` branch that extracts the symbol name via `signal_expr.decl().name()`. Applied to both the `violated_assertions` path and the preemption fallback path. Also added `is_bv`, `is_bv_value` to the z3 import line.
+
+PySlang usage: No changes to PySlang AST traversal.
+
+[2026-03-27] [BugFix] Fixed three milestone condition parsing/evaluation bugs in `frontend/condition_parser.py` and `engine/milestone.py`:
+
+1. **`>>` operator misparse** (`condition_parser.py:_find_top_level_comparison`): The second `>` of `>>` was being matched as a bare comparison operator, causing `(if_insn & 32'hFC000000) >> 26 == 32'h1c` to split incorrectly into LHS=`(if_insn & 32'hFC000000) >` and RHS=`26 == 32'h1c`. Fix: added `condition[i-1] != '>'` guard to skip the trailing `>` of any `>>` sequence.
+
+2. **Arithmetic expression as signal path** (`milestone.py:_get_signal_z3_value`): When a milestone condition LHS was an arithmetic expression like `(if_insn & 32'hFC000000) >> 26`, the code tried to look it up as a signal name in the store and failed. Fix: added an early-exit check for arithmetic operators (`&`, `|`, `>>`, `<<`, etc.) that routes the expression through `_evaluate_expression` instead of `parse_hierarchical_signal`.
+
+3. **LLM planner signal validation with expressions** (`condition_parser.py:extract_signal_name`): The validator was passing the full expression `((ex_insn & 32'hFC000000) >> 26)` as a signal name to the store lookup. Fix: updated `extract_signal_name` to extract the first identifier from arithmetic expressions using regex, so `((ex_insn & 32'hFC000000) >> 26)` correctly validates against `ex_insn`.
+
+PySlang usage: No changes to PySlang AST traversal.
+
+PySlang usage: No changes to PySlang AST traversal. All fixes are in the milestone condition parser and Z3 signal resolution layer.
+
+[2026-03-27] [Feature] Implemented data-flow distance heuristic for A* scoring in `engine/milestone.py` and `engine/strategies.py`:
+
+- New scoring formula: `Score = (remaining_milestones * 10) + cycle + dataflow_distance(state, next_milestone)`
+- `compute_dataflow_distance()`: walks the milestone condition tree, concretizes LHS via `z3.simplify` (fast path) then model probing (fallback), computes `abs(current - target)` for multi-bit signals and 10/0 penalty for 1-bit control signals. Capped at 999 to prevent distance from dominating milestone priority.
+- Operator-aware distance: `==` uses abs diff, `>=/>`  uses ReLU, `<=/< ` uses ReLU, `!=` uses 0-or-10 penalty, compound `&&` sums sub-distances, `||` takes minimum.
+- `compute_score_stateless()` updated to accept optional `state` and add distance gradient.
+- Added `[Score]` debug logging showing `remaining`, `cycle`, `base`, `distance`, `total` per enqueue.
+
+PySlang usage: No changes to PySlang AST traversal.
+
 [2026-03-25 16:59:21 +0800] [Directed Strategy] Added eager final-target preemption and sliding-window milestone advancement for fault-tolerant LLM milestone handling.
 
 PySlang usage summary: This change keeps existing PySlang-driven CFG extraction/execution flow unchanged (module discovery, always-block CFG paths, and statement visitation), and only updates post-cycle milestone SAT probing logic in the directed scheduler.

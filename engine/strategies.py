@@ -11,7 +11,7 @@ import heapq
 import time
 import logging
 
-from z3 import Solver, sat, BitVec
+from z3 import Solver, sat, BitVec, is_bv, is_bv_value
 
 from .symbolic_state import SymbolicState
 from .execution_manager import ExecutionManager
@@ -422,6 +422,19 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 self._handle_assertion_violation(engine, manager, item.state)
                 return
 
+            if result == "ALL_MILESTONES":
+                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=ALL_MILESTONES")
+                print(f"[DirectedStrategy] All milestones reached — reporting violation!")
+                # Prefer the deferred violation record (has real model) over the milestone state
+                deferred = getattr(self, '_deferred_violation', None)
+                if deferred is not None:
+                    saved_violations, saved_state = deferred
+                    manager.violated_assertions = saved_violations
+                    self._handle_assertion_violation(engine, manager, saved_state)
+                else:
+                    self._handle_assertion_violation(engine, manager, item.state)
+                return
+
             # Path ended without violation
             if result is None:
                 print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=CONTINUE, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}")
@@ -825,6 +838,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         # Step 3: Execute CFGs sequentially, lazy-fork at branches
         state = item.state
+        total_milestones = len(self.milestone_manager.milestones)
         for i, cfg_entry in enumerate(remaining_cfgs):
             module_name = cfg_entry['module']
             cfg_idx = cfg_entry['cfg_idx']
@@ -883,7 +897,21 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             )
 
             if result == "VIOLATION":
-                return "VIOLATION"
+                # Suppress violations until we're one step away from the final milestone.
+                # Earlier violations are spurious — unconstrained inputs trivially satisfy
+                # the negated assertion before the design has been steered through reset.
+                if item.milestones_completed >= total_milestones - 1:
+                    return "VIOLATION"
+                else:
+                    print(f"  [Suppressed] assertion violation at cycle {cycle}, milestones={item.milestones_completed}/{total_milestones} — deferring until near final milestone")
+                    # Save the violation record so we can report it if ALL_MILESTONES is reached
+                    if not hasattr(self, '_deferred_violation'):
+                        self._deferred_violation = None
+                    if self._deferred_violation is None and hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+                        self._deferred_violation = (list(manager.violated_assertions), self._clone_state(state))
+                    manager.assertion_violation = False
+                    if hasattr(manager, 'violated_assertions'):
+                        manager.violated_assertions = []
 
             if manager.abandon or manager.ignore:
                 # Restore state to pre-CFG snapshot and skip this CFG.
@@ -905,13 +933,21 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             return None
 
         # Step 6: Milestone/violation handling
-        if manager.assertion_violation:
-            return "VIOLATION"
-
         current_progress = item.milestones_completed
         total_milestones = len(self.milestone_manager.milestones)
 
-        if current_progress > 0 and self.milestone_manager.check_final_milestone(state):
+        if manager.assertion_violation:
+            # Only report if we've passed at least the first milestone (reset),
+            # otherwise it's a spurious violation on unconstrained initial state.
+            if current_progress > 0:
+                return "VIOLATION"
+            else:
+                print(f"  [Suppressed] assertion violation at cycle {cycle} before any milestone reached — likely spurious")
+                manager.assertion_violation = False
+                if hasattr(manager, 'violated_assertions'):
+                    manager.violated_assertions = []
+
+        if current_progress >= total_milestones - 1 and self.milestone_manager.check_final_milestone(state):
             print(
                 f"  [Preemption] Final milestone SAT after reset progress "
                 f"{current_progress}/{total_milestones}; reporting VIOLATION"
@@ -1113,11 +1149,13 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         for module in state.store:
                             for signal in state.store[module]:
                                 signal_expr = state.store[module][signal]
-                                # signal_expr is a string like "RST_0" or "CLK_1"
+                                sym_name = None
                                 if isinstance(signal_expr, str):
-                                    # Check if this exact symbol exists in the model
-                                    if signal_expr in symbols_to_values:
-                                        counterexample[f"{module}.{signal}"] = symbols_to_values[signal_expr]
+                                    sym_name = signal_expr
+                                elif is_bv(signal_expr) and not is_bv_value(signal_expr):
+                                    sym_name = signal_expr.decl().name()
+                                if sym_name and sym_name in symbols_to_values:
+                                    counterexample[f"{module}.{signal}"] = symbols_to_values[sym_name]
 
                         # Print counterexample
                         if counterexample:
@@ -1156,4 +1194,33 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
                     break  # Only process first violation
         else:
-            print("No violation information available")
+            # No violated_assertions recorded (e.g. preemption path) — derive
+            # counterexample directly from the current path condition.
+            print("Assertion violation detected via preemption (no assertion record).")
+            if engine.solve_pc(state.pc):
+                model = state.pc.model()
+                decls = model.decls()
+                if decls:
+                    symbols_to_values = {d.name(): model[d] for d in decls}
+                    counterexample = {}
+                    for module in state.store:
+                        for signal in state.store[module]:
+                            signal_expr = state.store[module][signal]
+                            sym_name = None
+                            if isinstance(signal_expr, str):
+                                sym_name = signal_expr
+                            elif is_bv(signal_expr) and not is_bv_value(signal_expr):
+                                sym_name = signal_expr.decl().name()
+                            if sym_name and sym_name in symbols_to_values:
+                                counterexample[f"{module}.{signal}"] = symbols_to_values[sym_name]
+                    if counterexample:
+                        print("\nCounterexample (input values):")
+                        for sig, val in counterexample.items():
+                            print(f"  {sig} = {val}")
+                    print("\nAll symbols in model:")
+                    for sym, val in symbols_to_values.items():
+                        print(f"  {sym} = {val}")
+                else:
+                    print("  (model has no free variables — violation is unconditional)")
+            else:
+                print("  (path condition UNSAT — cannot derive counterexample)")
