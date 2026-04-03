@@ -43,17 +43,24 @@ The Symbolic Execution Engine will use your milestones to steer the search. If t
     * The Final step MUST be the Verification Target itself.
 5.  **JSON Output Only**: Return a raw JSON list of objects. Do not wrap in markdown code blocks.
 
+6.  **Expected Cycles**: Each milestone MUST include an `"expected_cycles"` integer field.
+    * This is the number of clock cycles the engine should need to reach this milestone FROM THE PREVIOUS ONE (or from cycle 0 for step 0).
+    * Calculate this carefully based on pipeline stages, counter increments, FSM transitions, etc.
+    * The engine uses this as a bounded model-checking depth. If the milestone cannot be reached within `expected_cycles + margin`, the path is pruned as a potential hallucination.
+
 **JSON Format:**
 [
   {
     "step": 0,
     "description": "Brief explanation (e.g., System Reset)",
-    "condition": "rst_n == 0"
+    "condition": "rst_n == 0",
+    "expected_cycles": 1
   },
   {
     "step": 1,
     "description": "State machine enters IDLE",
-    "condition": "u_ctrl.state == 0"
+    "condition": "u_ctrl.state == 0",
+    "expected_cycles": 2
   },
   ...
 ]"""
@@ -61,20 +68,20 @@ The Symbolic Execution Engine will use your milestones to steer the search. If t
     # Mock responses for testing without API
     MOCK_RESPONSES = {
         "test_1.out > 3": [
-            {"step": 1, "description": "Reset active", "condition": "RST == 1"},
-            {"step": 2, "description": "Output initialized to zero", "condition": "out == 0"},
-            {"step": 3, "description": "First increment", "condition": "out == 1"},
-            {"step": 4, "description": "Second increment", "condition": "out == 2"},
-            {"step": 5, "description": "Target: output exceeds 3", "condition": "out > 3"},
+            {"step": 1, "description": "Reset active", "condition": "RST == 1", "expected_cycles": 1},
+            {"step": 2, "description": "Output initialized to zero", "condition": "out == 0", "expected_cycles": 1},
+            {"step": 3, "description": "First increment", "condition": "out == 1", "expected_cycles": 1},
+            {"step": 4, "description": "Second increment", "condition": "out == 2", "expected_cycles": 1},
+            {"step": 5, "description": "Target: output exceeds 3", "condition": "out > 3", "expected_cycles": 2},
         ],
         "test_1.out >= 2": [
-            {"step": 1, "description": "Reset active", "condition": "RST == 1"},
-            {"step": 2, "description": "Output initialized", "condition": "out == 0"},
-            {"step": 3, "description": "Target: output reaches 2", "condition": "out >= 2"},
+            {"step": 1, "description": "Reset active", "condition": "RST == 1", "expected_cycles": 1},
+            {"step": 2, "description": "Output initialized", "condition": "out == 0", "expected_cycles": 1},
+            {"step": 3, "description": "Target: output reaches 2", "condition": "out >= 2", "expected_cycles": 2},
         ],
         "default": [
-            {"step": 1, "description": "Initial state", "condition": "RST == 1"},
-            {"step": 2, "description": "Post-reset state", "condition": "RST == 0"},
+            {"step": 1, "description": "Initial state", "condition": "RST == 1", "expected_cycles": 1},
+            {"step": 2, "description": "Post-reset state", "condition": "RST == 0", "expected_cycles": 1},
         ],
     }
 

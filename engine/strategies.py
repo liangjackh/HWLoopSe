@@ -276,7 +276,8 @@ class WorkItem:
         cycle: int,
         milestones_completed: int,
         state: SymbolicState,
-        execution_context: Dict[str, Any]
+        execution_context: Dict[str, Any],
+        cycle_at_last_milestone: int = 0
     ):
         """
         Initialize a work item.
@@ -289,12 +290,14 @@ class WorkItem:
             execution_context: Dict containing:
                 - module_positions: {module_name: (cfg_idx, bb_idx, direction_idx)}
                 - pending_modules: List of modules not yet executed this cycle
+            cycle_at_last_milestone: Clock cycle at which the last milestone was reached
         """
         self.score = score
         self.cycle = cycle
         self.milestones_completed = milestones_completed
         self.state = state
         self.execution_context = execution_context
+        self.cycle_at_last_milestone = cycle_at_last_milestone
         self.id = id(self)  # Unique ID for tie-breaking
 
     def __lt__(self, other: 'WorkItem') -> bool:
@@ -312,7 +315,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
     at branch points and prioritizing paths that make progress toward milestones.
     """
 
-    def __init__(self, milestone_manager: 'MilestoneManager', max_cycles: int = 100, max_paths: int = 500000):
+    def __init__(self, milestone_manager: 'MilestoneManager', max_cycles: int = 100, max_paths: int = 500000, bmc_margin: int = 5):
         """
         Initialize the directed strategy.
 
@@ -320,10 +323,13 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             milestone_manager: Manager for milestone checking
             max_cycles: Maximum clock cycles before timeout
             max_paths: Maximum number of paths to explore before giving up
+            bmc_margin: Extra cycles added to each milestone's expected_cycles
+                        to form the BMC verification bound (default: 5)
         """
         self.milestone_manager = milestone_manager
         self.max_cycles = max_cycles
         self.max_paths = max_paths
+        self.bmc_margin = bmc_margin
         self.paths_explored = 0
 
     def run(
@@ -345,7 +351,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         print(f"[DirectedStrategy] Starting milestone-directed search")
         print(f"[DirectedStrategy] Milestones: {self.milestone_manager.milestones}")
         num_cycles_int = int(num_cycles)
-        print(f"[DirectedStrategy] Max cycles: {min(self.max_cycles, num_cycles_int)}")
+        print(f"[DirectedStrategy] Max cycles: {min(self.max_cycles, num_cycles_int)}, BMC margin: {self.bmc_margin}")
 
         # Store comb_by_module and wire_groups for use in _execute_cycle
         self._comb_by_module = comb_by_module or {}
@@ -400,6 +406,22 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 print(f"[DirectedStrategy] Timeout: reached max cycles ({max_cycles_to_run})")
                 continue
 
+            # BMC bound check: prune paths that exceed the local verification
+            # bound for the current milestone (expected_cycles + margin).
+            target_idx = item.milestones_completed
+            if target_idx < len(self.milestone_manager.milestones):
+                target_milestone = self.milestone_manager.milestones[target_idx]
+                k = target_milestone.expected_cycles
+                m = k + self.bmc_margin
+                local_depth = item.cycle - item.cycle_at_last_milestone
+                if local_depth > m:
+                    print(
+                        f"  [BMC Prune] cycle={item.cycle}, local_depth={local_depth} > "
+                        f"bound m={m} (k={k}+margin={self.bmc_margin}) for "
+                        f"milestone[{target_idx}] '{target_milestone.description}' — soft pruning"
+                    )
+                    continue
+
             self.paths_explored += 1
             print(f"\n--- [Path {self.paths_explored}] Popped: score={item.score}, cycle={item.cycle}, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}, queue={len(worklist)}")
 
@@ -444,6 +466,16 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         print(f"[DirectedStrategy] Search exhausted (UNSAT)")
         print(f"[DirectedStrategy] Paths explored: {self.paths_explored}")
         print(f"[DirectedStrategy] Branch points: {manager.branch_count}")
+        # Report which milestone the search stalled on
+        stalled_idx = self.milestone_manager.current_milestone_index
+        if stalled_idx < len(self.milestone_manager.milestones):
+            stalled = self.milestone_manager.milestones[stalled_idx]
+            print(
+                f"[DirectedStrategy] WARNING: Queue exhausted before reaching "
+                f"milestone[{stalled_idx}] '{stalled.description}' "
+                f"(condition: {stalled.condition_str}, expected_cycles: {stalled.expected_cycles}). "
+                f"This milestone may be hallucinated or its granularity too coarse."
+            )
 
     def _initialize_state(
         self,
@@ -878,7 +910,8 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         cycle=cycle,
                         milestones_completed=item.milestones_completed,
                         state=self._clone_state(pre_branch_state),
-                        execution_context=alt_ctx
+                        execution_context=alt_ctx,
+                        cycle_at_last_milestone=item.cycle_at_last_milestone
                     )
                     heapq.heappush(worklist, alt_item)
 
@@ -966,6 +999,12 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             return "ALL_MILESTONES"
 
         # Step 7: Enqueue next cycle
+        # Update cycle_at_last_milestone if milestones advanced this cycle
+        if current_progress > item.milestones_completed:
+            new_cycle_at_last_milestone = cycle
+        else:
+            new_cycle_at_last_milestone = item.cycle_at_last_milestone
+
         next_cycle = cycle + 1
         if next_cycle < self.max_cycles:
             new_score = self.milestone_manager.compute_score_stateless(current_progress, next_cycle, state)
@@ -974,7 +1013,8 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 cycle=next_cycle,
                 milestones_completed=current_progress,
                 state=state,
-                execution_context={'remaining_cfgs': None}  # fresh at next cycle
+                execution_context={'remaining_cfgs': None},  # fresh at next cycle
+                cycle_at_last_milestone=new_cycle_at_last_milestone
             )
             heapq.heappush(worklist, new_item)
             print(f"  [Enqueue] score={new_score}, next_cycle={next_cycle}, milestones={current_progress}/{len(self.milestone_manager.milestones)}")

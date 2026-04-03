@@ -1,5 +1,22 @@
 # Changelog
 
+[2025-04-23] [Feature] Implemented BMC-bounded milestone verification ("LLM Proposes, BMC Disposes") across 4 files:
+
+1. **`frontend/llm_planner.py`**: Updated `SYSTEM_PROMPT` to require `"expected_cycles": <int>` per milestone in the JSON schema. Added rule #6 instructing the LLM to calculate sequential cycles from pipeline stages, counters, and FSMs. Updated all `MOCK_RESPONSES` with `expected_cycles` values.
+
+2. **`engine/milestone.py`**: Added `expected_cycles: int = 10` parameter to `Milestone.__init__` (default 10 for backward compatibility with old milestone files). Updated `__repr__` to display `k=<expected_cycles>`.
+
+3. **`engine/execution_engine.py`**: Both milestone loading paths (file-based and auto-plan) now pass `expected_cycles=m.get('expected_cycles', 10)` to `Milestone()`. Log output shows `[k=...]`. Milestone JSON serialization now persists `expected_cycles`.
+
+4. **`engine/strategies.py`**:
+   - `WorkItem`: Added `cycle_at_last_milestone: int = 0` field, propagated through all 3 construction sites (initial, lazy-fork, next-cycle enqueue). Updated when milestones advance.
+   - `MilestoneDirectedStrategy.__init__`: Added `bmc_margin: int = 5` constructor parameter.
+   - **BMC bound check** in `run()` main loop: Computes `local_depth = cycle - cycle_at_last_milestone`. If `local_depth > expected_cycles + margin`, the work item is soft-pruned (dropped from queue) with a `[BMC Prune]` warning log.
+   - **Hallucination detection**: On queue exhaustion, prints a `WARNING` identifying the stalled milestone as potentially hallucinated, including its condition and `expected_cycles`.
+   - Dynamic Granularity Fallback (LLM re-planning loop) is deferred to a subsequent task.
+
+PySlang usage: No changes to PySlang AST traversal.
+
 [2026-03-27] [BugFix] Fixed premature preemption and missing counterexample in `engine/strategies.py`:
 
 1. **Premature preemption** (`strategies.py:_execute_cycle`): The final-milestone preemption guard `current_progress > 0` fired too early — at cycle 1 with only 1/5 milestones reached — because unconstrained signals made the final milestone trivially SAT. Fix: tightened guard to `current_progress >= total_milestones - 1` so preemption only fires when one step away from the final milestone.

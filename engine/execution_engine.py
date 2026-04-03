@@ -887,9 +887,9 @@ class ExecutionEngine:
                     if cond is None:
                         print(f"[ExecutionEngine] Warning: Skipping milestone without condition: {m}")
                         continue
-                    milestone = Milestone(desc, cond)
+                    milestone = Milestone(desc, cond, expected_cycles=m.get('expected_cycles', 10))
                     all_milestones.append(milestone)
-                    print(f"[ExecutionEngine]   Step {m.get('step', '?')}: {desc} ({cond})")
+                    print(f"[ExecutionEngine]   Step {m.get('step', '?')}: {desc} ({cond}) [k={milestone.expected_cycles}]")
                 except (ValueError, KeyError) as e:
                     print(f"[ExecutionEngine] Warning: Skipping invalid milestone: {e}")
 
@@ -981,7 +981,8 @@ class ExecutionEngine:
                                 {
                                     "step": i,
                                     "description": m.description,
-                                    "condition": m.condition_str
+                                    "condition": m.condition_str,
+                                    "expected_cycles": m.expected_cycles
                                 }
                                 for i, m in enumerate(all_milestones)
                             ]

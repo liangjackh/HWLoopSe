@@ -13,21 +13,24 @@ from frontend.condition_parser import (
 class Milestone:
     """Represents a single milestone condition (simple or compound)."""
 
-    def __init__(self, description: str, condition_str: str):
+    def __init__(self, description: str, condition_str: str, expected_cycles: int = 10):
         """
         Initialize a milestone.
 
         Args:
             description: Human-readable description (e.g., "Reset state")
             condition_str: Condition string (e.g., "RST == 1" or "RST == 0 && out == 0")
+            expected_cycles: LLM-estimated clock cycles to reach this milestone from
+                             the previous one. Used as BMC bound (default: 10).
         """
         self.description = description
         self.condition_str = condition_str
+        self.expected_cycles = expected_cycles
         # Parse the condition
         self.condition = parse_compound_condition(condition_str)
 
     def __repr__(self):
-        return f"Milestone({self.description}: {self.condition_str})"
+        return f"Milestone({self.description}: {self.condition_str}, k={self.expected_cycles})"
 
 
 class MilestoneManager:
