@@ -67,6 +67,9 @@ class CFG:
         # stack of flags for if we are looking at a block statement
         self.block_smt = [False]
 
+        # Whether this CFG is from an initial block (should only execute once)
+        self.is_initial = False
+
         # how many nested block statements we've seen so far
         self.block_stmt_depth = 0
 
@@ -114,16 +117,28 @@ class CFG:
         """Extracts always blocks from PySlang AST"""
         # Handle InstanceSymbol (from topInstances or child instances)
         if ast is not None and ast.__class__.__name__ == "InstanceSymbol":
-            # Iterate over the body to find ProceduralBlockSymbol and child instances
+            # Iterate over the body to find ProceduralBlockSymbol, ContinuousAssign, and child instances
             if hasattr(ast, 'body'):
                 for item in ast.body:
                     if item.__class__.__name__ == "ProceduralBlockSymbol":
                         # Get the syntax node from the symbol
                         if hasattr(item, 'syntax') and item.syntax is not None:
                             self.always_blocks.append(item.syntax)
+                    elif item.__class__.__name__ == "ContinuousAssignSymbol":
+                        # Collect continuous assignments for COI analysis
+                        if hasattr(item, 'syntax') and item.syntax is not None:
+                            self.comb.append(item.syntax)
+                    elif item.__class__.__name__ == "NetSymbol":
+                        # Handle wire declarations with inline assignment:
+                        # wire x = expr; (creates NetSymbol with initializer, not ContinuousAssignSymbol)
+                        if hasattr(item, 'syntax') and item.syntax is not None:
+                            self.comb.append(item.syntax)
                     elif item.__class__.__name__ == "InstanceSymbol":
-                        # Recursively process child instances (submodules)
-                        self.get_always_sv(m, s, item)
+                        # Do NOT recurse into child instances — each instance
+                        # gets its own CFGs built separately in execute_sv().
+                        # Recursing here would duplicate CFGs under the wrong
+                        # module context, causing signal lookup mismatches.
+                        pass
             return
 
         if (ast != None and isinstance(ast, ps.DefinitionSymbol)):
@@ -139,7 +154,7 @@ class CFG:
             if ast.__class__.__name__ == "ProceduralBlockSyntax":
                 self.always_blocks.append(ast)
             elif ast.__class__.__name__ == "ConditionalStatementSyntax":
-                self.get_always_sv(m, s, ast.statement) 
+                self.get_always_sv(m, s, ast.statement)
                 self.get_always_sv(m, s, ast.elseClause)
             elif ast.__class__.__name__ == "CaseStatementSyntax":
                 return self.get_always_sv(m, s, ast.items)
@@ -147,6 +162,33 @@ class CFG:
                 return self.get_always_sv(m, s, ast.statement)
             elif ast.__class__.__name__ == "BlockStatementSyntax":
                 self.get_always_sv(m, s, ast.items)
+            elif ast.__class__.__name__ == "NetDeclarationSyntax":
+                # Wire declarations: collect those with initializers as comb
+                has_init = False
+                declarators = getattr(ast, 'declarators', None)
+                if declarators:
+                    for decl in declarators:
+                        if getattr(decl, 'initializer', None) is not None:
+                            has_init = True
+                            break
+                if has_init:
+                    self.comb.append(ast)
+                else:
+                    self.decls.append(ast)
+            elif ast.__class__.__name__ == "DataDeclarationSyntax":
+                has_init = False
+                declarators = getattr(ast, 'declarators', None)
+                if declarators:
+                    for decl in declarators:
+                        if getattr(decl, 'initializer', None) is not None:
+                            has_init = True
+                            break
+                if has_init:
+                    self.comb.append(ast)
+                else:
+                    self.decls.append(ast)
+            elif ast.__class__.__name__ == "ContinuousAssignSyntax":
+                self.comb.append(ast)
             else:
                 if isinstance(ast, ps.ConditionalStatementSyntax):
                     then_body = getattr(ast, "ifTrue", getattr(ast, "statement", None))
@@ -169,7 +211,22 @@ class CFG:
                         self.decls.append(ast)
                     elif isinstance(ast, ps.ContinuousAssignSyntax):
                         self.comb.append(ast)
-                    ...
+                    elif isinstance(ast, ps.NetDeclarationSyntax):
+                        has_init = False
+                        declarators = getattr(ast, 'declarators', None)
+                        if declarators:
+                            for decl in declarators:
+                                if getattr(decl, 'initializer', None) is not None:
+                                    has_init = True
+                                    break
+                        if has_init:
+                            self.comb.append(ast)
+                        else:
+                            self.decls.append(ast)
+                    else:
+                        # Generic iterable: recurse into children
+                        for child in ast:
+                            self.get_always_sv(m, s, child)
         elif ast != None:
             # print(f"ast ! {ast.definitionKind} {dir(ast)}")
             # print(type(ps.DefinitionSymbol))
@@ -207,11 +264,34 @@ class CFG:
             else:
                 #print("18")
                 if isinstance(ast, ps.DataDeclarationSyntax):
-                    self.decls.append(ast)
+                    # Check if it has an initializer (wire x = expr pattern)
+                    has_init = False
+                    declarators = getattr(ast, 'declarators', None)
+                    if declarators:
+                        for decl in declarators:
+                            if getattr(decl, 'initializer', None) is not None:
+                                has_init = True
+                                break
+                    if has_init:
+                        self.comb.append(ast)
+                    else:
+                        self.decls.append(ast)
                 elif isinstance(ast, ps.ContinuousAssignSyntax):
                     self.comb.append(ast)
-                # elif isinstance(ast, ps.HierarchicalReference):
-                #     print("FOUND SUBModule!")
+                elif isinstance(ast, ps.NetDeclarationSyntax):
+                    # Collect net declarations with initializers as comb
+                    # e.g., wire check_en = valid_pipe[2];
+                    has_init = False
+                    declarators = getattr(ast, 'declarators', None)
+                    if declarators:
+                        for decl in declarators:
+                            if getattr(decl, 'initializer', None) is not None:
+                                has_init = True
+                                break
+                    if has_init:
+                        self.comb.append(ast)
+                    else:
+                        self.decls.append(ast)
                 ...
 
     def _process_conditional_sv(self, m: ExecutionManager, s: SymbolicState, parent_idx: int, node) -> None:
@@ -264,6 +344,18 @@ class CFG:
         """We want to get a list of AST nodes partitioned into basic blocks.
         Need to keep track of children/parent indices of each block in the list."""
         if hasattr(ast, '__iter__'):
+            # BlockStatementSyntax is iterable but iterating it directly yields raw
+            # tokens (BeginKeyword, SyntaxList, EndKeyword) instead of statements.
+            # Route through ast.items to get the actual statement children.
+            if isinstance(ast, ps.BlockStatementSyntax):
+                self.block_stmt_depth += 1
+                self.block_smt.append(True)
+                self.basic_blocks_sv(m, s, ast.items)
+                if self.block_stmt_depth in self.ind_branch_points:
+                    self.resolve_independent_branch_pts(self.block_stmt_depth)
+                self.block_smt.pop()
+                self.block_stmt_depth -= 1
+                return
             for item in ast:
                 if self.block_smt[self.block_stmt_depth] and (isinstance(item, ps.ConditionalStatementSyntax) or isinstance(item, ps.CaseStatementSyntax) or isinstance(item, ps.ForLoopStatementSyntax)):
                     if not self.block_stmt_depth in self.ind_branch_points:
@@ -297,7 +389,13 @@ class CFG:
                     self.curr_idx += 1
                     self.basic_blocks_sv(m, s, item.statement) 
                 elif isinstance(item, ps.BlockStatementSyntax):
+                    self.block_stmt_depth += 1
+                    self.block_smt.append(True)
                     self.basic_blocks_sv(m, s, item.items)
+                    if self.block_stmt_depth in self.ind_branch_points:
+                        self.resolve_independent_branch_pts(self.block_stmt_depth)
+                    self.block_smt.pop()
+                    self.block_stmt_depth -= 1
                 elif isinstance(item, ps.ProceduralBlockSyntax):
                     self.all_nodes.append(item)
                     self.curr_idx += 1
@@ -370,74 +468,56 @@ class CFG:
     def partition(self):
         """Partitions all_nodes into basic blocks based on partition_points.
 
-        The partition_points mark branch points in the CFG:
-        - The first partition point (0) is the start of the first block
-        - Subsequent partition points mark the START of new blocks (branch targets)
+        partition_points[0] is always 0 (start).
+        partition_points[1] is the first conditional (end of the "preamble" block).
+        partition_points[2+] are starts of branch-target blocks.
 
-        For partition_points = [0, 2, 3, 7, 10]:
-        - Block 0: nodes [0, 1, 2] (from 0 up to and including the conditional at 2)
-        - Block 1: nodes [3, 4, 5, 6] (then-branch: from 3 up to but not including 7)
-        - Block 2: nodes [7, 8, 9, 10] (else-branch: from 7 to the end)
-
-        The key insight is that partition_points[1] (the conditional) is the END of block 0,
-        while partition_points[2] and beyond are the START of new blocks.
+        Block 0: all_nodes[partition_list[0] .. partition_list[1]] (inclusive - preamble + conditional)
+        Block i (i>=1): all_nodes[partition_list[i+1] .. partition_list[i+2]-1]
+          (each branch-target block starts at a partition point and extends to the next)
+        Last block extends to the end of all_nodes.
         """
-        self.partition_points.add(len(self.all_nodes)-1)
         partition_list = sorted(list(self.partition_points))
 
-        # First block: from start to the first branch point (inclusive)
-        # This includes the conditional statement itself
-        if len(partition_list) >= 2:
-            first_block = self.all_nodes[partition_list[0]:partition_list[1]+1]
-            self.basic_block_list.append(first_block)
-
-            # Subsequent blocks: each starts at a partition point and ends before the next
-            for i in range(2, len(partition_list)):
-                start = partition_list[i-1] + 1  # Start after the previous partition point
-                end = partition_list[i]  # End at this partition point (exclusive for intermediate, inclusive for last)
-
-                if i == len(partition_list) - 1:
-                    # Last block: include up to and including the last node
-                    basic_block = self.all_nodes[start:end+1]
-                else:
-                    # Intermediate block: exclude the next partition point
-                    basic_block = self.all_nodes[start:end]
-
-                if basic_block:  # Only add non-empty blocks
-                    self.basic_block_list.append(basic_block)
-        else:
-            # Only one partition point: single block with all nodes
+        if len(partition_list) < 2:
+            # Only one partition point (or none): single block with all nodes
             self.basic_block_list.append(self.all_nodes[:])
+            return
+
+        # Block 0: preamble through the first conditional (inclusive)
+        first_block = self.all_nodes[partition_list[0]:partition_list[1]+1]
+        self.basic_block_list.append(first_block)
+
+        # Subsequent blocks: each partition_list[2+] marks the START of a new block
+        branch_starts = partition_list[2:]  # skip partition_list[0] and partition_list[1]
+        for i, start in enumerate(branch_starts):
+            if i + 1 < len(branch_starts):
+                end = branch_starts[i + 1]
+            else:
+                end = len(self.all_nodes)
+            basic_block = self.all_nodes[start:end]
+            self.basic_block_list.append(basic_block)
 
     def find_basic_block(self, node_idx) -> int:
         """Given a node index, find the index of the basic block that contains it.
 
-        Uses partition points to determine block membership:
-        - Block 0: nodes from partition_list[0] to partition_list[1] (inclusive)
-        - Block i (i > 0): nodes from partition_list[i] to partition_list[i+1]-1 (for branch targets)
+        Block 0: nodes from partition_list[0] to partition_list[1] (inclusive).
+        Block i (i>=1): starts at partition_list[i+1] (branch_starts[i-1]).
         """
         partition_list = sorted(list(self.partition_points))
 
         if len(partition_list) < 2:
             return 0
 
-        # Check if in first block (includes the conditional)
+        # Check if in block 0 (preamble + conditional)
         if node_idx <= partition_list[1]:
             return 0
 
-        # Check subsequent blocks (branch targets)
-        # Block 1 starts at partition_list[2], Block 2 starts at partition_list[3], etc.
-        for i in range(2, len(partition_list)):
-            block_start = partition_list[i]
-
-            if i == len(partition_list) - 1:
-                # Last block: from this partition point to the end
-                if node_idx >= block_start:
-                    return i - 1  # Block index is i-1 (since block 0 covers indices 0 and 1)
-            else:
-                block_end = partition_list[i + 1] - 1
-                if block_start <= node_idx <= block_end:
-                    return i - 1
+        # Branch-target blocks start at partition_list[2+]
+        branch_starts = partition_list[2:]
+        for i in range(len(branch_starts) - 1, -1, -1):
+            if node_idx >= branch_starts[i]:
+                return min(i + 1, len(self.basic_block_list) - 1)
 
         # Fallback: return last block
         return len(self.basic_block_list) - 1
@@ -464,13 +544,14 @@ class CFG:
 
     def build_cfg(self, m: ExecutionManager, s: SymbolicState):
         """Build networkx digraph."""
-        print(f"[DEBUG build_cfg] all_nodes count: {len(self.all_nodes)}, edgelist count: {len(self.edgelist)}")
-        print(f"[DEBUG build_cfg] partition_points: {sorted(self.partition_points)}")
-        print(f"[DEBUG build_cfg] edgelist: {self.edgelist}")
+        from helpers.debug import debug_print
+        debug_print("build_cfg", f"all_nodes count: {len(self.all_nodes)}, edgelist count: {len(self.edgelist)}")
+        debug_print("build_cfg", f"partition_points: {sorted(self.partition_points)}")
+        debug_print("build_cfg", f"edgelist: {self.edgelist}")
         self.make_paths()
-        print(f"[DEBUG build_cfg] cfg_edges: {self.cfg_edges}")
-        print(f"[DEBUG build_cfg] basic_block_list count: {len(self.basic_block_list)}")
-        print(f"[DEBUG build_cfg] basic_block_list: {self.basic_block_list}")
+        debug_print("build_cfg", f"cfg_edges: {self.cfg_edges}")
+        debug_print("build_cfg", f"basic_block_list count: {len(self.basic_block_list)}")
+        debug_print("build_cfg", f"basic_block_list: {self.basic_block_list}")
         # print(self.cfg_edges)
 
         G = nx.DiGraph()
@@ -504,8 +585,8 @@ class CFG:
 
         #traversed = nx.edge_dfs(G, source=-1)
         self.paths = list(nx.all_simple_paths(G, source=-1, target=-2))
-        print(f"[DEBUG build_cfg] paths computed: {len(self.paths)} paths")
+        debug_print("build_cfg", f"paths computed: {len(self.paths)} paths")
         if len(self.paths) <= 5:
-            print(f"[DEBUG build_cfg] paths: {self.paths}")
+            debug_print("build_cfg", f"paths: {self.paths}")
         #print(list(traversed))
         #print(list(self.paths))

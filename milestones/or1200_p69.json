@@ -1,0 +1,26 @@
+{
+  "target": "Violate assertion '(lsu_dcpu_dat_i == mem2reg_memdata) || (rst == 1)' in or1200_cpu.u_assertions",
+  "target_expr": "!((or1200_cpu.u_assertions.lsu_dcpu_dat_i == or1200_cpu.u_assertions.mem2reg_memdata) || (or1200_cpu.u_assertions.rst == 1))",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System Reset",
+      "condition": "or1200_cpu.u_assertions.rst == 1"
+    },
+    {
+      "step": 1,
+      "description": "Reset deasserted, system becomes active",
+      "condition": "or1200_cpu.u_assertions.rst == 0"
+    },
+    {
+      "step": 2,
+      "description": "LSU receives data from memory interface (dcpu_dat_i) that is different from the data selected for register write-back (mem2reg_memdata). This could be due to a misalignment, cache effect, or timing issue.",
+      "condition": "or1200_cpu.u_assertions.lsu_dcpu_dat_i != or1200_cpu.u_assertions.mem2reg_memdata"
+    },
+    {
+      "step": 3,
+      "description": "Verification Target: The assertion p69 is violated because lsu_dcpu_dat_i does not equal mem2reg_memdata and reset is not active.",
+      "condition": "!((or1200_cpu.u_assertions.lsu_dcpu_dat_i == or1200_cpu.u_assertions.mem2reg_memdata) || (or1200_cpu.u_assertions.rst == 1))"
+    }
+  ]
+}

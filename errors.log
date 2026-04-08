@@ -1,1 +1,17 @@
 DEBUG:root:Starting over
+DEBUG:root:[ConditionParser] 'rst == 1' -> LHS='rst' op='==' RHS='1'
+DEBUG:root:[ConditionParser] 'rst == 0' -> LHS='rst' op='==' RHS='0'
+DEBUG:root:[ConditionParser] 'icpu_ack_i == 1' -> LHS='icpu_ack_i' op='==' RHS='1'
+DEBUG:root:[ConditionParser] 'id_freeze == 0' -> LHS='id_freeze' op='==' RHS='0'
+DEBUG:root:[ConditionParser] '(if_insn & 32'hFC000000) >> 26 == 32'h1c' -> LHS='(if_insn & 32'hFC000000) >> 26' op='==' RHS='32'h1c'
+DEBUG:root:[ConditionParser] 'ex_freeze == 0' -> LHS='ex_freeze' op='==' RHS='0'
+DEBUG:root:[ConditionParser] '(id_insn & 32'hFC000000) >> 26 == 32'h1c' -> LHS='(id_insn & 32'hFC000000) >> 26' op='==' RHS='32'h1c'
+DEBUG:root:[ConditionParser] '((u_assertions.ctrl_ex_insn & 32'hFC000000) >> 26) == 32'h1c' -> LHS='((u_assertions.ctrl_ex_insn & 32'hFC000000) >> 26)' op='==' RHS='32'h1c'
+DEBUG:root:[ConditionParser] 'rst == 0' -> LHS='rst' op='==' RHS='0'
+DEBUG:root:  [TopoSort] u_assertions: 36 nodes sorted
+DEBUG:root:Initializing state: evaluating combinational logic to fixed-point...
+DEBUG:root:[Score] M[1]='Reset Deasserted and Instruction Acknowledged' remaining=4 cycle=1 base=41 distance=1 total=42
+DEBUG:root:[_get_signal_z3_value] Routing arithmetic expr to _evaluate_expression: '(if_insn & 32'hFC000000) >> 26'
+DEBUG:root:[_get_signal_z3_value] Routing arithmetic expr to _evaluate_expression: '(id_insn & 32'hFC000000) >> 26'
+DEBUG:root:[Score] M[3]='Instruction enters EX stage without freeze' remaining=2 cycle=2 base=22 distance=28 total=50
+DEBUG:root:[_get_signal_z3_value] Routing arithmetic expr to _evaluate_expression: '((u_assertions.ctrl_ex_insn & 32'hFC000000) >> 26)'

@@ -1,2 +1,37 @@
 todo:
 designs/benchmarks/or1200/buggy-or1200/properties.v , 错误，目前排除在or1200.F之外
+
+# 备忘录：基于 COI 的符号执行路径剪枝与 LLM 规划策略
+
+**日期**: 2026-02-24
+**主题**: Cone of Influence (COI) 在前后端协同验证中的边界处理与工程实践
+
+## 核心共识
+
+1. **后端 COI 策略：必须“完全跳过 (Skip)”，绝不能“降低优先级 (Deprioritize)”**
+   * **原理**: 形式化验证中的程序切片 (Program Slicing) 证明，COI 外的逻辑绝对不会影响 Assertion 的结果。
+   * **危害**: 仅仅“降低优先级”仍会将无关的符号变量和约束（Path Conditions）压入 Z3 Solver，导致矩阵膨胀、分支无端裂变和严重的“状态污染”，最终引发状态爆炸。
+
+2. **切片粒度：细化到 Always-block 级别 (CFG 级)**
+   * **原理**: Module 级别太粗（如 `or1200_ctrl` 包含 28 个 always 块）。保留整个 Module 会引入大量无关控制流。
+   * **实践**: 引擎必须能够按 CFG（即单个 always 块）为单位进行剪枝。前端 COI 分析器输出 `keep_list`（需要保留的 CFG 索引），后端 `MilestoneDirectedStrategy` 在遍历时直接 `continue` 跳过不在列表中的 CFG。
+
+3. **跨模块处理：穿透端口连接 (Port Mappings)**
+   * **原理**: 现代 RTL 高度模块化，控制依赖和数据依赖常常跨越边界。
+   * **实践**: 必须构建全局层级的依赖图（Hierarchical Dependency Graph），显式地将模块端口（Ports）连接起来，并在图上进行全局反向 BFS/DFS。
+
+## 关键边界情况 (Corner Cases) 的处理原则
+
+对于以下情况，**切勿使用“降级执行”妥协，而必须完善前端 COI 提取算法**：
+
+* **复位共享与门控 (Reset Gating)**: 属于“控制依赖 (Control Dependency)”，COI 分析不仅要追溯 `assign` / `<= `右侧的数据源，必须追溯 `if/case` 条件语句中的控制源（如 `rst_n` 的驱动者）。
+* **时钟门控与使能信号 (Clock / Enable Gating)**: 同上，控制寄存器更新的 `valid` 或 `en` 信号必须被纳入 COI 并反向追踪。
+* **隐式的执行顺序**: 只要 RTL 设计规范且同步，并发 `always` 块的相对执行顺序不会改变逻辑。跳过无关 block 是绝对安全的。
+
+## 应对假性反例 (False Counterexamples) 的方案
+
+* **问题**: 强行切掉外围模块后，原本受约束的输入（如 `valid`）变成了完全自由的符号变量，Z3 可能会探索出在真实硬件中不可能发生的输入序列，导致假 Bug。
+* **解决方案 (Assume-Guarantee)**: 这是引入 LLM Agent 的最佳场景。
+  1. 将被切掉的外围模块代码发给 LLM。
+  2. 让 LLM 总结该模块对被保留模块的“接口契约”（例如：“`valid` 信号不可能连续拉高超过 3 个周期”）。
+  3. 将这些契约转化为 Z3 的全局前置假设 (`Assume`)，约束搜索空间。

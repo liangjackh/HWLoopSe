@@ -1,0 +1,31 @@
+{
+  "target": "Violate assertion '(((ctrl_ex_insn & 32'hFC000000) >> 26) != 32'h1c) || (rst == 1)' in or1200_cpu.u_assertions",
+  "target_expr": "(((or1200_cpu.u_assertions.ctrl_ex_insn & 32'or1200_cpu.u_assertions.hFC000000) >> 26) != 32'or1200_cpu.u_assertions.h1c) || (or1200_cpu.u_assertions.rst != 1)",
+  "milestones":[
+      {
+        "step": 0,
+        "description": "System Reset Active",
+        "condition": "rst == 1"
+      },
+      {
+        "step": 1,
+        "description": "Reset Deasserted and Instruction Acknowledged",
+        "condition": "rst == 0 && icpu_ack_i == 1"
+      },
+      {
+        "step": 2,
+        "description": "Instruction enters ID stage, target opcode 0x1c fetched",
+        "condition": "id_freeze == 0 && (if_insn & 32'hFC000000) >> 26 == 32'h1c"
+      },
+      {
+        "step": 3,
+        "description": "Instruction enters EX stage without freeze",
+        "condition": "ex_freeze == 0 && (id_insn & 32'hFC000000) >> 26 == 32'h1c"
+      },
+      {
+        "step": 4,
+        "description": "Verification Target: Opcode 0x1c reaches EX stage assertion",
+        "condition": "((u_assertions.ctrl_ex_insn & 32'hFC000000) >> 26) == 32'h1c && rst == 0"
+      }
+    ]
+}

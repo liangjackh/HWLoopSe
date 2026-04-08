@@ -1,0 +1,36 @@
+{
+  "target": "Violate assertion '(operand_b == dcpu_dat_o) || (rst == 1)' in or1200_cpu.u_assertions",
+  "target_expr": "!((or1200_cpu.u_assertions.operand_b == or1200_cpu.u_assertions.dcpu_dat_o) || (or1200_cpu.u_assertions.rst == 1))",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System Reset",
+      "condition": "rst == 1"
+    },
+    {
+      "step": 1,
+      "description": "Reset released, CPU begins fetching instructions",
+      "condition": "rst == 0"
+    },
+    {
+      "step": 2,
+      "description": "A store instruction (e.g., l.sw) is decoded in ID stage",
+      "condition": "or1200_cpu.or1200_ctrl.id_insn[31:26] == 6'b101101"
+    },
+    {
+      "step": 3,
+      "description": "Store instruction moves to EX stage, operand_b is computed",
+      "condition": "or1200_cpu.or1200_ctrl.ex_insn[31:26] == 6'b101101"
+    },
+    {
+      "step": 4,
+      "description": "Store data (operand_b) is ready and LSU generates dcpu_dat_o",
+      "condition": "or1200_cpu.or1200_lsu.dcpu_we_o == 1 && or1200_cpu.or1200_lsu.dcpu_cycstb_o == 1"
+    },
+    {
+      "step": 5,
+      "description": "Verification Target: operand_b does NOT equal dcpu_dat_o",
+      "condition": "or1200_cpu.u_assertions.operand_b != or1200_cpu.u_assertions.dcpu_dat_o && or1200_cpu.u_assertions.rst == 0"
+    }
+  ]
+}

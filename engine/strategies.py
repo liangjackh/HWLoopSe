@@ -5,13 +5,13 @@ from the execution mechanism.
 """
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, List, Any, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Any, Optional, Tuple, Union
 from itertools import product
-from copy import deepcopy
 import heapq
 import time
+import logging
 
-from z3 import Solver
+from z3 import Solver, sat, BitVec, is_bv, is_bv_value
 
 from .symbolic_state import SymbolicState
 from .execution_manager import ExecutionManager
@@ -36,7 +36,10 @@ class ExplorationStrategy(ABC):
         cfgs_by_module: Dict[str, List[Any]],
         manager: ExecutionManager,
         state: SymbolicState,
-        num_cycles: int
+        num_cycles: int,
+        comb_by_module: Optional[Dict[str, List[Any]]] = None,
+        wire_groups: Optional[List[Any]] = None,
+        primary_input_flags: Optional[List[bool]] = None
     ) -> None:
         """
         Execute the exploration strategy.
@@ -54,12 +57,14 @@ class ExplorationStrategy(ABC):
         pass
 
 
+
 class BlindSearchStrategy(ExplorationStrategy):
     """
     Blind search strategy using Cartesian product of all paths.
 
-    This replicates the original behavior: pre-compute all path combinations
-    and iterate through them exhaustively.
+    This strategy uses a generator-based approach to avoid memory explosion
+    when dealing with a large number of paths (e.g., in complex RTL designs).
+    It explores all possible combinations of paths across modules and cycles.
     """
 
     def run(
@@ -71,9 +76,12 @@ class BlindSearchStrategy(ExplorationStrategy):
         cfgs_by_module: Dict[str, List[Any]],
         manager: ExecutionManager,
         state: SymbolicState,
-        num_cycles: int
+        num_cycles: int,
+        comb_by_module: Optional[Dict[str, List[Any]]] = None,
+        wire_groups: Optional[List[Any]] = None,
+        primary_input_flags: Optional[List[bool]] = None
     ) -> None:
-        """Execute blind exhaustive search."""
+        """Execute blind exhaustive search with memory optimization."""
 
         # Build mapped_paths: module_name -> cfg_idx -> paths
         mapped_paths = {}
@@ -84,38 +92,37 @@ class BlindSearchStrategy(ExplorationStrategy):
             for i, cfg in enumerate(cfg_list):
                 mapped_paths[module_name][i] = cfg.paths
 
-        # Build total_paths using Cartesian product
-        single_paths_by_module = {}
-        total_paths_by_module = {}
-        for module_name in cfgs_by_module:
-            print(f"Module {module_name} has {len(cfgs_by_module[module_name])} always blocks")
-            single_paths_by_module[module_name] = product(*mapped_paths[module_name].values())
-            total_paths_by_module[module_name] = list(tuple(product(
-                product(*mapped_paths[module_name].values()),
-                repeat=int(num_cycles)
-            )))
+        keys = list(cfgs_by_module.keys())
+        
+        # 1. Flatten all decision points to build the generator
+        all_decision_lists = []
+        decision_map = []  # Maps each decision to (cycle, module_name, cfg_idx)
+        
+        for cycle in range(int(num_cycles)):
+            for module_name in keys:
+                for cfg_idx, paths in enumerate(mapped_paths[module_name].values()):
+                    # Provide a fallback if a CFG has no paths
+                    path_list_to_add = paths if paths else [[]]
+                    all_decision_lists.append(path_list_to_add)
+                    decision_map.append((cycle, module_name, cfg_idx))
+                    
+        # 2. Build the super-generator (extremely low memory footprint)
+        total_paths_generator = product(*all_decision_lists)
 
-        if not total_paths_by_module:
-            total_paths = []
-        else:
-            keys = list(total_paths_by_module.keys())
-            values = []
-            for key in keys:
-                module_paths = total_paths_by_module[key]
-                if not module_paths:
-                    module_paths = [tuple(() for _ in range(int(num_cycles)))]
-                values.append(module_paths)
-
-            total_paths = []
-            for path_combo in product(*values):
-                total_paths.append({k: list(p) for k, p in zip(keys, path_combo)})
-
-        # Reset branch tracking
+        # Reset branch tracking and path count
         manager.branch_count = 0
         manager.branch_points_seen = set()
+        manager.path_count = 0
 
-        # Main exploration loop
-        for i in range(len(total_paths)):
+        print("[BlindSearchStrategy] Starting exhaustive search via generator...")
+
+        # 3. Main exploration loop directly consuming the generator
+        for path_tuple in total_paths_generator:
+            # Reconstruct the curr_path dictionary structure expected by the engine
+            curr_path = {k: [ [] for _ in range(int(num_cycles)) ] for k in keys}
+            for val, (cycle, module_name, cfg_idx) in zip(path_tuple, decision_map):
+                curr_path[module_name][cycle].append(val)
+                
             manager.prev_store = state.store
             # Use the first module for init_state
             first_module = modules[0] if modules else None
@@ -141,10 +148,9 @@ class BlindSearchStrategy(ExplorationStrategy):
 
             manager.curr_module = manager.names_list[0]
 
-            print(f"Executing path {i+1} / {len(total_paths)}")
+            print(f"Executing path {manager.path_count + 1} (Total paths unknown due to generator)")
             engine.check_state(manager, state)
 
-            curr_path = total_paths[i]
             modules_seen = 0
             for module_name in curr_path:
                 manager.curr_module = manager.names_list[modules_seen]
@@ -154,6 +160,12 @@ class BlindSearchStrategy(ExplorationStrategy):
                         state.apply_pending_nba()
 
                     for cfg_idx, cfg_path in enumerate(complete_single_cycle_path):
+                        # Handle empty paths generated as fallbacks
+                        if not cfg_path:
+                            continue
+                        # Skip initial blocks after cycle 0
+                        if manager.cycle > 0 and getattr(cfgs_by_module[module_name][cfg_idx], 'is_initial', False):
+                            continue
                         directions = cfgs_by_module[module_name][cfg_idx].compute_direction(cfg_path)
                         if engine.debug:
                             print(f"DEBUG: cfg_path={cfg_path}, directions={directions}")
@@ -165,7 +177,7 @@ class BlindSearchStrategy(ExplorationStrategy):
                                 print("Skipping dummy node in path")
                                 continue
                             else:
-                                direction = directions[k]
+                                direction = directions[k] if k < len(directions) else 0
                                 k += 1
                                 basic_block = cfgs_by_module[module_name][cfg_idx].basic_block_list[basic_block_idx]
                                 print(f"visiting basic_block: {[str(s)[:50] if s else 'None' for s in basic_block]}")
@@ -177,7 +189,6 @@ class BlindSearchStrategy(ExplorationStrategy):
 
             manager.cycle = 0
             engine.done = True
-            print(f"Checking path {i+1} / {len(total_paths)}")
             engine.check_state(manager, state)
             engine.done = False
 
@@ -186,14 +197,20 @@ class BlindSearchStrategy(ExplorationStrategy):
                 manager.instances_seen[module_name] = 0
                 manager.instances_loc[module_name] = ""
 
-            if engine.debug:
-                print("------------------------")
-
             if manager.assertion_violation:
+                print(f"[Path {manager.path_count + 1}] cycles={int(num_cycles)}, result=VIOLATION")
                 self._handle_assertion_violation(engine, manager, state)
                 return
 
+            # Path completed without violation
+            pc_result = "SAT" if state.pc.check() == sat else "UNSAT"
+            print(f"[Path {manager.path_count + 1}] cycles={int(num_cycles)}, result={pc_result}")
+
+            if engine.debug:
+                print("------------------------")
+
             state.pc.reset()
+            state.pc_constraint_set.clear()
             for module in manager.dependencies:
                 module = {}
 
@@ -244,7 +261,7 @@ class BlindSearchStrategy(ExplorationStrategy):
             print(counterexample)
         else:
             print("UNSAT")
-
+            
 
 class WorkItem:
     """
@@ -295,16 +312,18 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
     at branch points and prioritizing paths that make progress toward milestones.
     """
 
-    def __init__(self, milestone_manager: 'MilestoneManager', max_cycles: int = 100):
+    def __init__(self, milestone_manager: 'MilestoneManager', max_cycles: int = 100, max_paths: int = 500000):
         """
         Initialize the directed strategy.
 
         Args:
             milestone_manager: Manager for milestone checking
             max_cycles: Maximum clock cycles before timeout
+            max_paths: Maximum number of paths to explore before giving up
         """
         self.milestone_manager = milestone_manager
         self.max_cycles = max_cycles
+        self.max_paths = max_paths
         self.paths_explored = 0
 
     def run(
@@ -316,13 +335,26 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         cfgs_by_module: Dict[str, List[Any]],
         manager: ExecutionManager,
         state: SymbolicState,
-        num_cycles: int
+        num_cycles: int,
+        comb_by_module: Optional[Dict[str, List[Any]]] = None,
+        wire_groups: Optional[List[Any]] = None,
+        primary_input_flags: Optional[List[bool]] = None
     ) -> None:
         """Execute milestone-directed search with priority queue."""
 
         print(f"[DirectedStrategy] Starting milestone-directed search")
         print(f"[DirectedStrategy] Milestones: {self.milestone_manager.milestones}")
-        print(f"[DirectedStrategy] Max cycles: {min(self.max_cycles, num_cycles)}")
+        num_cycles_int = int(num_cycles)
+        print(f"[DirectedStrategy] Max cycles: {min(self.max_cycles, num_cycles_int)}")
+
+        # Store comb_by_module and wire_groups for use in _execute_cycle
+        self._comb_by_module = comb_by_module or {}
+        self._wire_groups = wire_groups or []
+        self._primary_input_flags = primary_input_flags or []
+        self._active_instances = set(manager.names_list)
+
+        # Build topologically sorted comb nodes (single-pass instead of 2-pass fixedpoint)
+        self._sorted_comb_by_module = self._topo_sort_comb(cfgs_by_module, manager)
 
         # Reset milestone progress
         self.milestone_manager.reset()
@@ -357,14 +389,26 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         while worklist:
             item = heapq.heappop(worklist)
 
+            # Check path limit
+            if self.paths_explored >= self.max_paths:
+                print(f"[DirectedStrategy] Path limit reached ({self.max_paths} paths)")
+                print(f"[DirectedStrategy] Consider increasing max_paths or simplifying the design")
+                break
+
             # Check timeout
             if item.cycle >= max_cycles_to_run:
                 print(f"[DirectedStrategy] Timeout: reached max cycles ({max_cycles_to_run})")
                 continue
 
             self.paths_explored += 1
-            if self.paths_explored % 100 == 0:
-                print(f"[DirectedStrategy] Explored {self.paths_explored} paths, queue size: {len(worklist)}")
+            print(f"\n--- [Path {self.paths_explored}] Popped: score={item.score}, cycle={item.cycle}, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}, queue={len(worklist)}")
+
+            # Reset manager flags for this work item
+            manager.ignore = False
+            manager.abandon = False
+            manager.assertion_violation = False
+            if hasattr(manager, 'violated_assertions'):
+                manager.violated_assertions = []
 
             # Execute one cycle for all modules
             result = self._execute_cycle(
@@ -373,14 +417,29 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             )
 
             if result == "VIOLATION":
+                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=VIOLATION, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}")
                 print(f"[DirectedStrategy] Assertion violation found!")
                 self._handle_assertion_violation(engine, manager, item.state)
                 return
 
             if result == "ALL_MILESTONES":
-                print(f"[DirectedStrategy] All milestones reached!")
-                print(f"[DirectedStrategy] Final state: {item.state.store}")
+                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=ALL_MILESTONES")
+                print(f"[DirectedStrategy] All milestones reached — reporting violation!")
+                # Prefer the deferred violation record (has real model) over the milestone state
+                deferred = getattr(self, '_deferred_violation', None)
+                if deferred is not None:
+                    saved_violations, saved_state = deferred
+                    manager.violated_assertions = saved_violations
+                    self._handle_assertion_violation(engine, manager, saved_state)
+                else:
+                    self._handle_assertion_violation(engine, manager, item.state)
                 return
+
+            # Path ended without violation
+            if result is None:
+                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=CONTINUE, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}")
+            elif result == "TIMEOUT":
+                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=TIMEOUT, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}")
 
         print(f"[DirectedStrategy] Search exhausted (UNSAT)")
         print(f"[DirectedStrategy] Paths explored: {self.paths_explored}")
@@ -394,42 +453,339 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         manager: ExecutionManager,
         state: SymbolicState
     ) -> None:
-        """Initialize symbolic state for all modules."""
+        """Initialize symbolic state for all modules.
+
+        Registers (Variable symbols) are initialized to BitVecVal(0, 32) per
+        Verilog semantics.  Input ports and nets get fresh symbolic values so
+        the solver can explore all possible input combinations.
+        """
+        import pyslang as ps
+        from z3 import BitVecVal
+
         for module_name in manager.names_list:
             manager.curr_module = module_name
             visitor.symbolic_store.clear()
             visitor.visited.clear()
             visitor.dfs(modules_dict[module_name])
-            for var_name in visitor.symbolic_store:
+            for var_name, sym in visitor.symbolic_store.items():
                 if var_name not in state.store[module_name]:
-                    state.store[module_name][var_name] = init_symbol()
+                    # Initialize everything to 0 (Verilog default for regs).
+                    # Port propagation + _unify_port_symbols will later assign
+                    # shared fresh symbols to signals connected through ports,
+                    # so primary inputs end up symbolic while internal signals
+                    # start at a well-defined value.
+                    state.store[module_name][var_name] = BitVecVal(0, 32)
 
-        # Process declarations and combinational logic
+        # Process declarations using visitor.dfs (these are Symbol/Syntax nodes)
         for module_name in manager.names_list:
+            manager.curr_module = module_name
             if module_name in cfgs_by_module:
                 for c in cfgs_by_module[module_name]:
                     for node in c.decls:
                         visitor.dfs(node)
-                    for node in c.comb:
-                        visitor.dfs(node)
+
+        # Unify port symbols so connected signals share the same value
+        self._unify_port_symbols(state, cycle=0)
+
+        # Evaluate combinational logic to fixed-point (Sylvia-style)
+        logging.debug("Initializing state: evaluating combinational logic to fixed-point...")
+        self._evaluate_comb_topo(visitor, manager, state)
 
     def _clone_state(self, state: SymbolicState) -> SymbolicState:
+        """Create an efficient shallow clone of the symbolic state."""
+        return state.clone()
+
+    def _preferred_path_idx(self, cfg, cycle: int) -> int:
+        """Choose the preferred default path for a CFG at a given cycle.
+
+        For cycle 0: use path 0 (typically the reset path).
+        For cycle > 0: prefer a non-reset path. When multiple non-reset
+        paths exist (e.g., shift vs no-shift), alternate among them by
+        cycle number to ensure diverse constraint combinations are explored
+        as the main (un-penalized) path.
+
+        This avoids both the cascade forking problem (always picking reset)
+        and the single-path bias problem (always picking the same non-reset
+        path, causing all work items to accumulate the same data-path
+        constraints).
         """
-        Create a deep copy of the symbolic state.
+        if cycle == 0 or len(cfg.paths) <= 1:
+            return 0
 
-        Z3 Solvers cannot be deep-copied, so we create a new solver
-        and copy assertions.
+        first_dirs = []
+        for path in cfg.paths:
+            directions = cfg.compute_direction(path)
+            first_dirs.append(directions[0] if directions else None)
+
+        dir_1_count = sum(1 for d in first_dirs if d == 1)
+        dir_0_count = sum(1 for d in first_dirs if d == 0)
+
+        # If exactly 1 path takes the true branch at the first conditional,
+        # it's likely the single reset path (no further branching inside reset).
+        # Prefer a non-reset path (direction[0]==0) for cycle > 0.
+        if dir_1_count == 1 and dir_0_count >= 1:
+            non_reset_indices = [i for i, d in enumerate(first_dirs) if d == 0]
+            # Alternate among non-reset paths by cycle to create diverse
+            # constraint combinations across cycles
+            return non_reset_indices[(cycle - 1) % len(non_reset_indices)]
+
+        return 0
+
+    def _propagate_ports(self, state: SymbolicState, module_name: str = None):
+        """Propagate values through wire equivalence groups.
+
+        If module_name is given, propagate FROM that module's signals TO other
+        members of each group. Otherwise propagate all groups (pick any source
+        from an active instance — i.e., not pruned by COI).
         """
-        new_state = SymbolicState()
-        new_state.store = deepcopy(state.store)
-        new_state.pending_nba = deepcopy(state.pending_nba)
+        if not self._wire_groups:
+            return
 
-        # Copy Z3 solver assertions
-        new_state.pc = Solver()
-        for assertion in state.pc.assertions():
-            new_state.pc.add(assertion)
+        active = getattr(self, '_active_instances', None)
 
-        return new_state
+        for group in self._wire_groups:
+            if module_name is not None:
+                # Find this module's signal in the group as the source
+                source_value = None
+                for inst, sig in group:
+                    if inst == module_name and inst in state.store and sig in state.store[inst]:
+                        source_value = state.store[inst][sig]
+                        break
+                if source_value is None:
+                    continue  # This module has no signal in this group
+            else:
+                # No specific source module — pick any active member that has a value
+                source_value = None
+                for inst, sig in group:
+                    if active and inst not in active:
+                        continue  # Skip COI-pruned instances
+                    if inst in state.store and sig in state.store[inst]:
+                        source_value = state.store[inst][sig]
+                        break
+                if source_value is None:
+                    continue
+
+            # Propagate to all other members
+            for inst, sig in group:
+                if inst in state.store:
+                    state.store[inst][sig] = source_value
+
+    def _unify_port_symbols(self, state: SymbolicState, cycle: int = 0):
+        """Assign a fresh shared Z3 BitVec to all signals in each wire group.
+
+        Uses cycle number in the symbol name so that primary inputs get
+        independent symbols at each clock cycle, allowing the solver to
+        explore different input values per cycle (e.g. rst_n=0 at cycle 0,
+        rst_n=1 at cycle 1).
+        """
+        if not self._wire_groups:
+            return
+
+        for group in self._wire_groups:
+            # Pick a representative name for the group
+            rep_inst, rep_sig = next(iter(group))
+            sym_name = f"{rep_sig}_c{cycle}"
+            shared_bv = BitVec(sym_name, 32)
+
+            # Assign to all members
+            for inst, sig in group:
+                if inst in state.store:
+                    state.store[inst][sig] = shared_bv
+
+    def _refresh_primary_inputs(self, state: SymbolicState, cycle: int):
+        """Assign fresh Z3 BitVec symbols to primary input wire groups for this cycle.
+
+        Only primary inputs (top-level input ports like rst_n, top_in) get
+        refreshed. Internal wires (out_a, out_b, etc.) keep their computed values.
+        """
+        if not self._wire_groups or not self._primary_input_flags:
+            return
+
+        for i, group in enumerate(self._wire_groups):
+            if i >= len(self._primary_input_flags) or not self._primary_input_flags[i]:
+                continue  # Not a primary input group
+
+            rep_inst, rep_sig = next(iter(group))
+            sym_name = f"{rep_sig}_c{cycle}"
+            shared_bv = BitVec(sym_name, 32)
+
+            for inst, sig in group:
+                if inst in state.store:
+                    state.store[inst][sig] = shared_bv
+
+    def _topo_sort_comb(self, cfgs_by_module, manager) -> Dict[str, List[Any]]:
+        """Topologically sort combinational logic nodes per module.
+
+        Uses write/read dependency analysis: if node A writes signal X and
+        node B reads signal X, then A must be evaluated before B.
+
+        Returns sorted_comb_by_module with nodes in dependency order.
+        Falls back to original order if a cycle is detected.
+        """
+        import networkx as nx
+
+        sorted_comb = {}
+        for module_name in manager.names_list:
+            nodes = self._comb_by_module.get(module_name, [])
+            if len(nodes) <= 1:
+                sorted_comb[module_name] = list(nodes)
+                continue
+
+            # Build write->node and read sets per node
+            node_writes = {}   # node_idx -> set of written signal names
+            node_reads = {}    # node_idx -> set of read signal names
+            signal_writer = {} # signal_name -> node_idx that writes it
+
+            for idx, node in enumerate(nodes):
+                writes, reads = self._extract_comb_node_signals(node)
+                node_writes[idx] = writes
+                node_reads[idx] = reads
+                for sig in writes:
+                    signal_writer[sig] = idx
+
+            # Build dependency DAG: edge from writer to reader
+            G = nx.DiGraph()
+            G.add_nodes_from(range(len(nodes)))
+            for idx in range(len(nodes)):
+                for sig in node_reads[idx]:
+                    writer_idx = signal_writer.get(sig)
+                    if writer_idx is not None and writer_idx != idx:
+                        G.add_edge(writer_idx, idx)
+
+            try:
+                order = list(nx.topological_sort(G))
+                sorted_comb[module_name] = [nodes[i] for i in order]
+                logging.debug(f"  [TopoSort] {module_name}: {len(nodes)} nodes sorted")
+            except nx.NetworkXUnfeasible:
+                print(f"[TopoSort] Warning: cycle detected in {module_name}, using original order")
+                sorted_comb[module_name] = list(nodes)
+
+        return sorted_comb
+
+    def _extract_comb_node_signals(self, node):
+        """Extract (writes, reads) signal name sets from a comb node."""
+        import pyslang as ps
+        writes = set()
+        reads = set()
+
+        if node is None:
+            return writes, reads
+
+        cname = node.__class__.__name__
+        # Unwrap symbol wrappers
+        if cname in ('ContinuousAssignSymbol', 'NetSymbol'):
+            syntax = getattr(node, 'syntax', None)
+            if syntax is not None:
+                node = syntax
+                cname = node.__class__.__name__
+
+        if cname == 'ContinuousAssignSyntax':
+            assigns = getattr(node, 'assigns', None)
+            if assigns:
+                for assign in assigns:
+                    lhs = getattr(assign, 'left', None)
+                    rhs = getattr(assign, 'right', None)
+                    if lhs:
+                        name = self._get_signal_name(lhs)
+                        if name:
+                            writes.add(name)
+                    if rhs:
+                        self._collect_read_names(rhs, reads)
+
+        elif cname in ('NetDeclarationSyntax', 'DataDeclarationSyntax'):
+            declarators = getattr(node, 'declarators', None)
+            if declarators:
+                for decl in declarators:
+                    name_node = getattr(decl, 'name', None)
+                    init = getattr(decl, 'initializer', None)
+                    if name_node:
+                        name = getattr(name_node, 'valueText', str(name_node))
+                        writes.add(name)
+                    if init:
+                        init_expr = getattr(init, 'expr', getattr(init, 'expression', init))
+                        self._collect_read_names(init_expr, reads)
+
+        return writes, reads
+
+    @staticmethod
+    def _get_signal_name(node):
+        """Extract signal name from an LHS syntax node."""
+        if hasattr(node, 'identifier'):
+            ident = node.identifier
+            return getattr(ident, 'valueText', getattr(ident, 'value', str(ident)))
+        if hasattr(node, 'valueText'):
+            return node.valueText
+        return None
+
+    @staticmethod
+    def _collect_read_names(node, reads):
+        """Recursively collect signal names read by an expression node."""
+        if node is None:
+            return
+        cname = node.__class__.__name__
+        if cname == 'IdentifierNameSyntax':
+            if hasattr(node, 'identifier'):
+                name = getattr(node.identifier, 'valueText', getattr(node.identifier, 'value', None))
+                if name:
+                    reads.add(name)
+            return
+        if cname == 'IdentifierSelectNameSyntax':
+            if hasattr(node, 'identifier'):
+                name = getattr(node.identifier, 'valueText', getattr(node.identifier, 'value', None))
+                if name:
+                    reads.add(name)
+            return
+        # Recurse into children
+        for attr in ('left', 'right', 'operand', 'expression', 'expr'):
+            child = getattr(node, attr, None)
+            if child is not None:
+                MilestoneDirectedStrategy._collect_read_names(child, reads)
+        # Handle lists (e.g., concatenation operands)
+        for attr in ('expressions', 'operands', 'items', 'assigns'):
+            children = getattr(node, attr, None)
+            if children is not None and hasattr(children, '__iter__'):
+                for child in children:
+                    MilestoneDirectedStrategy._collect_read_names(child, reads)
+
+    def _evaluate_comb_topo(
+        self,
+        visitor: Any,
+        manager: ExecutionManager,
+        state: SymbolicState
+    ):
+        """Single-pass combinational evaluation in topological order."""
+        for module_name in manager.names_list:
+            manager.curr_module = module_name
+            for node in self._sorted_comb_by_module.get(module_name, []):
+                visitor.evaluate_comb(manager, state, node)
+        self._propagate_ports(state)
+
+# engine/strategies.py (截取 MilestoneDirectedStrategy 的修改部分)
+    def _evaluate_comb_fixedpoint(
+        self,
+        visitor: Any,
+        manager: ExecutionManager,
+        state: SymbolicState,
+        max_iterations: int = 2
+    ) -> int:
+        """Evaluate combinational logic to a stable state (Sylvia-style).
+
+        Combinational logic forms a DAG. Two passes suffice:
+        - Pass 1: evaluate all comb nodes, establishing initial values.
+        - Pass 2: re-evaluate so that nodes depending on other comb outputs
+                  pick up the values computed in pass 1.
+
+        Returns the number of iterations executed.
+        """
+        for iteration in range(max_iterations):
+            for module_name in manager.names_list:
+                manager.curr_module = module_name
+                for node in self._comb_by_module.get(module_name, []):
+                    visitor.evaluate_comb(manager, state, node)
+            self._propagate_ports(state)
+
+        logging.debug(f"  [Comb] Evaluated {max_iterations} pass(es)")
+        return max_iterations
 
     def _execute_cycle(
         self,
@@ -441,62 +797,189 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         item: WorkItem,
         worklist: List[WorkItem]
     ) -> Optional[str]:
-        """
-        Execute one clock cycle for all modules.
+        """Execute one clock cycle (Sylvia-style: lazy fork at branch points).
 
-        Returns:
-            "VIOLATION" if assertion violated
-            "ALL_MILESTONES" if all milestones reached
-            None otherwise
+        Executes CFGs sequentially on a single state. When a branching CFG is
+        encountered, we execute one path and push the remaining paths as new
+        WorkItems into the worklist (with a snapshot of the state *before* the
+        branch). This avoids both:
+        - Exponential intra-cycle state explosion (old approach)
+        - Generating useless Cartesian products upfront (previous fix)
+
+        The path to execute is chosen from execution_context['remaining_cfgs'],
+        which tracks which CFGs still need to be executed and which path to take.
         """
-        state = item.state
         cycle = item.cycle
 
-        # Apply pending non-blocking assignments from previous cycle
+        # Step 1: Apply NBA and refresh inputs (if cycle > 0)
         if cycle > 0:
-            state.apply_pending_nba()
+            item.state.apply_pending_nba()
+            self._refresh_primary_inputs(item.state, cycle)
+            self._evaluate_comb_topo(visitor, manager, item.state)
 
-        # Execute all modules for this cycle
-        for module_name in manager.names_list:
+        # Step 2: Build CFG list if not already in context
+        remaining_cfgs = item.execution_context.get('remaining_cfgs', None)
+        if remaining_cfgs is None:
+            remaining_cfgs = []
+            for module_name in manager.names_list:
+                if module_name not in cfgs_by_module:
+                    continue
+                for cfg_idx, cfg in enumerate(cfgs_by_module[module_name]):
+                    if cycle > 0 and getattr(cfg, 'is_initial', False):
+                        continue
+                    paths = cfg.paths
+                    if not paths:
+                        continue
+                    remaining_cfgs.append({
+                        'module': module_name,
+                        'cfg_idx': cfg_idx,
+                        'path_idx': self._preferred_path_idx(cfg, cycle),
+                    })
+
+        # Step 3: Execute CFGs sequentially, lazy-fork at branches
+        state = item.state
+        total_milestones = len(self.milestone_manager.milestones)
+        for i, cfg_entry in enumerate(remaining_cfgs):
+            module_name = cfg_entry['module']
+            cfg_idx = cfg_entry['cfg_idx']
+            chosen_path_idx = cfg_entry['path_idx']
+
             manager.curr_module = module_name
             manager.cycle = cycle
 
-            if module_name not in cfgs_by_module:
+            cfg = cfgs_by_module[module_name][cfg_idx]
+
+            # Clamp path index
+            if chosen_path_idx >= len(cfg.paths):
+                chosen_path_idx = 0
+
+            # Lazy fork: if this CFG has multiple paths and we're taking path 0
+            # (i.e., not already a forked work item for a specific path),
+            # push siblings for the other paths.
+            if len(cfg.paths) > 1 and cfg_entry.get('forked', False) is False:
+                pre_branch_state = self._clone_state(state)
+                for alt_path_idx in range(len(cfg.paths)):
+                    if alt_path_idx == chosen_path_idx:
+                        continue
+                    # Build remaining CFGs for the alternative: same list from
+                    # this point onward, but with this CFG using alt_path_idx
+                    alt_remaining = []
+                    alt_remaining.append({
+                        'module': module_name,
+                        'cfg_idx': cfg_idx,
+                        'path_idx': alt_path_idx,
+                        'forked': True,  # mark so we don't re-fork
+                    })
+                    for j in range(i + 1, len(remaining_cfgs)):
+                        alt_remaining.append(dict(remaining_cfgs[j]))
+                    alt_ctx = {'remaining_cfgs': alt_remaining}
+                    alt_item = WorkItem(
+                        score=item.score + 1,
+                        cycle=cycle,
+                        milestones_completed=item.milestones_completed,
+                        state=self._clone_state(pre_branch_state),
+                        execution_context=alt_ctx
+                    )
+                    heapq.heappush(worklist, alt_item)
+
+            # Execute the chosen path
+            cfg_path = cfg.paths[chosen_path_idx]
+            manager.ignore = False
+            manager.abandon = False
+
+            # Snapshot store & pending_nba so we can rollback on abandon
+            pre_cfg_store = {mod: sigs.copy() for mod, sigs in state.store.items()}
+            pre_cfg_nba = {mod: sigs.copy() for mod, sigs in state.pending_nba.items()}
+
+            result = self._execute_path(
+                engine, visitor, modules_dict, cfg, cfg_path,
+                module_name, manager, state, cfg_idx, chosen_path_idx
+            )
+
+            if result == "VIOLATION":
+                # Suppress violations until we're one step away from the final milestone.
+                # Earlier violations are spurious — unconstrained inputs trivially satisfy
+                # the negated assertion before the design has been steered through reset.
+                if item.milestones_completed >= total_milestones - 1:
+                    return "VIOLATION"
+                else:
+                    print(f"  [Suppressed] assertion violation at cycle {cycle}, milestones={item.milestones_completed}/{total_milestones} — deferring until near final milestone")
+                    # Save the violation record so we can report it if ALL_MILESTONES is reached
+                    if not hasattr(self, '_deferred_violation'):
+                        self._deferred_violation = None
+                    if self._deferred_violation is None and hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+                        self._deferred_violation = (list(manager.violated_assertions), self._clone_state(state))
+                    manager.assertion_violation = False
+                    if hasattr(manager, 'violated_assertions'):
+                        manager.violated_assertions = []
+
+            if manager.abandon or manager.ignore:
+                # Restore state to pre-CFG snapshot and skip this CFG.
+                # This is safe because _try_add_constraint uses push/pop
+                # and does NOT permanently add UNSAT constraints.
+                state.store = pre_cfg_store
+                state.pending_nba = pre_cfg_nba
+                print(f"  [Skip] {module_name}/cfg{cfg_idx}/path{chosen_path_idx}: abandoned/ignore, rolling back and continuing")
+                manager.abandon = False
+                manager.ignore = False
                 continue
 
-            # Execute each CFG (always block) in the module
-            for cfg_idx, cfg in enumerate(cfgs_by_module[module_name]):
-                # For directed search, we explore all paths through the CFG
-                # by creating child states at branch points
-                result = self._execute_cfg_step_by_step(
-                    engine, visitor, modules_dict, cfg, cfg_idx,
-                    module_name, manager, state, worklist, item
-                )
+        # Step 4: Re-evaluate comb after sequential logic
+        self._evaluate_comb_topo(visitor, manager, state)
 
-                if result == "VIOLATION":
-                    return "VIOLATION"
+        # Step 5: Check SAT
+        if state.pc.check() != sat:
+            print(f"  [Pruned] cycle {cycle}: UNSAT after execution")
+            return None
 
-        # After all modules executed, check milestones
-        if self.milestone_manager.check_milestone(state, state.pc):
-            if self.milestone_manager.all_milestones_reached():
-                return "ALL_MILESTONES"
+        # Step 6: Milestone/violation handling
+        current_progress = item.milestones_completed
+        total_milestones = len(self.milestone_manager.milestones)
 
-        # Check for assertion violations
         if manager.assertion_violation:
+            # Only report if we've passed at least the first milestone (reset),
+            # otherwise it's a spurious violation on unconstrained initial state.
+            if current_progress > 0:
+                return "VIOLATION"
+            else:
+                print(f"  [Suppressed] assertion violation at cycle {cycle} before any milestone reached — likely spurious")
+                manager.assertion_violation = False
+                if hasattr(manager, 'violated_assertions'):
+                    manager.violated_assertions = []
+
+        if current_progress >= total_milestones - 1 and self.milestone_manager.check_final_milestone(state):
+            print(
+                f"  [Preemption] Final milestone SAT after reset progress "
+                f"{current_progress}/{total_milestones}; reporting VIOLATION"
+            )
             return "VIOLATION"
 
-        # Create work item for next cycle
+        current_progress, skipped_idx = self.milestone_manager.advance_with_sliding_window(
+            state,
+            current_progress,
+            window_size=1,
+        )
+        if skipped_idx is not None:
+            print(f"  [Sliding Window] Skipped hallucinated milestone {skipped_idx} -> advanced to {current_progress}")
+
+        if current_progress >= total_milestones:
+            return "ALL_MILESTONES"
+
+        # Step 7: Enqueue next cycle
         next_cycle = cycle + 1
         if next_cycle < self.max_cycles:
-            new_score = self.milestone_manager.compute_score(next_cycle)
+            new_score = self.milestone_manager.compute_score_stateless(current_progress, next_cycle, state)
             new_item = WorkItem(
                 score=new_score,
                 cycle=next_cycle,
-                milestones_completed=len(self.milestone_manager.milestones) - self.milestone_manager.milestones_remaining(),
-                state=self._clone_state(state),
-                execution_context=item.execution_context.copy()
+                milestones_completed=current_progress,
+                state=state,
+                execution_context={'remaining_cfgs': None}  # fresh at next cycle
             )
             heapq.heappush(worklist, new_item)
+            print(f"  [Enqueue] score={new_score}, next_cycle={next_cycle}, milestones={current_progress}/{len(self.milestone_manager.milestones)}")
+        else:
+            print(f"  [MaxCycle] cycle {next_cycle} >= limit {self.max_cycles}, not enqueued")
 
         return None
 
@@ -509,50 +992,65 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         cfg_idx: int,
         module_name: str,
         manager: ExecutionManager,
-        state: SymbolicState,
-        worklist: List[WorkItem],
-        parent_item: WorkItem
-    ) -> Optional[str]:
-        """
-        Execute a CFG step by step, branching at conditionals.
-
-        For simplicity in this initial implementation, we execute all paths
-        through the CFG but create separate states for each branch.
-        """
-        # Get all paths through this CFG
+        state: SymbolicState
+    ) -> Union[List[SymbolicState], str]:
+        """粗粒度分支处理：返回所有存活的子状态列表"""
         paths = cfg.paths
-
         if not paths:
-            return None
+            return [state]
 
-        # For the first path, execute directly on current state
-        # For additional paths, clone state and add to worklist
+        valid_states = []
+
+        # Always save a clean copy before executing any paths
+        clean_base_state = self._clone_state(state)
+
+        if len(paths) > 1:
+            print(f"  [Branch] {module_name}/cfg{cfg_idx}: {len(paths)} paths")
+
         for path_idx, cfg_path in enumerate(paths):
-            if path_idx == 0:
-                # Execute on current state
-                result = self._execute_path(
-                    engine, visitor, modules_dict, cfg, cfg_path,
-                    module_name, manager, state
-                )
-                if result == "VIOLATION":
-                    return "VIOLATION"
-            else:
-                # Clone state and add to worklist for later exploration
-                cloned_state = self._clone_state(state)
-                new_score = self.milestone_manager.compute_score(parent_item.cycle)
-                new_item = WorkItem(
-                    score=new_score + path_idx,  # Slight penalty for alternative paths
-                    cycle=parent_item.cycle,
-                    milestones_completed=parent_item.milestones_completed,
-                    state=cloned_state,
-                    execution_context={
-                        'pending_path': (module_name, cfg_idx, cfg_path),
-                        **parent_item.execution_context
-                    }
-                )
-                heapq.heappush(worklist, new_item)
+            # Reset abandon/ignore flags for each new path
+            manager.ignore = False
+            manager.abandon = False
 
-        return None
+            if path_idx == 0:
+                curr_state = state
+            else:
+                curr_state = self._clone_state(clean_base_state)
+
+            result = self._execute_path(
+                engine, visitor, modules_dict, cfg, cfg_path,
+                module_name, manager, curr_state, cfg_idx, path_idx
+            )
+
+            if result == "VIOLATION":
+                return "VIOLATION"
+
+            # Early Pruning: skip abandoned paths and UNSAT states
+            if manager.abandon or manager.ignore:
+                print(f"  [Pruned] {module_name}/cfg{cfg_idx}/path{path_idx}: abandoned/ignore")
+                continue
+            if curr_state.pc.check() == sat:
+                valid_states.append(curr_state)
+            else:
+                print(f"  [Pruned] {module_name}/cfg{cfg_idx}/path{path_idx}: UNSAT")
+
+        if len(paths) > 1:
+            print(f"  [Branch] {module_name}/cfg{cfg_idx}: {len(valid_states)}/{len(paths)} survived")
+
+        # If all paths were abandoned/UNSAT, preserve the original state
+        # so execution can continue to the next module/cycle.
+        # This handles cases like assertion guards that are false at cycle 0.
+        if not valid_states:
+            if len(paths) > 1:
+                valid_states = [clean_base_state]
+            else:
+                valid_states = [state]
+
+        return valid_states
+    
+
+
+
 
     def _execute_path(
         self,
@@ -563,7 +1061,9 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         cfg_path: List[int],
         module_name: str,
         manager: ExecutionManager,
-        state: SymbolicState
+        state: SymbolicState,
+        cfg_idx: int = -1,
+        path_idx: int = -1
     ) -> Optional[str]:
         """Execute a single path through a CFG."""
         directions = cfg.compute_direction(cfg_path)
@@ -572,6 +1072,12 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         for basic_block_idx in cfg_path:
             if basic_block_idx < 0:
                 # Skip dummy nodes
+                continue
+
+            # Safety check: ensure basic_block_idx is valid
+            if basic_block_idx >= len(cfg.basic_block_list):
+                cfg_info = f"{module_name}/cfg{cfg_idx}/path{path_idx}" if cfg_idx >= 0 else module_name
+                print(f"[Warning] Skipping invalid basic_block_idx {basic_block_idx} in {cfg_info} (max: {len(cfg.basic_block_list)-1}, total blocks: {len(cfg.basic_block_list)})")
                 continue
 
             direction = directions[k] if k < len(directions) else 0
@@ -600,25 +1106,121 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             print("Violated assertion details:")
             for va in manager.violated_assertions:
                 print(f"  - condition: {va.get('condition', 'N/A')}")
-                print(f"    z3_condition: {va.get('z3_condition', 'N/A')}")
-                print(f"    path condition: {va.get('path condition', 'N/A')}")
+
+                # Better z3_condition display
+                z3_cond = va.get('z3_condition')
+                if z3_cond is not None:
+                    try:
+                        if hasattr(z3_cond, 'sexpr'):
+                            z3_str = z3_cond.sexpr()
+                            if len(z3_str) > 200:
+                                print(f"    z3_condition: {z3_str[:200]}... (truncated)")
+                            else:
+                                print(f"    z3_condition: {z3_str}")
+                        else:
+                            print(f"    z3_condition: {z3_cond}")
+                    except Exception as e:
+                        print(f"    z3_condition: (error displaying: {e})")
+                else:
+                    print(f"    z3_condition: N/A")
+
                 print(f"    kind: {va.get('kind', 'N/A')}")
 
+        # Extract counterexample from the stored model
         counterexample = {}
-        symbols_to_values = {}
 
-        if engine.solve_pc(state.pc):
-            solved_model = state.pc.model()
-            decls = solved_model.decls()
-            for item in decls:
-                symbols_to_values[item.name()] = solved_model[item]
+        if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+            for va in manager.violated_assertions:
+                model = va.get('model')
 
-            for module in state.store:
-                for signal in state.store[module]:
-                    for symbol in symbols_to_values:
-                        if state.store[module][signal] == symbol:
-                            counterexample[signal] = symbols_to_values[symbol]
+                if model is not None:
+                    # Get all declarations from the model
+                    decls = model.decls()
 
-            print(f"Counterexample: {counterexample}")
+                    if decls:
+                        print(f"\nCounterexample (input values):")
+
+                        # Build a mapping of symbol names to values
+                        symbols_to_values = {}
+                        for item in decls:
+                            symbols_to_values[item.name()] = model[item]
+
+                        # Match signals to their symbolic values
+                        for module in state.store:
+                            for signal in state.store[module]:
+                                signal_expr = state.store[module][signal]
+                                sym_name = None
+                                if isinstance(signal_expr, str):
+                                    sym_name = signal_expr
+                                elif is_bv(signal_expr) and not is_bv_value(signal_expr):
+                                    sym_name = signal_expr.decl().name()
+                                if sym_name and sym_name in symbols_to_values:
+                                    counterexample[f"{module}.{signal}"] = symbols_to_values[sym_name]
+
+                        # Print counterexample
+                        if counterexample:
+                            for sig, val in counterexample.items():
+                                print(f"  {sig} = {val}")
+                        else:
+                            print("  (no matching signals found in store)")
+
+                        # Also print all symbols for debugging
+                        print(f"\nAll symbols in model:")
+                        for sym, val in symbols_to_values.items():
+                            print(f"  {sym} = {val}")
+                    else:
+                        # Model has no free variables - all values are concrete
+                        print(f"\nCounterexample:")
+                        print(f"  The assertion violation occurs with concrete values.")
+                        print(f"  This means the design has a bug that always triggers,")
+                        print(f"  not dependent on specific input values.")
+                        print(f"\n  Path condition constraints:")
+                        path_cond = va.get('path condition', [])
+                        if path_cond:
+                            for i, constraint in enumerate(path_cond):
+                                # Try to get a better representation
+                                constraint_str = str(constraint)
+                                if len(constraint_str) > 100:
+                                    # Try sexpr if available
+                                    if hasattr(constraint, 'sexpr'):
+                                        constraint_str = constraint.sexpr()
+                                        if len(constraint_str) > 150:
+                                            constraint_str = constraint_str[:150] + "... (truncated)"
+                                    else:
+                                        constraint_str = constraint_str[:100] + "... (truncated)"
+                                print(f"    [{i}] {constraint_str}")
+                        else:
+                            print(f"    (no path constraints)")
+
+                    break  # Only process first violation
         else:
-            print("UNSAT - no counterexample found")
+            # No violated_assertions recorded (e.g. preemption path) — derive
+            # counterexample directly from the current path condition.
+            print("Assertion violation detected via preemption (no assertion record).")
+            if engine.solve_pc(state.pc):
+                model = state.pc.model()
+                decls = model.decls()
+                if decls:
+                    symbols_to_values = {d.name(): model[d] for d in decls}
+                    counterexample = {}
+                    for module in state.store:
+                        for signal in state.store[module]:
+                            signal_expr = state.store[module][signal]
+                            sym_name = None
+                            if isinstance(signal_expr, str):
+                                sym_name = signal_expr
+                            elif is_bv(signal_expr) and not is_bv_value(signal_expr):
+                                sym_name = signal_expr.decl().name()
+                            if sym_name and sym_name in symbols_to_values:
+                                counterexample[f"{module}.{signal}"] = symbols_to_values[sym_name]
+                    if counterexample:
+                        print("\nCounterexample (input values):")
+                        for sig, val in counterexample.items():
+                            print(f"  {sig} = {val}")
+                    print("\nAll symbols in model:")
+                    for sym, val in symbols_to_values.items():
+                        print(f"  {sym} = {val}")
+                else:
+                    print("  (model has no free variables — violation is unconditional)")
+            else:
+                print("  (path condition UNSAT — cannot derive counterexample)")

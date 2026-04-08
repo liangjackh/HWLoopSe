@@ -76,3 +76,4 @@ designs/benchmarks/or1200/buggy-or1200/or1200_wb_biu.v
 designs/benchmarks/or1200/buggy-or1200/or1200_wbmux.v
 designs/benchmarks/or1200/buggy-or1200/or1200_xcv_ram32x8d.v
 designs/benchmarks/or1200/buggy-or1200/timescale.v
+designs/benchmarks/or1200/buggy-or1200/or1200_assertions.sv

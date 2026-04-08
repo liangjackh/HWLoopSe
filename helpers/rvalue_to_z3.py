@@ -3,15 +3,57 @@ Z3 expressions and solving for assertion violations."""
 
 import z3
 import re
+import logging
 from z3 import Solver, Int, BitVec, Context, BitVecSort, ExprRef, BitVecRef, If, BitVecVal, And, IntVal, Int2BV, Or, Not, ULT, UGT, Z3Exception, BoolRef
 from z3 import is_and, is_app_of, Z3_OP_EXTRACT, is_eq, is_distinct
 from helpers.rvalue_parser import parse_tokens, tokenize
 from engine.execution_manager import ExecutionManager
-from engine.symbolic_state import SymbolicState
+from engine.symbolic_state import SymbolicState, smt_stats
 import pyslang as ps
 import networkx as nx
 import ast
-from copy import deepcopy
+
+
+def _bool_to_bv(expr, width=1):
+    """Convert a Z3 BoolRef to a BitVecRef of the given width."""
+    if isinstance(expr, BoolRef) and not isinstance(expr, BitVecRef):
+        return If(expr, BitVecVal(1, width), BitVecVal(0, width))
+    return expr
+
+
+def _match_bv_widths(lhs, rhs):
+    """Coerce BoolRef to BitVec if needed, then zero-extend the narrower operand (Verilog semantics)."""
+    # Fast path: both are BitVecRef with same width (most common case)
+    if isinstance(lhs, BitVecRef) and isinstance(rhs, BitVecRef):
+        lw, rw = lhs.size(), rhs.size()
+        if lw == rw:
+            return lhs, rhs
+        if lw < rw:
+            return z3.ZeroExt(rw - lw, lhs), rhs
+        return lhs, z3.ZeroExt(lw - rw, rhs)
+
+    # Convert BoolRef operands to 1-bit BitVec so they can participate in bitwise ops
+    lhs_is_bool = isinstance(lhs, BoolRef) and not isinstance(lhs, BitVecRef)
+    rhs_is_bool = isinstance(rhs, BoolRef) and not isinstance(rhs, BitVecRef)
+
+    if lhs_is_bool and rhs_is_bool:
+        return lhs, rhs
+
+    if lhs_is_bool:
+        target_w = rhs.size() if isinstance(rhs, BitVecRef) else 1
+        lhs = _bool_to_bv(lhs, target_w)
+    elif rhs_is_bool:
+        target_w = lhs.size() if isinstance(lhs, BitVecRef) else 1
+        rhs = _bool_to_bv(rhs, target_w)
+
+    # Reconcile BitVec widths after bool coercion
+    if isinstance(lhs, BitVecRef) and isinstance(rhs, BitVecRef):
+        lw, rw = lhs.size(), rhs.size()
+        if lw < rw:
+            lhs = z3.ZeroExt(rw - lw, lhs)
+        elif rw < lw:
+            rhs = z3.ZeroExt(lw - rw, rhs)
+    return lhs, rhs
 
 
 def parse_verilog_literal(val_str: str):
@@ -112,6 +154,8 @@ def parse_infix_expr_to_z3(expr_str: str, s, m):
                     if lhs is None or rhs is None:
                         continue
 
+                    lhs, rhs = _match_bv_widths(lhs, rhs)
+
                     # Apply the operator
                     op_stripped = op.strip()
                     if op_stripped == '+':
@@ -153,6 +197,11 @@ def parse_infix_expr_to_z3(expr_str: str, s, m):
             # Avoid infinite recursion - if the stored value is the same, return a BitVec
             if sym_val != expr_str:
                 return parse_infix_expr_to_z3(sym_val, s, m)
+    elif m is None and isinstance(s, dict) and expr_str in s:
+        # Flat store dict passed directly (e.g., from milestone checking)
+        sym_val = s[expr_str]
+        if sym_val != expr_str:
+            return parse_infix_expr_to_z3(sym_val, s, m)
 
     # Return None to indicate we couldn't parse it (caller will create a BitVec)
     return None
@@ -317,7 +366,7 @@ class Z3Visitor():
         # issue
         print((left_expr))
         print(node.left)
-        if str(left_expr.sort()) == "Bool" and str(right_expr.sort()) != "Bool":
+        if z3.is_bool(left_expr) and not z3.is_bool(right_expr):
             right_expr = UGT(right_expr, BitVecVal(0, 32)) 
             print(f"Converted Right Expression to Bool: {right_expr}")
 
@@ -383,6 +432,596 @@ def parse_concat_to_Z3(concat, s: SymbolicState, m: ExecutionManager):
     return res
 
 
+_BINARY_OP_DISPATCH = {
+    ps.BinaryOperator.LessThanEqual:      lambda l, r: z3.ULE(l, r),
+    ps.BinaryOperator.LessThan:           lambda l, r: ULT(l, r),
+    ps.BinaryOperator.GreaterThanEqual:   lambda l, r: z3.UGE(l, r),
+    ps.BinaryOperator.GreaterThan:        lambda l, r: UGT(l, r),
+    ps.BinaryOperator.Equality:           lambda l, r: l == r,
+    ps.BinaryOperator.CaseEquality:       lambda l, r: l == r,
+    ps.BinaryOperator.Inequality:         lambda l, r: l != r,
+    ps.BinaryOperator.CaseInequality:     lambda l, r: l != r,
+    ps.BinaryOperator.Add:                lambda l, r: l + r,
+    ps.BinaryOperator.Subtract:           lambda l, r: l - r,
+    ps.BinaryOperator.Multiply:           lambda l, r: l * r,
+    ps.BinaryOperator.Divide:             lambda l, r: z3.UDiv(l, r),
+    ps.BinaryOperator.Mod:                lambda l, r: z3.URem(l, r),
+    ps.BinaryOperator.BinaryAnd:          lambda l, r: l & r,
+    ps.BinaryOperator.BinaryOr:           lambda l, r: l | r,
+    ps.BinaryOperator.BinaryXor:          lambda l, r: l ^ r,
+    ps.BinaryOperator.LogicalShiftLeft:   lambda l, r: l << r,
+    ps.BinaryOperator.LogicalShiftRight:  lambda l, r: z3.LShR(l, r),
+    ps.BinaryOperator.ArithmeticShiftLeft:  lambda l, r: l << r,
+    ps.BinaryOperator.ArithmeticShiftRight: lambda l, r: l >> r,
+}
+
+def _kind_binary_op(e, s, m):
+    from helpers.debug import debug_print
+    lhs = parse_expr_to_Z3(e.left, s, m)
+    rhs = parse_expr_to_Z3(e.right, s, m)
+    op = e.op if hasattr(e, 'op') else None
+    lhs, rhs = _match_bv_widths(lhs, rhs)
+    # Fast path: direct enum dispatch (no str() conversion)
+    if op is not None:
+        handler = _BINARY_OP_DISPATCH.get(op)
+        if handler is not None:
+            return handler(lhs, rhs)
+        # LogicalAnd / LogicalOr need bool coercion
+        if op == ps.BinaryOperator.LogicalAnd:
+            lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
+            rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
+            return And(lhs_bool, rhs_bool)
+        if op == ps.BinaryOperator.LogicalOr:
+            lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
+            rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
+            return Or(lhs_bool, rhs_bool)
+    print(f"[Warning] Unhandled binary operator: {op}")
+    return BitVecVal(0, 32)
+
+
+def _kind_named_value(e, s, m):
+    from helpers.debug import debug_print, DEBUG_ENABLED
+    symbol = getattr(e, 'symbol', None)
+    if symbol is not None:
+        var_name = symbol.name
+        module_name = m.curr_module
+        if DEBUG_ENABLED:
+            debug_print("NamedValue", f"var_name={var_name}, module={module_name}, store keys={list(s.store.get(module_name, {}).keys())}")
+        if module_name in s.store and var_name in s.store[module_name]:
+            sym_val = s.store[module_name][var_name]
+            if isinstance(sym_val, str):
+                parsed_z3 = parse_infix_expr_to_z3(sym_val, s, m)
+                if parsed_z3 is not None:
+                    return parsed_z3
+                else:
+                    return BitVec(sym_val, 32)
+            else:
+                return sym_val
+        else:
+            return BitVec(var_name, 32)
+    return BitVecVal(0, 32)
+
+
+def _kind_integer_literal(e, s, m):
+    from helpers.debug import debug_print, DEBUG_ENABLED
+    val = getattr(e, 'value', 0)
+    if hasattr(val, 'value'):
+        val = val.value
+    if DEBUG_ENABLED:
+        debug_print("IntegerLiteral", f"val={val}")
+    return BitVecVal(int(val), 32)
+
+
+def _kind_conversion(e, s, m):
+    operand = getattr(e, 'operand', None)
+    if operand is not None:
+        return parse_expr_to_Z3(operand, s, m)
+    return BitVecVal(0, 32)
+
+
+def _kind_unary_op(e, s, m):
+    operand = parse_expr_to_Z3(e.operand, s, m)
+    op = e.op if hasattr(e, 'op') else None
+    if op == ps.UnaryOperator.LogicalNot:
+        if hasattr(operand, 'size'):
+            return operand == BitVecVal(0, 32)
+        return Not(operand)
+    elif op == ps.UnaryOperator.BitwiseNot:
+        return ~operand
+    elif op == ps.UnaryOperator.Minus:
+        return -operand
+    elif op == ps.UnaryOperator.Plus:
+        return operand
+    else:
+        print(f"[Warning] Unhandled unary operator: {op}")
+        return BitVecVal(0, 32)
+
+
+def _kind_concatenation(e, s, m):
+    operands = list(e.operands)
+    if not operands:
+        return BitVecVal(0, 32)
+    parts = [parse_expr_to_Z3(op, s, m) for op in operands]
+    sized_parts = []
+    for i, (part, op) in enumerate(zip(parts, operands)):
+        width = 32
+        if hasattr(op, 'type') and hasattr(op.type, 'getBitVectorRange'):
+            try:
+                bvr = op.type.getBitVectorRange()
+                width = bvr.width
+            except Exception:
+                pass
+        elif hasattr(op, 'type') and hasattr(op.type, 'bitWidth'):
+            width = op.type.bitWidth
+        if hasattr(part, 'size'):
+            cur_size = part.size()
+            if cur_size > width:
+                part = z3.Extract(width - 1, 0, part)
+            elif cur_size < width:
+                part = z3.ZeroExt(width - cur_size, part)
+        sized_parts.append(part)
+    result = sized_parts[0]
+    for p in sized_parts[1:]:
+        result = z3.Concat(result, p)
+    if hasattr(result, 'size') and result.size() < 32:
+        result = z3.ZeroExt(32 - result.size(), result)
+    elif hasattr(result, 'size') and result.size() > 32:
+        result = z3.Extract(31, 0, result)
+    return result
+
+
+def _kind_range_select(e, s, m):
+    base = parse_expr_to_Z3(e.value, s, m)
+    left_val = parse_expr_to_Z3(e.left, s, m)
+    right_val = parse_expr_to_Z3(e.right, s, m)
+    try:
+        msb = left_val.as_long() if hasattr(left_val, 'as_long') else int(str(left_val))
+        lsb = right_val.as_long() if hasattr(right_val, 'as_long') else int(str(right_val))
+    except (ValueError, z3.Z3Exception):
+        return BitVecVal(0, 32)
+    if hasattr(base, 'size'):
+        bw = base.size()
+        if msb >= bw:
+            msb = bw - 1
+        if lsb < 0:
+            lsb = 0
+        return z3.Extract(msb, lsb, base)
+    return BitVecVal(0, 32)
+
+
+def _kind_element_select(e, s, m):
+    base = parse_expr_to_Z3(e.value, s, m)
+    selector = parse_expr_to_Z3(e.selector, s, m)
+    try:
+        idx = selector.as_long() if hasattr(selector, 'as_long') else int(str(selector))
+    except (ValueError, z3.Z3Exception):
+        return BitVecVal(0, 32)
+    if hasattr(base, 'size'):
+        bw = base.size()
+        if idx < bw:
+            bit = z3.Extract(idx, idx, base)
+            return z3.ZeroExt(31, bit)
+    return BitVecVal(0, 32)
+
+
+def _kind_replication(e, s, m):
+    count_expr = e.count
+    concat_expr = e.concat
+    try:
+        count = count_expr.value if hasattr(count_expr, 'value') else int(str(count_expr))
+        if hasattr(count, 'value'):
+            count = count.value
+        count = int(count)
+    except (ValueError, AttributeError):
+        count = 1
+    inner = parse_expr_to_Z3(concat_expr, s, m)
+    if count <= 1:
+        return inner
+    if hasattr(concat_expr, 'type') and hasattr(concat_expr.type, 'bitWidth'):
+        inner_width = concat_expr.type.bitWidth
+    elif hasattr(inner, 'size'):
+        inner_width = inner.size()
+    else:
+        inner_width = 32
+    if hasattr(inner, 'size') and inner.size() != inner_width:
+        if inner.size() > inner_width:
+            inner = z3.Extract(inner_width - 1, 0, inner)
+        else:
+            inner = z3.ZeroExt(inner_width - inner.size(), inner)
+    result = inner
+    for _ in range(count - 1):
+        result = z3.Concat(result, inner)
+    total_width = inner_width * count
+    if total_width < 32:
+        result = z3.ZeroExt(32 - total_width, result)
+    elif total_width > 32:
+        result = z3.Extract(31, 0, result)
+    return result
+
+
+def _syntax_parenthesized(e, s, m):
+    from helpers.debug import debug_print, DEBUG_ENABLED
+    inner_expr = getattr(e, 'expression', None)
+    if inner_expr is not None:
+        if DEBUG_ENABLED:
+            debug_print("ParenthesizedExpressionSyntax", f"unwrapping to: {inner_expr}")
+        return parse_expr_to_Z3(inner_expr, s, m)
+    return BitVecVal(0, 32)
+
+
+def _syntax_binary_expression(e, s, m):
+    from helpers.debug import debug_print, DEBUG_ENABLED
+    lhs = parse_expr_to_Z3(e.left, s, m)
+    rhs = parse_expr_to_Z3(e.right, s, m)
+    op_token = str(getattr(e, 'operatorToken', ''))
+    if DEBUG_ENABLED:
+        debug_print("BinaryExpressionSyntax", f"lhs={lhs}, rhs={rhs}, op_token={op_token}")
+    lhs, rhs = _match_bv_widths(lhs, rhs)
+    if "<=" in op_token:
+        return z3.ULE(lhs, rhs)
+    elif ">=" in op_token:
+        return z3.UGE(lhs, rhs)
+    elif "<" in op_token and "=" not in op_token:
+        return ULT(lhs, rhs)
+    elif ">" in op_token and "=" not in op_token:
+        return UGT(lhs, rhs)
+    elif "==" in op_token:
+        return lhs == rhs
+    elif "!=" in op_token:
+        return lhs != rhs
+    elif "+" in op_token:
+        return lhs + rhs
+    elif "-" in op_token:
+        return lhs - rhs
+    elif "*" in op_token:
+        return lhs * rhs
+    elif "/" in op_token:
+        return z3.UDiv(lhs, rhs)
+    elif "%" in op_token:
+        return z3.URem(lhs, rhs)
+    elif "&&" in op_token:
+        lhs_bool = lhs != BitVecVal(0, lhs.size()) if hasattr(lhs, 'size') else lhs
+        rhs_bool = rhs != BitVecVal(0, rhs.size()) if hasattr(rhs, 'size') else rhs
+        return And(lhs_bool, rhs_bool)
+    elif "||" in op_token:
+        lhs_bool = lhs != BitVecVal(0, lhs.size()) if hasattr(lhs, 'size') else lhs
+        rhs_bool = rhs != BitVecVal(0, rhs.size()) if hasattr(rhs, 'size') else rhs
+        return Or(lhs_bool, rhs_bool)
+    elif "&" in op_token:
+        return lhs & rhs
+    elif "|" in op_token:
+        return lhs | rhs
+    elif "^" in op_token:
+        return lhs ^ rhs
+    elif "<<" in op_token:
+        return lhs << rhs
+    elif ">>" in op_token:
+        return z3.LShR(lhs, rhs)
+    else:
+        print(f"[Warning] Unhandled binary operator token: {op_token}")
+        return BitVecVal(0, 32)
+
+
+def _syntax_literal_expression(e, s, m):
+    literal_token = getattr(e, 'literal', None)
+    if literal_token is not None:
+        val_str = str(literal_token)
+        try:
+            if "'" in val_str:
+                parts = val_str.split("'")
+                base_char = parts[1][0] if len(parts[1]) > 0 else 'd'
+                num_str = parts[1][1:].replace('_', '') if len(parts[1]) > 1 else '0'
+                if base_char == 'd':
+                    return BitVecVal(int(num_str), 32)
+                elif base_char == 'h':
+                    return BitVecVal(int(num_str, 16), 32)
+                elif base_char == 'b':
+                    return BitVecVal(int(num_str, 2), 32)
+                elif base_char == 'o':
+                    return BitVecVal(int(num_str, 8), 32)
+            else:
+                return BitVecVal(int(val_str), 32)
+        except ValueError:
+            print(f"[Warning] Could not parse literal: {val_str}")
+            return BitVecVal(0, 32)
+    return BitVecVal(0, 32)
+
+
+def _syntax_integer_vector(e, s, m):
+    literal_token = getattr(e, 'literal', None)
+    if literal_token is not None:
+        val_str = str(literal_token)
+        try:
+            if "'" in val_str:
+                parts = val_str.split("'")
+                try:
+                    declared_width = int(parts[0])
+                except (ValueError, TypeError):
+                    declared_width = 32
+                base_char = parts[1][0] if len(parts[1]) > 0 else 'd'
+                num_str = parts[1][1:].replace('_', '') if len(parts[1]) > 1 else '0'
+                if base_char == 'd':
+                    return BitVecVal(int(num_str), declared_width)
+                elif base_char == 'h':
+                    return BitVecVal(int(num_str, 16), declared_width)
+                elif base_char == 'b':
+                    return BitVecVal(int(num_str, 2), declared_width)
+                elif base_char == 'o':
+                    return BitVecVal(int(num_str, 8), declared_width)
+            else:
+                return BitVecVal(int(val_str), 32)
+        except ValueError:
+            print(f"[Warning] Could not parse literal: {val_str}")
+            return BitVecVal(0, 32)
+    if hasattr(e, 'size') and hasattr(e, 'value'):
+        try:
+            width = int(str(e.size))
+            val_str = str(e.value).replace('_', '')
+            full_str = str(e).strip()
+            if "'" in full_str:
+                base_char = full_str.split("'")[1][0].lower() if len(full_str.split("'")[1]) > 0 else 'd'
+                if base_char == 'h':
+                    return BitVecVal(int(val_str, 16), width)
+                elif base_char == 'b':
+                    return BitVecVal(int(val_str, 2), width)
+                elif base_char == 'o':
+                    return BitVecVal(int(val_str, 8), width)
+                else:
+                    return BitVecVal(int(val_str), width)
+            else:
+                return BitVecVal(int(val_str), width)
+        except (ValueError, TypeError):
+            pass
+    return BitVecVal(0, 32)
+
+
+def _syntax_identifier_name(e, s, m):
+    module_name = m.curr_module
+    if not hasattr(e, "identifier"):
+        var_name = getattr(e, "valueText", getattr(e, "name", None))
+        if var_name is None:
+            return BitVecVal(0, 32)
+    else:
+        var_name = e.identifier.valueText if hasattr(e.identifier, "valueText") else None
+        if var_name is None:
+            var_name = getattr(e.identifier, "name", None)
+    if var_name is None:
+        return BitVecVal(0, 32)
+    if module_name not in s.store or var_name not in s.store[module_name]:
+        return BitVecVal(0, 32)
+    sym_val = s.store[module_name][var_name]
+    if isinstance(sym_val, str):
+        parsed_z3 = parse_infix_expr_to_z3(sym_val, s, m)
+        if parsed_z3 is not None:
+            return parsed_z3
+        else:
+            return BitVec(sym_val, 32)
+    else:
+        return sym_val
+
+
+def _syntax_integer_literal_expr(e, s, m):
+    int_val = IntVal(e.value)
+    return Int2BV(int_val, 32)
+
+
+def _syntax_identifier_select(e, s, m):
+    module_name = m.curr_module
+    base_name = None
+    if hasattr(e, 'identifier'):
+        base_name = getattr(e.identifier, 'valueText', getattr(e.identifier, 'value', str(e.identifier)))
+    idx_str = None
+    is_range = False
+    range_msb = None
+    range_lsb = None
+    if hasattr(e, 'selectors'):
+        for sel in e.selectors:
+            inner = getattr(sel, 'selector', getattr(sel, 'expr', getattr(sel, 'expression', None)))
+            if inner is not None:
+                if inner.__class__.__name__ == 'RangeSelectSyntax':
+                    is_range = True
+                    left_tok = getattr(inner, 'left', None)
+                    right_tok = getattr(inner, 'right', None)
+                    if left_tok is not None and right_tok is not None:
+                        try:
+                            range_msb = int(str(getattr(left_tok, 'value', getattr(left_tok, 'valueText', left_tok))))
+                            range_lsb = int(str(getattr(right_tok, 'value', getattr(right_tok, 'valueText', right_tok))))
+                        except (ValueError, TypeError):
+                            pass
+                    idx_str = f"{range_msb}:{range_lsb}" if range_msb is not None else str(inner)
+                else:
+                    inner_val = getattr(inner, 'value', getattr(inner, 'valueText', None))
+                    if inner_val is not None:
+                        idx_str = str(inner_val)
+                    else:
+                        lit = getattr(inner, 'literal', None)
+                        if lit is not None:
+                            idx_str = str(getattr(lit, 'value', lit))
+                        else:
+                            idx_str = str(inner)
+    if base_name and idx_str is not None:
+        if is_range and range_msb is not None and range_lsb is not None:
+            if module_name in s.store and base_name in s.store[module_name]:
+                sym_val = s.store[module_name][base_name]
+                if isinstance(sym_val, str):
+                    lit_val, lit_width = parse_verilog_literal(sym_val)
+                    if lit_val is not None:
+                        mask = ((1 << (range_msb - range_lsb + 1)) - 1)
+                        extracted = (lit_val >> range_lsb) & mask
+                        return BitVecVal(extracted, range_msb - range_lsb + 1)
+                    return BitVec(f"{sym_val}[{range_msb}:{range_lsb}]", range_msb - range_lsb + 1)
+                elif hasattr(sym_val, 'size'):
+                    bv_size = sym_val.size()
+                    actual_msb = min(range_msb, bv_size - 1)
+                    return z3.Extract(actual_msb, range_lsb, sym_val)
+            return BitVecVal(0, range_msb - range_lsb + 1)
+        full_name = f"{base_name}[{idx_str}]"
+        if module_name in s.store and full_name in s.store[module_name]:
+            sym_val = s.store[module_name][full_name]
+            if isinstance(sym_val, str):
+                lit_val, lit_width = parse_verilog_literal(sym_val)
+                if lit_val is not None:
+                    return BitVecVal(lit_val, 32)
+                return BitVec(sym_val, 32)
+            return sym_val
+        elif module_name in s.store and base_name in s.store[module_name]:
+            sym_val = s.store[module_name][base_name]
+            try:
+                idx_int = int(idx_str)
+            except (ValueError, TypeError):
+                idx_int = None
+            if isinstance(sym_val, str):
+                lit_val, lit_width = parse_verilog_literal(sym_val)
+                if lit_val is not None:
+                    if idx_int is not None:
+                        bit = (lit_val >> idx_int) & 1
+                        return BitVecVal(bit, 32)
+                    return BitVecVal(lit_val, 32)
+                return BitVec(f"{sym_val}[{idx_str}]", 32)
+            elif hasattr(sym_val, 'size') and idx_int is not None:
+                bv_size = sym_val.size()
+                if idx_int < bv_size:
+                    bit = z3.Extract(idx_int, idx_int, sym_val)
+                    return z3.ZeroExt(31, bit)
+                else:
+                    return BitVecVal(0, 32)
+            return sym_val
+        else:
+            return BitVec(full_name, 32)
+    return BitVecVal(0, 32)
+
+
+def _syntax_multiple_concat(e, s, m):
+    count_expr = getattr(e, 'expression', None)
+    concatenation = getattr(e, 'concatenation', None)
+    count_val = 1
+    if count_expr is not None:
+        count_raw = getattr(count_expr, 'value', getattr(count_expr, 'literal', None))
+        if count_raw is not None:
+            count_raw = getattr(count_raw, 'value', count_raw)
+            try:
+                count_val = int(str(count_raw))
+            except (ValueError, TypeError):
+                count_val = 32
+    if concatenation is not None:
+        inner_exprs = getattr(concatenation, 'expressions', getattr(concatenation, 'items', None))
+        if inner_exprs:
+            inner_val = 0
+            inner_bits = 1
+            for inner_e in inner_exprs:
+                if hasattr(inner_e, 'literal'):
+                    lit_str = str(getattr(inner_e.literal, 'value', inner_e.literal))
+                    lit_val, lit_width = parse_verilog_literal(lit_str)
+                    if lit_val is not None:
+                        inner_val = lit_val
+                        inner_bits = lit_width if lit_width else 1
+            result_val = 0
+            for i in range(count_val):
+                result_val = (result_val << inner_bits) | (inner_val & ((1 << inner_bits) - 1))
+            return BitVecVal(result_val, 32)
+    return BitVecVal(0, 32)
+
+
+def _syntax_concatenation(e, s, m):
+    expressions = getattr(e, 'expressions', getattr(e, 'items', []))
+    if not expressions:
+        return BitVecVal(0, 32)
+    parts = []
+    for sub_expr in expressions:
+        if sub_expr.__class__.__name__ == "Token":
+            continue
+        part_z3 = parse_expr_to_Z3(sub_expr, s, m)
+        if isinstance(part_z3, BoolRef) and not isinstance(part_z3, BitVecRef):
+            part_z3 = _bool_to_bv(part_z3, 1)
+        elif not isinstance(part_z3, BitVecRef):
+            try:
+                part_z3 = BitVecVal(int(part_z3), 32)
+            except (TypeError, ValueError):
+                part_z3 = BitVecVal(0, 32)
+        parts.append(part_z3)
+    if len(parts) == 0:
+        return BitVecVal(0, 32)
+    if len(parts) == 1:
+        return parts[0]
+    result = parts[0]
+    for p in parts[1:]:
+        result = z3.Concat(result, p)
+    result_size = result.size() if hasattr(result, 'size') else 32
+    if result_size > 32:
+        result = z3.Extract(31, 0, result)
+    elif result_size < 32:
+        result = z3.ZeroExt(32 - result_size, result)
+    return result
+
+
+def _syntax_token(e, s, m):
+    return BitVecVal(0, 32)
+
+
+def _syntax_prefix_unary(e, s, m):
+    operand_node = getattr(e, 'operand', None)
+    if operand_node is None:
+        return BitVecVal(0, 32)
+    operand = parse_expr_to_Z3(operand_node, s, m)
+    op_token = getattr(e, 'operatorToken', getattr(e, 'operator', None))
+    op_str = str(getattr(op_token, 'valueText', getattr(op_token, 'kind', ''))) if op_token else ''
+    if '!' in op_str or 'Not' in op_str or 'LogicalNot' in str(getattr(e, 'kind', '')):
+        if hasattr(operand, 'size'):
+            return operand == BitVecVal(0, operand.size())
+        return Not(operand)
+    elif '~' in op_str or 'BitwiseNot' in str(getattr(e, 'kind', '')):
+        return ~operand
+    elif '-' in op_str and '+' not in op_str:
+        return -operand
+    else:
+        if hasattr(operand, 'size'):
+            return operand == BitVecVal(0, operand.size())
+        return Not(operand)
+
+
+def _syntax_conditional_pattern(e, s, m):
+    expr = getattr(e, 'expr', getattr(e, 'expression', None))
+    if expr is not None:
+        return parse_expr_to_Z3(expr, s, m)
+    return BitVecVal(0, 32)
+
+
+
+# ---------------------------------------------------------------------------
+# Dispatch tables (built after all handler functions are defined)
+# ---------------------------------------------------------------------------
+_KIND_DISPATCH = None  # populated below after ps is imported at module level
+
+def _build_dispatch_tables():
+    global _KIND_DISPATCH
+    _KIND_DISPATCH = {
+        ps.ExpressionKind.BinaryOp:       _kind_binary_op,
+        ps.ExpressionKind.NamedValue:     _kind_named_value,
+        ps.ExpressionKind.IntegerLiteral: _kind_integer_literal,
+        ps.ExpressionKind.Conversion:     _kind_conversion,
+        ps.ExpressionKind.UnaryOp:        _kind_unary_op,
+        ps.ExpressionKind.Concatenation:  _kind_concatenation,
+        ps.ExpressionKind.RangeSelect:    _kind_range_select,
+        ps.ExpressionKind.ElementSelect:  _kind_element_select,
+        ps.ExpressionKind.Replication:    _kind_replication,
+    }
+
+_SYNTAX_DISPATCH = {
+    "ParenthesizedExpressionSyntax":        _syntax_parenthesized,
+    "BinaryExpressionSyntax":               _syntax_binary_expression,
+    "LiteralExpressionSyntax":              _syntax_literal_expression,
+    "IntegerVectorExpressionSyntax":        _syntax_integer_vector,
+    "IdentifierNameSyntax":                 _syntax_identifier_name,
+    "IntegerLiteralExpressionSyntax":       _syntax_integer_literal_expr,
+    "IdentifierSelectNameSyntax":           _syntax_identifier_select,
+    "MultipleConcatenationExpressionSyntax": _syntax_multiple_concat,
+    "ConcatenationExpressionSyntax":        _syntax_concatenation,
+    "Token":                                _syntax_token,
+    "PrefixUnaryExpressionSyntax":          _syntax_prefix_unary,
+    "ConditionalPatternSyntax":             _syntax_conditional_pattern,
+}
+
+
 def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManager):
     """Converts a Verilog Expression to a Z3 expression.
 
@@ -399,217 +1038,37 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
     Returns:
         Z3 expression (BitVecRef, BoolRef, etc.)
     """
-    #print(f"[DEBUG parse_expr_to_Z3] expr: {e}, type: {type(e)}, class: {e.__class__.__name__}")
-    if hasattr(e, 'kind'):
-        print(f"[DEBUG parse_expr_to_Z3] kind: {e.kind}")
-    if hasattr(e, 'op'):
-        print(f"[DEBUG parse_expr_to_Z3] op: {e.op}")
+    # Fast path 1: ExpressionKind dispatch (semantic elaborated nodes)
+    kind = getattr(e, 'kind', None)
+    if kind is not None:
+        # Lazily build the kind dispatch table on first call
+        global _KIND_DISPATCH
+        if _KIND_DISPATCH is None:
+            _build_dispatch_tables()
+        handler = _KIND_DISPATCH.get(kind)
+        if handler is not None:
+            return handler(e, s, m)
 
-    # Handle PySlang semantic expressions FIRST (ExpressionKind)
-    if hasattr(e, 'kind'):
-        kind = e.kind
-
-        # Handle BinaryOp semantic expressions (e.g., out <= 2)
-        if kind == ps.ExpressionKind.BinaryOp:
-            lhs = parse_expr_to_Z3(e.left, s, m)
-            rhs = parse_expr_to_Z3(e.right, s, m)
-            op = str(e.op) if hasattr(e, 'op') else ""
-            print(f"[DEBUG BinaryOp] lhs={lhs}, rhs={rhs}, op={op}")
-
-            # Map PySlang binary operators to Z3
-            if "LessThanEqual" in op or "LessEq" in op:
-                return z3.ULE(lhs, rhs)
-            elif "LessThan" in op and "Equal" not in op:
-                return ULT(lhs, rhs)
-            elif "GreaterThanEqual" in op or "GreaterEq" in op:
-                return z3.UGE(lhs, rhs)
-            elif "GreaterThan" in op and "Equal" not in op:
-                return UGT(lhs, rhs)
-            elif "Equality" in op or op == "BinaryOperator.Eq":
-                return lhs == rhs
-            elif "Inequality" in op or "NotEq" in op:
-                return lhs != rhs
-            elif "Add" in op or "Plus" in op:
-                return lhs + rhs
-            elif "Subtract" in op or "Sub" in op or "Minus" in op:
-                return lhs - rhs
-            elif "Multiply" in op or "Mul" in op or "Times" in op:
-                return lhs * rhs
-            elif "Divide" in op or "Div" in op:
-                return z3.UDiv(lhs, rhs)
-            elif "Mod" in op:
-                return z3.URem(lhs, rhs)
-            elif "BinaryAnd" in op:
-                return lhs & rhs
-            elif "BinaryOr" in op:
-                return lhs | rhs
-            elif "BinaryXor" in op or "Xor" in op:
-                return lhs ^ rhs
-            elif "LogicalAnd" in op or "Land" in op:
-                lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
-                rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
-                return And(lhs_bool, rhs_bool)
-            elif "LogicalOr" in op or "Lor" in op:
-                lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
-                rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
-                return Or(lhs_bool, rhs_bool)
-            elif "LogicalShiftLeft" in op or "Sll" in op:
-                return lhs << rhs
-            elif "LogicalShiftRight" in op or "Srl" in op:
-                return z3.LShR(lhs, rhs)
-            elif "ArithmeticShiftRight" in op or "Sra" in op:
-                return lhs >> rhs
-            else:
-                print(f"[Warning] Unhandled binary operator: {op}")
-                return BitVecVal(0, 32)
-
-        # Handle NamedValue semantic expressions (variable references)
-        elif kind == ps.ExpressionKind.NamedValue:
-            symbol = getattr(e, 'symbol', None)
-            if symbol is not None:
-                var_name = symbol.name
-                module_name = m.curr_module
-                print(f"[DEBUG NamedValue] var_name={var_name}, module={module_name}, store keys={list(s.store.get(module_name, {}).keys())}")
-                if module_name in s.store and var_name in s.store[module_name]:
-                    sym_val = s.store[module_name][var_name]
-                    if isinstance(sym_val, str):
-                        # Try to parse as Verilog literal or infix expression
-                        parsed_z3 = parse_infix_expr_to_z3(sym_val, s, m)
-                        if parsed_z3 is not None:
-                            return parsed_z3
-                        else:
-                            return BitVec(sym_val, 32)
-                    else:
-                        return sym_val
-                else:
-                    # Variable not in store, create a fresh symbolic variable
-                    return BitVec(var_name, 32)
-            return BitVecVal(0, 32)
-
-        # Handle IntegerLiteral semantic expressions
-        elif kind == ps.ExpressionKind.IntegerLiteral:
-            val = getattr(e, 'value', 0)
-            if hasattr(val, 'value'):
-                val = val.value
-            print(f"[DEBUG IntegerLiteral] val={val}")
-            return BitVecVal(int(val), 32)
-
-        # Handle Conversion expressions (type casts)
-        elif kind == ps.ExpressionKind.Conversion:
-            operand = getattr(e, 'operand', None)
-            if operand is not None:
-                return parse_expr_to_Z3(operand, s, m)
-            return BitVecVal(0, 32)
-
-        # Handle UnaryOp semantic expressions
-        elif kind == ps.ExpressionKind.UnaryOp:
-            operand = parse_expr_to_Z3(e.operand, s, m)
-            op = str(e.op) if hasattr(e, 'op') else ""
-            if "Not" in op or "LogicalNot" in op:
-                if hasattr(operand, 'size'):
-                    return operand == BitVecVal(0, 32)
-                return Not(operand)
-            elif "BitwiseNot" in op:
-                return ~operand
-            elif "Minus" in op:
-                return -operand
-            elif "Plus" in op:
-                return operand
-            else:
-                print(f"[Warning] Unhandled unary operator: {op}")
-                return BitVecVal(0, 32)
-
-    # Handle PySlang SYNTAX nodes (SyntaxKind) - these are different from semantic ExpressionKind
+    # Fast path 2: class name dispatch (syntax parse-tree nodes)
     class_name = e.__class__.__name__
+    handler = _SYNTAX_DISPATCH.get(class_name)
+    if handler is not None:
+        return handler(e, s, m)
 
-    # Handle ParenthesizedExpressionSyntax - unwrap and recurse
-    if class_name == "ParenthesizedExpressionSyntax":
-        inner_expr = getattr(e, 'expression', None)
-        if inner_expr is not None:
-            print(f"[DEBUG ParenthesizedExpressionSyntax] unwrapping to: {inner_expr}")
-            return parse_expr_to_Z3(inner_expr, s, m)
-        return BitVecVal(0, 32)
+    # Slow fallback: legacy Z3 expression checks and SyntaxKind string matching
+    return _fallback_dispatch(e, s, m)
 
-    # Handle BinaryExpressionSyntax
-    if class_name == "BinaryExpressionSyntax":
-        lhs = parse_expr_to_Z3(e.left, s, m)
-        rhs = parse_expr_to_Z3(e.right, s, m)
-        op_token = str(getattr(e, 'operatorToken', ''))
-        print(f"[DEBUG BinaryExpressionSyntax] lhs={lhs}, rhs={rhs}, op_token={op_token}")
 
-        if "<=" in op_token:
-            return z3.ULE(lhs, rhs)
-        elif ">=" in op_token:
-            return z3.UGE(lhs, rhs)
-        elif "<" in op_token and "=" not in op_token:
-            return ULT(lhs, rhs)
-        elif ">" in op_token and "=" not in op_token:
-            return UGT(lhs, rhs)
-        elif "==" in op_token:
-            return lhs == rhs
-        elif "!=" in op_token:
-            return lhs != rhs
-        elif "+" in op_token:
-            return lhs + rhs
-        elif "-" in op_token:
-            return lhs - rhs
-        elif "*" in op_token:
-            return lhs * rhs
-        elif "/" in op_token:
-            return z3.UDiv(lhs, rhs)
-        elif "%" in op_token:
-            return z3.URem(lhs, rhs)
-        elif "&&" in op_token:
-            lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
-            rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
-            return And(lhs_bool, rhs_bool)
-        elif "||" in op_token:
-            lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
-            rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
-            return Or(lhs_bool, rhs_bool)
-        elif "&" in op_token:
-            return lhs & rhs
-        elif "|" in op_token:
-            return lhs | rhs
-        elif "^" in op_token:
-            return lhs ^ rhs
-        elif "<<" in op_token:
-            return lhs << rhs
-        elif ">>" in op_token:
-            return z3.LShR(lhs, rhs)
-        else:
-            print(f"[Warning] Unhandled binary operator token: {op_token}")
-            return BitVecVal(0, 32)
+def _fallback_dispatch(e, s, m):
+    """Fallback handler for nodes not caught by the dispatch tables.
 
-    # Handle LiteralExpressionSyntax (integer literals)
-    if class_name == "LiteralExpressionSyntax" or class_name == "IntegerVectorExpressionSyntax":
-        # Try to get the literal value
-        literal_token = getattr(e, 'literal', None)
-        if literal_token is not None:
-            val_str = str(literal_token)
-            # Parse Verilog integer literals (e.g., "2", "32'd5", "8'hFF")
-            try:
-                if "'" in val_str:
-                    # Handle sized literals like 32'd5
-                    parts = val_str.split("'")
-                    base_char = parts[1][0] if len(parts[1]) > 0 else 'd'
-                    num_str = parts[1][1:] if len(parts[1]) > 1 else '0'
-                    if base_char == 'd':
-                        return BitVecVal(int(num_str), 32)
-                    elif base_char == 'h':
-                        return BitVecVal(int(num_str, 16), 32)
-                    elif base_char == 'b':
-                        return BitVecVal(int(num_str, 2), 32)
-                    elif base_char == 'o':
-                        return BitVecVal(int(num_str, 8), 32)
-                else:
-                    return BitVecVal(int(val_str), 32)
-            except ValueError:
-                print(f"[Warning] Could not parse literal: {val_str}")
-                return BitVecVal(0, 32)
-        return BitVecVal(0, 32)
+    Handles: Z3 native expressions (is_eq, is_and, is_app_of),
+    SyntaxKind string-based dispatch, and any remaining class name checks.
+    """
+    from helpers.debug import debug_print
+    from z3 import is_bool
 
-    # Legacy handling for syntax nodes and Z3 expressions below
+    # Legacy handling for Z3 expressions and tokenized fallback
     tokens_list = parse_tokens(tokenize(e, s, m))
     new_constraint = evaluate_expr(tokens_list, s, m)
     new_constants = []
@@ -618,7 +1077,6 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
     if is_and(e):
         lhs = parse_expr_to_Z3(e.left, s, m)
         rhs = parse_expr_to_Z3(e.right, s, m)
-        # Return the AND of the two Z3 expressions without modifying path condition
         return And(lhs, rhs)
     elif is_app_of(e, Z3_OP_EXTRACT):
         part_sel_expr = f"{e.var.name}[{e.msb}:{e.lsb}]"
@@ -627,14 +1085,11 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
         if not e.var.scope is None:
             module_name = e.scope.labellist[0].name
         sym_val = s.store[module_name][e.var.name]
-        # Try to parse as Verilog literal (e.g., 1'b0, 32'd5, 8'hFF)
         lit_val, lit_width = parse_verilog_literal(sym_val)
         if lit_val is not None:
             int_val = IntVal(lit_val)
             return Int2BV(int_val, 32)
         else:
-            # Look up the symbolic value without modifying the store
-            # If part_sel_expr doesn't exist, use the base variable's symbolic value
             if part_sel_expr in s.store[module_name]:
                 sym_val = s.store[module_name][part_sel_expr]
             elif "[" in part_sel_expr:
@@ -644,180 +1099,253 @@ def parse_expr_to_Z3(e: ps.ExpressionSyntax, s: SymbolicState, m: ExecutionManag
             else:
                 sym_val = part_sel_expr
             return BitVec(sym_val, 32)
-    elif e.__class__.__name__ == "IdentifierNameSyntax":
-        module_name = m.curr_module  # Default to current module
-        # PySlang 7.0 IdentifierNameSyntax uses .identifier.valueText for the name
-        # Access the identifier name through .identifier attribute
-        if not hasattr(e, "identifier"):
-            # Fallback: try to get name directly if identifier attribute doesn't exist
-            var_name = getattr(e, "valueText", getattr(e, "name", None))
-            if var_name is None:
-                return BitVecVal(0, 32)  # Return zero if we can't get the name
-        else:
-            var_name = e.identifier.valueText if hasattr(e.identifier, "valueText") else None
-            if var_name is None:
-                var_name = getattr(e.identifier, "name", None)
-
-        if var_name is None:
-            return BitVecVal(0, 32)  # Return zero if we can't get the name
-
-        is_reg = var_name in m.reg_decls if hasattr(m, "reg_decls") else False
-
-        # Check if variable exists in store, if not return zero
-        if module_name not in s.store or var_name not in s.store[module_name]:
-            return BitVecVal(0, 32)
-
-        sym_val = s.store[module_name][var_name]
-        # Try to parse as Verilog literal or infix expression
-        parsed_z3 = parse_infix_expr_to_z3(sym_val, s, m)
-        if parsed_z3 is not None:
-            return parsed_z3
-        else:
-            return BitVec(sym_val, 32)
-    elif e.__class__.__name__ == "IntegerLiteralExpressionSyntax":
-        int_val = IntVal(e.value)
-        return Int2BV(int_val, 32)
     elif is_eq(e):
         lhs = parse_expr_to_Z3(e.left, s, m)
         rhs = parse_expr_to_Z3(e.right, s, m)
-        # Return the equality expression without modifying path condition
+        lhs, rhs = _match_bv_widths(lhs, rhs)
         return (lhs == rhs)
     elif is_distinct(e):
         lhs = parse_expr_to_Z3(e.left, s, m)
         rhs = parse_expr_to_Z3(e.right, s, m)
-        # Return the inequality expression without modifying path condition
-        # Handle type conversion if needed
+        lhs, rhs = _match_bv_widths(lhs, rhs)
         if isinstance(rhs, z3.z3.BitVecRef) and not isinstance(lhs, z3.z3.BitVecRef):
             c = If(lhs, BitVecVal(1, 32), BitVecVal(0, 32))
             return (c != rhs)
         else:
             return (lhs != rhs)
 
-    # Handle PySlang semantic expressions (ExpressionKind)
+    # SyntaxKind string-based dispatch (nodes that have .kind but it's a SyntaxKind)
     if hasattr(e, 'kind'):
         kind = e.kind
+        kind_str = str(kind)
 
-        # Handle BinaryOp semantic expressions (e.g., out <= 2)
-        if kind == ps.ExpressionKind.BinaryOp:
-            lhs = parse_expr_to_Z3(e.left, s, m)
-            rhs = parse_expr_to_Z3(e.right, s, m)
-            op = str(e.op) if hasattr(e, 'op') else ""
-
-            # Map PySlang binary operators to Z3
-            if op == "BinaryOperator.LessThanEqual" or "LessEq" in op:
-                return z3.ULE(lhs, rhs)
-            elif op == "BinaryOperator.LessThan" or "LessThan" in op:
-                return ULT(lhs, rhs)
-            elif op == "BinaryOperator.GreaterThanEqual" or "GreaterEq" in op:
-                return z3.UGE(lhs, rhs)
-            elif op == "BinaryOperator.GreaterThan" or "GreaterThan" in op:
-                return UGT(lhs, rhs)
-            elif op == "BinaryOperator.Equality" or "Eq" in op:
-                return lhs == rhs
-            elif op == "BinaryOperator.Inequality" or "NotEq" in op:
-                return lhs != rhs
-            elif op == "BinaryOperator.Add" or "Add" in op or "Plus" in op:
-                return lhs + rhs
-            elif op == "BinaryOperator.Subtract" or "Sub" in op or "Minus" in op:
-                return lhs - rhs
-            elif op == "BinaryOperator.Multiply" or "Mul" in op or "Times" in op:
-                return lhs * rhs
-            elif op == "BinaryOperator.Divide" or "Div" in op:
-                return z3.UDiv(lhs, rhs)
-            elif op == "BinaryOperator.Mod" or "Mod" in op:
-                return z3.URem(lhs, rhs)
-            elif op == "BinaryOperator.BinaryAnd" or "And" in op:
-                return lhs & rhs
-            elif op == "BinaryOperator.BinaryOr" or "Or" in op:
-                return lhs | rhs
-            elif op == "BinaryOperator.BinaryXor" or "Xor" in op:
-                return lhs ^ rhs
-            elif op == "BinaryOperator.LogicalAnd" or "Land" in op:
-                # Convert to bool if needed
-                lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
-                rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
-                return And(lhs_bool, rhs_bool)
-            elif op == "BinaryOperator.LogicalOr" or "Lor" in op:
-                lhs_bool = lhs != BitVecVal(0, 32) if hasattr(lhs, 'size') else lhs
-                rhs_bool = rhs != BitVecVal(0, 32) if hasattr(rhs, 'size') else rhs
-                return Or(lhs_bool, rhs_bool)
-            elif op == "BinaryOperator.LogicalShiftLeft" or "Sll" in op:
-                return lhs << rhs
-            elif op == "BinaryOperator.LogicalShiftRight" or "Srl" in op:
-                return z3.LShR(lhs, rhs)
-            elif op == "BinaryOperator.ArithmeticShiftRight" or "Sra" in op:
-                return lhs >> rhs
-            else:
-                print(f"[Warning] Unhandled binary operator: {op}")
-                return BitVecVal(0, 32)
-
-        # Handle NamedValue semantic expressions (variable references)
-        elif kind == ps.ExpressionKind.NamedValue:
-            symbol = getattr(e, 'symbol', None)
-            if symbol is not None:
-                var_name = symbol.name
-                module_name = m.curr_module
-                if module_name in s.store and var_name in s.store[module_name]:
-                    sym_val = s.store[module_name][var_name]
-                    if isinstance(sym_val, str):
-                        # Try to parse as Verilog literal (e.g., 1'b0, 32'd5, 8'hFF)
-                        lit_val, lit_width = parse_verilog_literal(sym_val)
-                        if lit_val is not None:
-                            return BitVecVal(lit_val, 32)
-                        else:
-                            return BitVec(sym_val, 32)
-                    else:
-                        return sym_val
+        if 'SyntaxKind' in kind_str:
+            class_name = e.__class__.__name__
+            if class_name == "PrefixUnaryExpressionSyntax":
+                operand_node = getattr(e, 'operand', None)
+                if operand_node is None:
+                    return BitVecVal(0, 32)
+                operand = parse_expr_to_Z3(operand_node, s, m)
+                if 'LogicalNot' in kind_str:
+                    if hasattr(operand, 'size'):
+                        return operand == BitVecVal(0, operand.size())
+                    return Not(operand)
+                elif 'BitwiseNot' in kind_str:
+                    return ~operand
+                elif 'UnaryMinus' in kind_str:
+                    return -operand
                 else:
-                    # Variable not in store, create a fresh symbolic variable
+                    if hasattr(operand, 'size'):
+                        return operand == BitVecVal(0, operand.size())
+                    return Not(operand)
+
+            elif class_name == "BinaryExpressionSyntax":
+                lhs_node = getattr(e, 'left', None)
+                rhs_node = getattr(e, 'right', None)
+                if lhs_node is None or rhs_node is None:
+                    return BitVecVal(0, 32)
+                lhs = parse_expr_to_Z3(lhs_node, s, m)
+                rhs = parse_expr_to_Z3(rhs_node, s, m)
+                if 'LessThanEqual' in kind_str and m is not None and getattr(m, 'curr_module', '') == 'u_assert':
+                    print(f"[LESSEQ-SYNTAX-DEBUG] lhs={lhs} rhs={rhs} kind_str={kind_str}")
+                    print(f"[LESSEQ-SYNTAX-DEBUG]   lhs_node={lhs_node} type={type(lhs_node).__name__} kind={getattr(lhs_node, 'kind', '?')}")
+                    print(f"[LESSEQ-SYNTAX-DEBUG]   rhs_node={rhs_node} type={type(rhs_node).__name__} kind={getattr(rhs_node, 'kind', '?')}")
+                    if hasattr(rhs_node, 'value'):
+                        print(f"[LESSEQ-SYNTAX-DEBUG]   rhs_node.value={rhs_node.value}")
+                    if hasattr(rhs_node, 'literal'):
+                        print(f"[LESSEQ-SYNTAX-DEBUG]   rhs_node.literal={rhs_node.literal} value={getattr(rhs_node.literal, 'value', 'N/A')}")
+                    if hasattr(rhs_node, 'constantValue'):
+                        print(f"[LESSEQ-SYNTAX-DEBUG]   rhs_node.constantValue={rhs_node.constantValue}")
+
+                def _to_bv(x):
+                    if hasattr(x, 'size'):
+                        return x
+                    if is_bool(x):
+                        return If(x, BitVecVal(1, 32), BitVecVal(0, 32))
+                    return BitVecVal(0, 32)
+
+                if 'LogicalAnd' in kind_str:
+                    lb = lhs != BitVecVal(0, lhs.size()) if hasattr(lhs, 'size') else lhs
+                    rb = rhs != BitVecVal(0, rhs.size()) if hasattr(rhs, 'size') else rhs
+                    return And(lb, rb)
+                elif 'LogicalOr' in kind_str:
+                    lb = lhs != BitVecVal(0, lhs.size()) if hasattr(lhs, 'size') else lhs
+                    rb = rhs != BitVecVal(0, rhs.size()) if hasattr(rhs, 'size') else rhs
+                    return Or(lb, rb)
+                elif 'Equality' in kind_str:
+                    return _to_bv(lhs) == _to_bv(rhs)
+                elif 'Inequality' in kind_str:
+                    return _to_bv(lhs) != _to_bv(rhs)
+                elif 'GreaterThanEqual' in kind_str:
+                    return UGE(_to_bv(lhs), _to_bv(rhs))
+                elif 'GreaterThan' in kind_str:
+                    return UGT(_to_bv(lhs), _to_bv(rhs))
+                elif 'LessThanEqual' in kind_str:
+                    return ULE(_to_bv(lhs), _to_bv(rhs))
+                elif 'LessThan' in kind_str:
+                    return ULT(_to_bv(lhs), _to_bv(rhs))
+                elif 'Add' in kind_str:
+                    return _to_bv(lhs) + _to_bv(rhs)
+                elif 'Subtract' in kind_str:
+                    return _to_bv(lhs) - _to_bv(rhs)
+                elif 'Multiply' in kind_str:
+                    return _to_bv(lhs) * _to_bv(rhs)
+                elif 'ShiftLeft' in kind_str:
+                    return _to_bv(lhs) << _to_bv(rhs)
+                elif 'ShiftRight' in kind_str:
+                    return LShR(_to_bv(lhs), _to_bv(rhs))
+                elif 'BitwiseAnd' in kind_str:
+                    return _to_bv(lhs) & _to_bv(rhs)
+                elif 'BitwiseOr' in kind_str:
+                    return _to_bv(lhs) | _to_bv(rhs)
+                elif 'BitwiseXor' in kind_str:
+                    return _to_bv(lhs) ^ _to_bv(rhs)
+                elif 'NonblockingAssignment' in kind_str or 'Assignment' in kind_str:
+                    return rhs
+                else:
+                    print(f"[Warning] Unhandled binary syntax kind: {kind_str}")
+                    return BitVecVal(0, 32)
+
+            elif class_name == "IdentifierNameSyntax":
+                module_name = m.curr_module
+                var_name = None
+                if hasattr(e, "identifier"):
+                    var_name = getattr(e.identifier, 'valueText', getattr(e.identifier, 'value', None))
+                if var_name is None:
+                    var_name = getattr(e, "valueText", getattr(e, "name", None))
+                if var_name is None:
+                    return BitVecVal(0, 32)
+                if module_name not in s.store or var_name not in s.store[module_name]:
                     return BitVec(var_name, 32)
-            return BitVecVal(0, 32)
+                sym_val = s.store[module_name][var_name]
+                if isinstance(sym_val, str):
+                    parsed_z3 = parse_infix_expr_to_z3(sym_val, s, m)
+                    if parsed_z3 is not None:
+                        return parsed_z3
+                    return BitVec(sym_val, 32)
+                return sym_val
 
-        # Handle IntegerLiteral semantic expressions
-        elif kind == ps.ExpressionKind.IntegerLiteral:
-            val = getattr(e, 'value', 0)
-            if hasattr(val, 'value'):
-                val = val.value
-            return BitVecVal(int(val), 32)
-
-        # Handle Conversion expressions (type casts)
-        elif kind == ps.ExpressionKind.Conversion:
-            operand = getattr(e, 'operand', None)
-            if operand is not None:
-                return parse_expr_to_Z3(operand, s, m)
-            return BitVecVal(0, 32)
-
-        # Handle UnaryOp semantic expressions
-        elif kind == ps.ExpressionKind.UnaryOp:
-            operand = parse_expr_to_Z3(e.operand, s, m)
-            op = str(e.op) if hasattr(e, 'op') else ""
-            if "Not" in op or "LogicalNot" in op:
-                if hasattr(operand, 'size'):
-                    return operand == BitVecVal(0, 32)
-                return Not(operand)
-            elif "BitwiseNot" in op:
-                return ~operand
-            elif "Minus" in op:
-                return -operand
-            elif "Plus" in op:
-                return operand
-            else:
-                print(f"[Warning] Unhandled unary operator: {op}")
+            elif class_name == "ConditionalPatternSyntax":
+                expr = getattr(e, 'expr', getattr(e, 'expression', None))
+                if expr is not None:
+                    return parse_expr_to_Z3(expr, s, m)
                 return BitVecVal(0, 32)
 
-    # Default: return a BitVecVal of 0 if expression type is not recognized
+            elif class_name == "ParenthesizedExpressionSyntax":
+                inner = getattr(e, 'expression', getattr(e, 'expr', None))
+                if inner is not None:
+                    return parse_expr_to_Z3(inner, s, m)
+                return BitVecVal(0, 32)
+
+            elif class_name == "IntegerLiteralExpressionSyntax":
+                int_val = IntVal(e.value)
+                return Int2BV(int_val, 32)
+
+            elif class_name == "IdentifierSelectNameSyntax":
+                return _syntax_identifier_select(e, s, m)
+
+            elif class_name == "MultipleConcatenationExpressionSyntax":
+                return _syntax_multiple_concat(e, s, m)
+
+            elif class_name == "ConcatenationExpressionSyntax":
+                return _syntax_concatenation(e, s, m)
+
+            elif class_name == "Token":
+                return BitVecVal(0, 32)
+
+            else:
+                print(f"[Warning] Unrecognized SyntaxKind expression: {e.__class__.__name__} kind={kind_str}")
+                return BitVecVal(0, 32)
+
+        # ExpressionKind fallback (duplicate of Phase 1, for nodes that slipped through)
+        elif kind == ps.ExpressionKind.BinaryOp:
+            return _kind_binary_op(e, s, m)
+        elif kind == ps.ExpressionKind.NamedValue:
+            return _kind_named_value(e, s, m)
+        elif kind == ps.ExpressionKind.IntegerLiteral:
+            return _kind_integer_literal(e, s, m)
+        elif kind == ps.ExpressionKind.Conversion:
+            return _kind_conversion(e, s, m)
+        elif kind == ps.ExpressionKind.UnaryOp:
+            return _kind_unary_op(e, s, m)
+
+    # Final class-name fallbacks for nodes that reach here
+    class_name = e.__class__.__name__
+    if class_name == "PrefixUnaryExpressionSyntax":
+        return _syntax_prefix_unary(e, s, m)
+    elif class_name == "BinaryExpressionSyntax":
+        lhs_node = getattr(e, 'left', None)
+        rhs_node = getattr(e, 'right', None)
+        if lhs_node is None or rhs_node is None:
+            return BitVecVal(0, 32)
+        lhs = parse_expr_to_Z3(lhs_node, s, m)
+        rhs = parse_expr_to_Z3(rhs_node, s, m)
+        kind_str = str(getattr(e, 'kind', ''))
+        op_token = getattr(e, 'operatorToken', getattr(e, 'operator', None))
+        op_str = str(getattr(op_token, 'valueText', '')) if op_token else ''
+
+        def to_bv(x):
+            if hasattr(x, 'size'):
+                return x
+            if is_bool(x):
+                return If(x, BitVecVal(1, 32), BitVecVal(0, 32))
+            return BitVecVal(0, 32)
+
+        if 'LogicalAnd' in kind_str or op_str == '&&':
+            lb = lhs != BitVecVal(0, lhs.size()) if hasattr(lhs, 'size') else lhs
+            rb = rhs != BitVecVal(0, rhs.size()) if hasattr(rhs, 'size') else rhs
+            return And(lb, rb)
+        elif 'LogicalOr' in kind_str or op_str == '||':
+            lb = lhs != BitVecVal(0, lhs.size()) if hasattr(lhs, 'size') else lhs
+            rb = rhs != BitVecVal(0, rhs.size()) if hasattr(rhs, 'size') else rhs
+            return Or(lb, rb)
+        elif 'Equality' in kind_str or op_str == '==':
+            return to_bv(lhs) == to_bv(rhs)
+        elif 'Inequality' in kind_str or op_str == '!=':
+            return to_bv(lhs) != to_bv(rhs)
+        elif 'GreaterThanEqual' in kind_str or op_str == '>=':
+            return UGE(to_bv(lhs), to_bv(rhs))
+        elif 'GreaterThan' in kind_str or op_str == '>':
+            return UGT(to_bv(lhs), to_bv(rhs))
+        elif 'LessThanEqual' in kind_str or op_str == '<=':
+            return ULE(to_bv(lhs), to_bv(rhs))
+        elif 'LessThan' in kind_str or op_str == '<':
+            return ULT(to_bv(lhs), to_bv(rhs))
+        elif 'Add' in kind_str or op_str == '+':
+            return to_bv(lhs) + to_bv(rhs)
+        elif 'Subtract' in kind_str or op_str == '-':
+            return to_bv(lhs) - to_bv(rhs)
+        elif 'Multiply' in kind_str or op_str == '*':
+            return to_bv(lhs) * to_bv(rhs)
+        elif 'LogicalShiftLeft' in kind_str or op_str == '<<':
+            return to_bv(lhs) << to_bv(rhs)
+        elif 'LogicalShiftRight' in kind_str or op_str == '>>':
+            return LShR(to_bv(lhs), to_bv(rhs))
+        elif 'BitwiseAnd' in kind_str or op_str == '&':
+            return to_bv(lhs) & to_bv(rhs)
+        elif 'BitwiseOr' in kind_str or op_str == '|':
+            return to_bv(lhs) | to_bv(rhs)
+        elif 'BitwiseXor' in kind_str or op_str == '^':
+            return to_bv(lhs) ^ to_bv(rhs)
+        else:
+            print(f"[Warning] Unhandled binary op: kind={kind_str} op={op_str}")
+            return BitVecVal(0, 32)
+    elif class_name == "ConditionalPatternSyntax":
+        return _syntax_conditional_pattern(e, s, m)
+    elif class_name == "ParenthesizedExpressionSyntax":
+        return _syntax_parenthesized(e, s, m)
+
     print(f"[Warning] Unrecognized expression type: {type(e)}, returning 0")
     return BitVecVal(0, 32)
 
 def solve_pc(s: Solver) -> bool:
     """Solve path condition."""
-    result = str(s.check())
-    if str(result) == "sat":
+    from z3 import sat as z3_sat
+    if smt_stats.timed_check(s) == z3_sat:
         model = s.model()
         return True
     else:
-        print(f"unsat: {s}, unsat core: {s.unsat_core()}")
-        print(s.unsat_core())
+        logging.debug(f"UNSAT: {len(s.assertions())} constraint(s)")
         return False
 
 def evaluate_expr(parsedList, s: SymbolicState, m: ExecutionManager):

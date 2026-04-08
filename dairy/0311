@@ -1,0 +1,84 @@
+Issue 1: ExpressionKind.Assignment not handled in SymbolicDFS.visit_expr()
+
+  In helpers/slang_helpers.py:655-774, the visit_expr() method of SymbolicDFS has handlers for syntax-level assignment expressions
+  (SyntaxKind.AssignmentExpression at line 689, SyntaxKind.NonblockingAssignmentExpression at line 713), but no handler for the semantic
+  ExpressionKind.Assignment.
+
+  The SlangSymbolVisitor (post-processor at line 189) lists ExpressionKind.Assignment, confirming pyslang uses this kind for semantic assignment nodes.
+  But SymbolicDFS.visit_expr() never matches it. This means when the always block statements are processed as semantic nodes, nonblocking assignments
+  like pipe[0] <= in_a + 1'b1 and in_a_history[0] <= top_in_a may be silently dropped.
+
+  Issue 2: Array element assignments silently dropped
+
+  Even when the syntax-level handler is reached (SyntaxKind.NonblockingAssignmentExpression at line 713), it checks:
+  if hasattr(expr.left, "identifier"):
+      lhs_var = expr.left.identifier.value
+  For array element assignments like pipe[0] <= value or in_a_history[0] <= top_in_a, the LHS is an ElementSelect expression (not a simple identifier).
+  The identifier attribute check fails, and the code falls through to else: ... (line 735) which does nothing. The assignment is silently skipped.
+
+  Impact: The pipeline registers (pipe[0..1] in module_a, in_a_history[0..2] in my_assertions) are never updated across cycles. past_3_in_a =
+  in_a_history[2] stays at its initial value (0 or a stale symbol).
+
+  Issue 3: add_pending_nba() never called - NBA semantics not implemented
+
+  SymbolicState.add_pending_nba() exists (engine/symbolic_state.py:36) but is never called by any code in the codebase:
+
+  $ grep -r "add_pending_nba" → only the definition + CHANGELOG mentions
+
+  Both strategies call apply_pending_nba() between cycles (line 154 and 469), but since nothing is ever added to pending_nba, it's always empty. All
+  assignments are handled as immediate store updates (blocking semantics), which violates Verilog's NBA semantics.
+
+  Issue 4: COI pruning removes top and u_c - port connections broken
+
+  The COI analysis output:
+  [COI] Pruned all CFGs for instance: top
+  [COI] Pruned all CFGs for instance: u_c
+  [COI] Removed instances from exploration: {'top', 'u_c'}
+
+top pruned: The top module provides critical port connections:
+  - top_in → u_a.in_a, u_b.orig_in_a, u_assert.top_in_a
+  - wire_a_to_b: u_a.out_a → u_b.in_b, u_assert.a_out
+  - top_out: u_b.out_b → u_assert.b_out
+
+  Without top's port connection logic, each module's ports become independent symbolic variables. u_assert.b_out is disconnected from u_b.out_b, and
+  u_b.orig_in_a is disconnected from u_assert.top_in_a. The inter-module data flow that creates the timing hazard is broken.
+
+  u_c pruned: Module_c does assign out_c = in_c << 1. With 0 CFGs built, its continuous assignment is never attached to any CFG and never executed. c_out
+   in module_b remains unconstrained.
+
+  Issue 5: Continuous assignments not re-evaluated per cycle
+
+  In strategies.py:427-434, continuous assignments (comb nodes) are processed only once during _initialize_state():
+  for node in c.comb:
+      visitor.dfs(node)  # Only called during initialization
+
+  In _execute_cycle() (lines 464-531), there is no re-evaluation of comb nodes after apply_pending_nba(). Wire declarations like:
+  - wire check_en = valid_pipe[2]
+  - wire past_3_in_a = in_a_history[2]
+
+  These are evaluated once at initialization and never updated. Even if valid_pipe were properly updated via NBA, check_en would still reference the
+  stale initial value.
+
+  Issue 6: Conditional branch constraints are pushed then immediately popped
+
+  In visit_stmt (line 847-886) for StatementKind.Conditional:
+  s.pc.push()           # line 847
+  s.pc.assert_and_track(cond_z3, ...)  # line 859/869
+  # ... check SAT ...
+  s.pc.pop()            # line 886 (always executes!)
+
+  The branch condition is added to the path condition temporarily (to check feasibility), then immediately removed via pop. The comment at lines 879-883
+  says "branches are visited as separate basic blocks" but the constraint is NOT retained in the path condition. This means when the assertion handler
+  later runs, the path condition doesn't reflect which branches were actually taken.
+
+  ---
+  How These Issues Combine
+
+  For the assertion assert(b_out == (past_3_in_a + 1)) to be violated, the engine needs:
+  1. check_en == 1 (after 3 cycles) → Issue 2+5: valid_pipe never properly updated, check_en stale
+  2. past_3_in_a <= 0xFF → Issue 2: in_a_history array never updated
+  3. b_out derived from u_b.out_b → Issue 4: port connections broken when top pruned
+  4. NBA semantics to propagate register values across cycles → Issue 3: NBA never populated
+
+  The end result is that the assertion condition can't be meaningfully evaluated against the actual design behavior, leading to the UNSAT result.
+
