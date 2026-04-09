@@ -1,0 +1,48 @@
+{
+  "target": "Violate assertion '\n        ((32'h1A10_4FFF <= 32'h1A10_2000) && (32'h1A10_4000 >= 32'h1A10_4FFF))' in jg_bind_inst",
+  "target_expr": "((32'jg_bind_inst.jg_bind_inst.h1A10_4FFF > 32'jg_bind_inst.h1A10_2000) && (32'jg_bind_inst.h1A10_4000 >= 32'jg_bind_inst.jg_bind_inst.h1A10_4FFF))",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System Reset",
+      "condition": "rstn_top == 0",
+      "expected_cycles": 10
+    },
+    {
+      "step": 1,
+      "description": "Reset released, system active",
+      "condition": "rstn_top == 1",
+      "expected_cycles": 10
+    },
+    {
+      "step": 2,
+      "description": "ALU division unit instantiated and parameters defined",
+      "condition": "top_wrapper.riscv_core.ex_stage_i.alu_i.div_i.C_WIDTH == 32",
+      "expected_cycles": 10
+    },
+    {
+      "step": 3,
+      "description": "C_LOG_WIDTH parameter computed from C_WIDTH",
+      "condition": "top_wrapper.riscv_core.ex_stage_i.alu_i.div_i.C_LOG_WIDTH == 6",
+      "expected_cycles": 10
+    },
+    {
+      "step": 4,
+      "description": "Verification target: C_LOG_WIDTH != clog2(C_WIDTH+1)",
+      "condition": "top_wrapper.riscv_core.ex_stage_i.alu_i.div_i.C_LOG_WIDTH != 6",
+      "expected_cycles": 10
+    },
+    {
+      "step": 5,
+      "description": "Initial state",
+      "condition": "RST == 1",
+      "expected_cycles": 10
+    },
+    {
+      "step": 6,
+      "description": "Post-reset state",
+      "condition": "RST == 0",
+      "expected_cycles": 10
+    }
+  ]
+}

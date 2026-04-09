@@ -678,7 +678,7 @@ class SymbolicDFS:
             if cond_expr:
                 self.path_condition.pop()
         elif stmt.kind == ps.StatementKind.List:
-            for s in stmt.body:
+            for s in stmt.list:
                 self.dfs_stmt(s)
 
     def dfs_expr(self, expr):
@@ -1519,6 +1519,35 @@ class SymbolicDFS:
 
         s.pc.pop()
 
+    @staticmethod
+    def _unwrap_property_expr(expr):
+        """Unwrap SVA property/sequence syntax wrappers to the real expression.
+
+        The pyslang AST wraps assertion conditions in layers:
+            SimplePropertyExprSyntax  → .expr →
+            SimpleSequenceExprSyntax  → .expr →
+            <actual expression>
+
+        Without unwrapping, rvalue_to_z3 doesn't recognise these wrappers
+        and falls back to BitVecVal(0,32), causing every assertion to
+        appear trivially violated.
+        """
+        # Unwrap SimplePropertyExprSyntax
+        kind = getattr(expr, 'kind', None)
+        if kind == ps.SyntaxKind.SimplePropertyExpr:
+            inner = getattr(expr, 'expr', None)
+            if inner is not None:
+                expr = inner
+
+        # Unwrap SimpleSequenceExprSyntax
+        kind = getattr(expr, 'kind', None)
+        if kind == ps.SyntaxKind.SimpleSequenceExpr:
+            inner = getattr(expr, 'expr', None)
+            if inner is not None:
+                expr = inner
+
+        return expr
+
     def _handle_assert_property_syntax(self, m: ExecutionManager, s: SymbolicState, stmt, modules, direction):
         """Handle AssertPropertyStatement syntax node.
 
@@ -1538,6 +1567,9 @@ class SymbolicDFS:
 
         if expr is None:
             return
+
+        # Unwrap SVA property/sequence wrappers to get the actual expression
+        expr = self._unwrap_property_expr(expr)
 
         # Visit the expression
         self.visit_expr(m, s, expr)
@@ -1612,6 +1644,9 @@ class SymbolicDFS:
         if expr is None:
             # print(f"[PROPERTY SPEC] No expression found in PropertySpec")
             return
+
+        # Unwrap SVA property/sequence wrappers to get the actual expression
+        expr = self._unwrap_property_expr(expr)
 
         # print(f"[PROPERTY SPEC] Found expression: {expr}, type: {type(expr).__name__}")
 

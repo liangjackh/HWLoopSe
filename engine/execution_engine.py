@@ -811,13 +811,19 @@ class ExecutionEngine:
                         # Extract signal names from the assertion condition
                         signals = extract_signals_from_condition(target.assertion_source)
                         for sig in signals:
-                            if sig.isdigit() or sig in ('if', 'else', 'begin', 'end'):
+                            if sig.isdigit():
                                 continue
-                            # target.module_name might be hierarchical like "or1200_cpu.u_assertions"
-                            # but modules_dict uses short names like "u_assertions"
-                            # Take the last component of the path
-                            instance_name = target.module_name.split('.')[-1] if '.' in target.module_name else target.module_name
-                            seed_signals.append((instance_name, sig))
+                            if '.' in sig:
+                                # Hierarchical path like top_wrapper.soc_interconnect.TCDM_data_gnt
+                                # Instance = second-to-last component, signal = last component
+                                parts = sig.split('.')
+                                inst = parts[-2] if len(parts) >= 2 else parts[0]
+                                sig_name = parts[-1]
+                                seed_signals.append((inst, sig_name))
+                            else:
+                                # Plain signal — scope to the assertion's module instance
+                                instance_name = target.module_name.split('.')[-1] if '.' in target.module_name else target.module_name
+                                seed_signals.append((instance_name, sig))
 
                 if seed_signals:
                     analyzer = COIAnalyzer(modules_dict, cfgs_by_module, modules)

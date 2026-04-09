@@ -1244,6 +1244,49 @@ def _fallback_dispatch(e, s, m):
             elif class_name == "IdentifierSelectNameSyntax":
                 return _syntax_identifier_select(e, s, m)
 
+            elif class_name == "ScopedNameSyntax":
+                # Hierarchical reference like top_wrapper.soc_interconnect.TCDM_data_gnt
+                # Flatten the left-recursive tree to get the rightmost signal name,
+                # then look it up in the store (the store uses bare signal names keyed
+                # by instance, so we use the last component as the variable name).
+                def _flatten_scoped(node):
+                    left = getattr(node, 'left', None)
+                    right = getattr(node, 'right', None)
+                    right_name = getattr(right, 'identifier', None)
+                    if right_name is not None:
+                        right_name = getattr(right_name, 'valueText', getattr(right_name, 'value', str(right_name)))
+                    else:
+                        right_name = getattr(right, 'valueText', str(right)) if right is not None else ''
+                    if left is None:
+                        return right_name
+                    left_kind = getattr(left, 'kind', None)
+                    if left_kind == ps.SyntaxKind.ScopedName:
+                        left_name = _flatten_scoped(left)
+                    else:
+                        ident = getattr(left, 'identifier', None)
+                        left_name = getattr(ident, 'valueText', getattr(ident, 'value', str(left))) if ident else str(left)
+                    return f"{left_name}.{right_name}"
+
+                full_path = _flatten_scoped(e)
+                parts = full_path.split('.')
+                var_name = parts[-1]
+                # For a hierarchical path a.b.c, the owning instance is parts[-2].
+                # Try that first, then current module, then all modules.
+                owner_mod = parts[-2] if len(parts) >= 2 else None
+                search_order = []
+                if owner_mod:
+                    search_order.append(owner_mod)
+                if m is not None and m.curr_module not in search_order:
+                    search_order.append(m.curr_module)
+                for mod in list(s.store.keys()):
+                    if mod not in search_order:
+                        search_order.append(mod)
+                for mod in search_order:
+                    if mod in s.store and var_name in s.store[mod]:
+                        return s.store[mod][var_name]
+                # Not found — return a fresh symbolic variable
+                return BitVec(var_name, 32)
+
             elif class_name == "MultipleConcatenationExpressionSyntax":
                 return _syntax_multiple_concat(e, s, m)
 

@@ -447,14 +447,14 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             if result == "ALL_MILESTONES":
                 print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=ALL_MILESTONES")
                 print(f"[DirectedStrategy] All milestones reached — reporting violation!")
-                # Prefer the deferred violation record (has real model) over the milestone state
+                # Use item.state (full multi-cycle path condition) for counterexample.
+                # The deferred violation record has stale _c0 symbols; the current
+                # item.state accumulates constraints from ALL cycles (_c0.._cN).
                 deferred = getattr(self, '_deferred_violation', None)
                 if deferred is not None:
-                    saved_violations, saved_state = deferred
+                    saved_violations, _ = deferred
                     manager.violated_assertions = saved_violations
-                    self._handle_assertion_violation(engine, manager, saved_state)
-                else:
-                    self._handle_assertion_violation(engine, manager, item.state)
+                self._handle_assertion_violation(engine, manager, item.state)
                 return
 
             # Path ended without violation
@@ -501,12 +501,18 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             visitor.dfs(modules_dict[module_name])
             for var_name, sym in visitor.symbolic_store.items():
                 if var_name not in state.store[module_name]:
-                    # Initialize everything to 0 (Verilog default for regs).
-                    # Port propagation + _unify_port_symbols will later assign
-                    # shared fresh symbols to signals connected through ports,
-                    # so primary inputs end up symbolic while internal signals
-                    # start at a well-defined value.
-                    state.store[module_name][var_name] = BitVecVal(0, 32)
+                    # Parameters get their actual constant value; everything
+                    # else starts at 0 (Verilog default for regs).
+                    if (hasattr(sym, 'kind') and
+                            sym.kind == ps.SymbolKind.Parameter and
+                            hasattr(sym, 'value') and sym.value is not None):
+                        try:
+                            int_val = sym.value.convertToInt()
+                            state.store[module_name][var_name] = BitVecVal(int_val, 32)
+                        except Exception:
+                            state.store[module_name][var_name] = BitVecVal(0, 32)
+                    else:
+                        state.store[module_name][var_name] = BitVecVal(0, 32)
 
         # Process declarations using visitor.dfs (these are Symbol/Syntax nodes)
         for module_name in manager.names_list:
@@ -515,6 +521,58 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 for c in cfgs_by_module[module_name]:
                     for node in c.decls:
                         visitor.dfs(node)
+
+        # Populate parameters from submodule instances that are NOT in modules_dict.
+        # e.g. div_i (riscv_alu_div) is inside a generate block inside alu_i and is
+        # never a top-level module entry, so its parameters (C_LOG_WIDTH, C_WIDTH) are
+        # not stored.  Recursively walk each module's symbol body—descending into
+        # GenerateBlock/GenerateBlockArray—and for every InstanceSymbol found, store
+        # its parameters keyed by the *instance name* so that hierarchical milestone
+        # paths like "...alu_i.div_i.C_LOG_WIDTH" resolve via parts[-2] = "div_i".
+        def _collect_submodule_params(sym_body):
+            """Yield (inst_name, param_name, BitVecVal) for every nested instance."""
+            try:
+                for child in sym_body:
+                    kind = getattr(child, 'kind', None)
+                    if kind == ps.SymbolKind.Instance:
+                        child_body = getattr(child, 'body', None)
+                        if child_body is None:
+                            continue
+                        inst_name = getattr(child, 'name', None)
+                        if inst_name is None:
+                            continue
+                        try:
+                            for param in child_body:
+                                if getattr(param, 'kind', None) != ps.SymbolKind.Parameter:
+                                    continue
+                                pname = param.name
+                                cv = getattr(param, 'value', None)
+                                if cv is None:
+                                    continue
+                                try:
+                                    int_val = cv.convertToInt()
+                                    yield (inst_name, pname, BitVecVal(int_val, 32))
+                                except Exception:
+                                    pass
+                        except TypeError:
+                            pass
+                        # Also recurse into the child's body for deeper nesting
+                        yield from _collect_submodule_params(child_body)
+                    elif kind in (ps.SymbolKind.GenerateBlock, ps.SymbolKind.GenerateBlockArray):
+                        # Descend into generate blocks to find instances inside them
+                        yield from _collect_submodule_params(child)
+            except TypeError:
+                pass
+
+        for module_name, module_sym in modules_dict.items():
+            body = getattr(module_sym, 'body', module_sym)
+            for inst_name, pname, bv in _collect_submodule_params(body):
+                # Store under the instance name (e.g. "div_i") so that paths
+                # like "...div_i.C_LOG_WIDTH" resolve via parts[-2] lookup.
+                if inst_name not in state.store:
+                    state.store[inst_name] = {}
+                if pname not in state.store[inst_name]:
+                    state.store[inst_name][pname] = bv
 
         # Unify port symbols so connected signals share the same value
         self._unify_port_symbols(state, cycle=0)
@@ -933,9 +991,26 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 # Suppress violations until we're one step away from the final milestone.
                 # Earlier violations are spurious — unconstrained inputs trivially satisfy
                 # the negated assertion before the design has been steered through reset.
+                # Exception: if the violation is unconditional (path condition has no free
+                # variables), report immediately regardless of milestone progress.
                 if item.milestones_completed >= total_milestones - 1:
                     return "VIOLATION"
                 else:
+                    # Check if violation is unconditional (no symbolic constraints)
+                    _is_unconditional = False
+                    _pc_assertions = list(state.pc.assertions())
+                    if len(_pc_assertions) == 0:
+                        _is_unconditional = True
+                    else:
+                        from z3 import Solver as _Solver, sat as _sat
+                        _s = _Solver()
+                        for _a in _pc_assertions:
+                            _s.add(_a)
+                        if _s.check() == _sat and len(_s.model().decls()) == 0:
+                            _is_unconditional = True
+                    if _is_unconditional:
+                        print(f"  [Unconditional] assertion violation fires with no path constraints — reporting immediately")
+                        return "VIOLATION"
                     print(f"  [Suppressed] assertion violation at cycle {cycle}, milestones={item.milestones_completed}/{total_milestones} — deferring until near final milestone")
                     # Save the violation record so we can report it if ALL_MILESTONES is reached
                     if not hasattr(self, '_deferred_violation'):
@@ -970,9 +1045,21 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         total_milestones = len(self.milestone_manager.milestones)
 
         if manager.assertion_violation:
-            # Only report if we've passed at least the first milestone (reset),
-            # otherwise it's a spurious violation on unconstrained initial state.
-            if current_progress > 0:
+            # If the path condition has no constraints, the violation is unconditional
+            # (fires for any input regardless of reset/milestones) — report immediately.
+            pc_assertions = list(state.pc.assertions())
+            is_unconditional = len(pc_assertions) == 0
+            if not is_unconditional and current_progress == 0:
+                from z3 import Solver as _Solver, sat as _sat
+                _s = _Solver()
+                for _a in pc_assertions:
+                    _s.add(_a)
+                _chk = _s.check()
+                _ndecls = len(_s.model().decls()) if _chk == _sat else -1
+                is_unconditional = (_chk == _sat and _ndecls == 0)
+            if current_progress > 0 or is_unconditional:
+                if is_unconditional:
+                    print(f"  [Unconditional] assertion violation fires with no path constraints — reporting immediately")
                 return "VIOLATION"
             else:
                 print(f"  [Suppressed] assertion violation at cycle {cycle} before any milestone reached — likely spurious")
@@ -1140,127 +1227,121 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         manager: ExecutionManager,
         state: SymbolicState
     ) -> None:
-        """Handle assertion violation."""
+        """Handle assertion violation with cycle-by-cycle counterexample trace."""
+        import re
+        from z3 import Solver, sat as z3_sat
+
         print("Assertion violation detected!")
+
+        # Collect assertion signal names from violated_assertions conditions
+        # so we can prioritize them in the reverse map below.
+        _assertion_signals: set = set()
+        if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+            for _va in manager.violated_assertions:
+                _cond_str = _va.get('condition', '')
+                # Extract bare identifiers from the condition string
+                for _tok in re.findall(r'[a-zA-Z_][a-zA-Z0-9_]*', _cond_str):
+                    _assertion_signals.add(_tok)
+
+        # Build reverse map: z3_var_base -> assertion signal name (used for display).
+        # Priority: (1) signal appears in assertion condition, (2) longer name.
+        _cycle_re_rev = re.compile(r'^(.+)_c(\d+)$')
+        _z3base_to_sig: Dict[str, str] = {}
+        for _mod, _sigs in state.store.items():
+            for _sig_name, _z3_val in _sigs.items():
+                try:
+                    if hasattr(_z3_val, 'decl') and _z3_val.num_args() == 0:
+                        _z3_full = _z3_val.decl().name()
+                        _m2 = _cycle_re_rev.match(_z3_full)
+                        _z3_base = _m2.group(1) if _m2 else _z3_full
+                        _existing = _z3base_to_sig.get(_z3_base, '')
+                        _new_in_assert = _sig_name in _assertion_signals
+                        _old_in_assert = _existing in _assertion_signals
+                        # Prefer assertion signal names; break ties by length
+                        if (_new_in_assert and not _old_in_assert) or \
+                           (_new_in_assert == _old_in_assert and len(_sig_name) > len(_existing)):
+                            _z3base_to_sig[_z3_base] = _sig_name
+                except Exception:
+                    pass
+
         if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
             print("Violated assertion details:")
             for va in manager.violated_assertions:
                 print(f"  - condition: {va.get('condition', 'N/A')}")
-
-                # Better z3_condition display
                 z3_cond = va.get('z3_condition')
                 if z3_cond is not None:
                     try:
-                        if hasattr(z3_cond, 'sexpr'):
-                            z3_str = z3_cond.sexpr()
-                            if len(z3_str) > 200:
-                                print(f"    z3_condition: {z3_str[:200]}... (truncated)")
-                            else:
-                                print(f"    z3_condition: {z3_str}")
-                        else:
-                            print(f"    z3_condition: {z3_cond}")
+                        z3_str = z3_cond.sexpr() if hasattr(z3_cond, 'sexpr') else str(z3_cond)
+                        # Replace underlying Z3 var names with assertion signal names
+                        for _z3b, _sn in _z3base_to_sig.items():
+                            # Match base_cN pattern (cycle-stamped variables)
+                            z3_str = re.sub(re.escape(_z3b) + r'(_c\d+)', _sn + r'\1', z3_str)
+                            # Also replace bare (non-cycle-stamped) occurrences
+                            z3_str = re.sub(r'\b' + re.escape(_z3b) + r'\b', _sn, z3_str)
+                        if len(z3_str) > 200:
+                            z3_str = z3_str[:200] + "... (truncated)"
+                        print(f"    z3_condition: {z3_str}")
                     except Exception as e:
-                        print(f"    z3_condition: (error displaying: {e})")
-                else:
-                    print(f"    z3_condition: N/A")
-
+                        print(f"    z3_condition: (error: {e})")
                 print(f"    kind: {va.get('kind', 'N/A')}")
 
-        # Extract counterexample from the stored model
-        counterexample = {}
+        # Solve the CURRENT path condition (accumulated over all cycles) to get
+        # the full multi-cycle model with _c0, _c1, ..., _cN stamped symbols.
+        # Build one fresh solver, check it, and read the model from the SAME
+        # solver instance — calling model() on an unchecked solver gives empty decls.
+        ce_solver = Solver()
+        for assertion in state.pc.assertions():
+            ce_solver.add(assertion)
+        if ce_solver.check() != z3_sat:
+            print("\n(path condition UNSAT — cannot derive counterexample)")
+            return
 
-        if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
-            for va in manager.violated_assertions:
-                model = va.get('model')
+        model = ce_solver.model()
+        decls = model.decls()
+        if not decls:
+            # Path condition has no symbolic constraints — the assertion fires for any
+            # input. Try to get a concrete witness by adding the z3_condition itself.
+            if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+                va = manager.violated_assertions[-1]
+                z3_cond = va.get('z3_condition')
+                if z3_cond is not None:
+                    from z3 import Not as z3_Not
+                    witness_solver = Solver()
+                    witness_solver.add(z3_Not(z3_cond))
+                    if witness_solver.check() == z3_sat:
+                        model = witness_solver.model()
+                        decls = model.decls()
+            if not decls:
+                print("\nCounterexample: violation is unconditional (no free variables).")
+                return
 
-                if model is not None:
-                    # Get all declarations from the model
-                    decls = model.decls()
+        # Build symbol-name -> concrete value mapping
+        sym_vals = {d.name(): model[d] for d in decls}
 
-                    if decls:
-                        print(f"\nCounterexample (input values):")
+        # Parse _cN suffix: symbol name format is "<signal>_c<cycle>"
+        cycle_re = re.compile(r'^(.+)_c(\d+)$')
 
-                        # Build a mapping of symbol names to values
-                        symbols_to_values = {}
-                        for item in decls:
-                            symbols_to_values[item.name()] = model[item]
-
-                        # Match signals to their symbolic values
-                        for module in state.store:
-                            for signal in state.store[module]:
-                                signal_expr = state.store[module][signal]
-                                sym_name = None
-                                if isinstance(signal_expr, str):
-                                    sym_name = signal_expr
-                                elif is_bv(signal_expr) and not is_bv_value(signal_expr):
-                                    sym_name = signal_expr.decl().name()
-                                if sym_name and sym_name in symbols_to_values:
-                                    counterexample[f"{module}.{signal}"] = symbols_to_values[sym_name]
-
-                        # Print counterexample
-                        if counterexample:
-                            for sig, val in counterexample.items():
-                                print(f"  {sig} = {val}")
-                        else:
-                            print("  (no matching signals found in store)")
-
-                        # Also print all symbols for debugging
-                        print(f"\nAll symbols in model:")
-                        for sym, val in symbols_to_values.items():
-                            print(f"  {sym} = {val}")
-                    else:
-                        # Model has no free variables - all values are concrete
-                        print(f"\nCounterexample:")
-                        print(f"  The assertion violation occurs with concrete values.")
-                        print(f"  This means the design has a bug that always triggers,")
-                        print(f"  not dependent on specific input values.")
-                        print(f"\n  Path condition constraints:")
-                        path_cond = va.get('path condition', [])
-                        if path_cond:
-                            for i, constraint in enumerate(path_cond):
-                                # Try to get a better representation
-                                constraint_str = str(constraint)
-                                if len(constraint_str) > 100:
-                                    # Try sexpr if available
-                                    if hasattr(constraint, 'sexpr'):
-                                        constraint_str = constraint.sexpr()
-                                        if len(constraint_str) > 150:
-                                            constraint_str = constraint_str[:150] + "... (truncated)"
-                                    else:
-                                        constraint_str = constraint_str[:100] + "... (truncated)"
-                                print(f"    [{i}] {constraint_str}")
-                        else:
-                            print(f"    (no path constraints)")
-
-                    break  # Only process first violation
-        else:
-            # No violated_assertions recorded (e.g. preemption path) — derive
-            # counterexample directly from the current path condition.
-            print("Assertion violation detected via preemption (no assertion record).")
-            if engine.solve_pc(state.pc):
-                model = state.pc.model()
-                decls = model.decls()
-                if decls:
-                    symbols_to_values = {d.name(): model[d] for d in decls}
-                    counterexample = {}
-                    for module in state.store:
-                        for signal in state.store[module]:
-                            signal_expr = state.store[module][signal]
-                            sym_name = None
-                            if isinstance(signal_expr, str):
-                                sym_name = signal_expr
-                            elif is_bv(signal_expr) and not is_bv_value(signal_expr):
-                                sym_name = signal_expr.decl().name()
-                            if sym_name and sym_name in symbols_to_values:
-                                counterexample[f"{module}.{signal}"] = symbols_to_values[sym_name]
-                    if counterexample:
-                        print("\nCounterexample (input values):")
-                        for sig, val in counterexample.items():
-                            print(f"  {sig} = {val}")
-                    print("\nAll symbols in model:")
-                    for sym, val in symbols_to_values.items():
-                        print(f"  {sym} = {val}")
-                else:
-                    print("  (model has no free variables — violation is unconditional)")
+        # Group by cycle number; use assertion signal names where available
+        # Reuse _z3base_to_sig (built above with assertion-priority logic)
+        by_cycle: Dict[int, Dict[str, Any]] = {}
+        ungrouped: Dict[str, Any] = {}
+        for sym_name, val in sym_vals.items():
+            m = cycle_re.match(sym_name)
+            if m:
+                sig, cyc = m.group(1), int(m.group(2))
+                display = _z3base_to_sig.get(sig, sig)
+                by_cycle.setdefault(cyc, {})[display] = val
             else:
-                print("  (path condition UNSAT — cannot derive counterexample)")
+                display = _z3base_to_sig.get(sym_name, sym_name)
+                ungrouped[display] = val
+
+        if by_cycle:
+            print("\nCounterexample trace (cycle-by-cycle):")
+            for cyc in sorted(by_cycle.keys()):
+                print(f"  Cycle {cyc}:")
+                for sig in sorted(by_cycle[cyc].keys()):
+                    print(f"    {sig} = {by_cycle[cyc][sig]}")
+        if ungrouped:
+            print("\nOther model values:")
+            for sym, val in sorted(ungrouped.items()):
+                print(f"  {sym} = {val}")

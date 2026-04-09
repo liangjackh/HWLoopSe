@@ -77,16 +77,30 @@ def extract_signals_from_condition(condition_str: str) -> List[str]:
     """
     Extract signal names from a condition string.
 
+    Preserves dot-separated hierarchical paths as single tokens, e.g.
+    ``top_wrapper.soc_interconnect.TCDM_data_gnt`` stays as one token.
+
     Args:
         condition_str: Condition like "out <= 2" or "a + b > c"
 
     Returns:
         List of signal names found
     """
-    # Remove operators and numbers to find identifiers
-    # This is a simple heuristic - may need refinement
-    tokens = re.findall(r'[a-zA-Z_][a-zA-Z0-9_]*', condition_str)
-    return tokens
+    # Strip Verilog numeric literals (e.g. 32'h1C00_0000, 8'b1010_0011)
+    # so the hex/bin digits aren't mistaken for identifiers.
+    stripped = re.sub(r"\d*'[hHbBoOdD][0-9a-fA-F_]+", "", condition_str)
+
+    # Match dot-separated hierarchical paths (a.b.c) or plain identifiers
+    tokens = re.findall(r'[a-zA-Z_][a-zA-Z0-9_.]*[a-zA-Z0-9_]|[a-zA-Z_][a-zA-Z0-9_]*', stripped)
+
+    # Filter out SystemVerilog / Verilog keywords
+    sv_keywords = {
+        'if', 'else', 'begin', 'end', 'always', 'assign', 'wire', 'reg',
+        'input', 'output', 'module', 'endmodule', 'posedge', 'negedge',
+        'assert', 'property', 'sequence', 'disable', 'iff', 'or', 'and',
+        'not', 'inside', 'return', 'void', 'bit', 'logic', 'integer',
+    }
+    return [t for t in tokens if t not in sv_keywords]
 
 
 def extract_verification_targets(modules, manager, compilation=None, driver=None) -> List[VerificationTarget]:
@@ -204,15 +218,23 @@ def extract_verification_targets(modules, manager, compilation=None, driver=None
         # Build target expression with hierarchical paths
         target_expr = negated
         for signal in signals:
-            # Skip numeric literals and keywords
-            if signal.isdigit() or signal in ['if', 'else', 'begin', 'end']:
+            # Skip numeric literals (keywords already filtered by extract_signals_from_condition)
+            if signal.isdigit():
                 continue
 
             # Resolve to hierarchical path
             hierarchical = resolve_signal_path(signal, instance_name)
 
-            # Replace in target expression
-            target_expr = re.sub(r'\b' + signal + r'\b', hierarchical, target_expr)
+            # Replace in target expression.
+            # Use re.escape so dots in hierarchical signal names are treated literally.
+            # For dotted paths, \b won't match at dots, so use a lookaround pattern.
+            escaped = re.escape(signal)
+            if '.' in signal:
+                # Dot-separated path: match the exact string with word boundary at start/end
+                pattern = r'(?<![.\w])' + escaped + r'(?![.\w])'
+            else:
+                pattern = r'\b' + escaped + r'\b'
+            target_expr = re.sub(pattern, hierarchical, target_expr)
 
         # Create verification target
         target = VerificationTarget(

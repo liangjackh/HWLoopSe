@@ -96,9 +96,14 @@ class MilestoneManager:
             self._debug_dump_store(state, var_name, signal_path)
             return None
         elif len(parts) > 2:
-            # Hierarchical path like "or1200_cpu.u_assertions.operand_b"
-            # Try to find the signal by searching in all modules
-            var_name = parts[-1]  # Last part is the signal name
+            # Hierarchical path like "riscv_core.ex_stage_i.alu_i.div_i.C_LOG_WIDTH"
+            var_name = parts[-1]
+            # First try the immediate parent instance name (parts[-2]) — this handles
+            # submodule parameters stored as state.store['div_i']['C_LOG_WIDTH'].
+            parent_inst = parts[-2]
+            if parent_inst in state.store and var_name in state.store[parent_inst]:
+                return state.store[parent_inst][var_name]
+            # Fall back to searching all modules
             for module_name, module_store in state.store.items():
                 if var_name in module_store:
                     return module_store[var_name]
@@ -187,6 +192,25 @@ class MilestoneManager:
                     break
             if all_inside:
                 expr_str = expr_str[1:-1].strip()
+
+        # Handle unary operators before binary search to avoid infinite recursion.
+        # Without this, ~expr falls through to _resolve_operand which calls
+        # _get_signal_z3_value which detects ~ as arithmetic and loops back here.
+        if expr_str.startswith('~'):
+            inner = expr_str[1:].strip()
+            operand = self._evaluate_expression(inner, state, default_width)
+            if operand is not None:
+                return ~operand
+            return None
+        if expr_str.startswith('!'):
+            inner = expr_str[1:].strip()
+            operand = self._evaluate_expression(inner, state, default_width)
+            if operand is not None:
+                from z3 import Not, is_bool
+                if is_bool(operand):
+                    return Not(operand)
+                return operand == BitVecVal(0, operand.size())
+            return None
 
         # Try to find a binary operator at the top level (outside nested parens)
         # Order: lowest precedence first (<<, >>, +, -, *, /)
@@ -656,6 +680,9 @@ class MilestoneManager:
     ) -> Tuple[int, Optional[int]]:
         """Advance milestone progress with a small lookahead window.
 
+        Also auto-skips milestones whose signals are not in the store
+        (build_z3_condition returns None), treating them as hallucinated.
+
         Returns:
             (new_progress, skipped_idx). skipped_idx is the skipped milestone index
             when lookahead succeeds past the current milestone; otherwise None.
@@ -668,6 +695,23 @@ class MilestoneManager:
             success, new_progress = self.check_and_lock_stateless(state, current_progress)
             return (new_progress, None) if success else (current_progress, None)
 
+        # Auto-skip any milestone at current_progress whose condition cannot be
+        # built (signal not in store = hallucinated signal name).
+        first_skipped = None
+        while current_progress < total:
+            milestone = self.milestones[current_progress]
+            condition = self.build_z3_condition(milestone, state)
+            if condition is not None:
+                break  # This milestone is evaluable — stop skipping
+            if first_skipped is None:
+                first_skipped = current_progress
+            print(f"  [Auto-skip] Milestone {current_progress} '{milestone.description}' "
+                  f"has unresolvable signals — treating as hallucinated")
+            current_progress += 1
+
+        if current_progress >= total:
+            return current_progress, first_skipped
+
         last_idx = total - 1
         furthest_idx = min(current_progress + window_size, last_idx)
 
@@ -678,10 +722,12 @@ class MilestoneManager:
             milestone = self.milestones[milestone_idx]
             print(f"  [Milestone] Step {milestone_idx} REACHED: {milestone.description}")
             new_progress = milestone_idx + 1
-            skipped_idx = current_progress if milestone_idx > current_progress else None
+            skipped_idx = first_skipped if first_skipped is not None else (
+                current_progress if milestone_idx > current_progress else None
+            )
             return new_progress, skipped_idx
 
-        return current_progress, None
+        return current_progress, first_skipped
 
     def compute_dataflow_distance(self, state: SymbolicState, milestone_idx: int) -> int:
         """Compute microscopic data-flow distance from current state to a milestone's condition.

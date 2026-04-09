@@ -1088,3 +1088,57 @@ python3 -m main 3 or1200.F --sv --auto-plan --llm-provider deepseek --coi --stra
 - The deduplication fix is critical for any design with multiple assertions
 - Signal-to-signal comparisons enable more expressive milestone conditions
 - Verilog format support is essential for realistic hardware verification
+
+---
+
+## [2026-04-09] [Fix] Counterexample generation for cross-module hierarchical assertions (hackdac18)
+
+### Problem
+Running hackdac18 with `--auto-plan --coi --strategy directed` always reported:
+```
+Counterexample: violation is unconditional (no free variables).
+```
+The Z3 model was empty despite the assertion firing every cycle.
+
+### Root Cause
+The assertion `HACKDAC_p2` uses cross-module hierarchical references:
+```sv
+assert property (
+    (~((top_wrapper.soc_interconnect.TCDM_data_gnt_DEM_TO_XBAR) >> 1) &&
+    ((top_wrapper.soc_interconnect.TCDM_data_add_DEM_TO_XBAR >= 32'h1C00_0000) &&
+     (top_wrapper.soc_interconnect.TCDM_data_add_DEM_TO_XBAR <= 32'h1C08_0000)))
+);
+```
+These signals are driven by `assign` statements in `soc_interconnect` (not always blocks), so COI found no relevant CFGs — leaving them as unconstrained fresh Z3 variables. The violation fired unconditionally, but the suppression logic kept deferring it until milestones were reached (which never happened with bad LLM plans).
+
+### Fixes
+
+**`helpers/rvalue_to_z3.py` — `ScopedNameSyntax` handler**
+- For hierarchical path `a.b.c`, now tries `parts[-2]` (owning module, e.g. `soc_interconnect`) first before current module and all modules
+- Prevents wrong signal aliasing across modules (e.g. `TCDM_data_gnt_DEM_TO_XBAR` being resolved to a signal from a different module)
+
+**`engine/strategies.py` — `_execute_cycle` (inner CFG loop + Step 6)**
+- Added unconditional violation detection: when `state.pc.assertions()` yields an empty/tautological solver model (`len(decls)==0`), report immediately instead of suppressing forever
+- Applied to both the inner CFG loop suppression block and the Step 6 milestone check
+
+**`engine/strategies.py` — `_handle_assertion_violation`**
+- Witness solver: when path condition model has no decls, solve `Not(z3_cond)` to get a concrete witness assignment
+- Signal name display: build reverse map `z3_base_name → assertion_signal_name` from store, prioritizing names that appear in the assertion condition string; applied to both `z3_condition` display (using `base_cN` regex) and the counterexample trace
+- Fixed: a second duplicate reverse map `z3base_to_sig` (length-only heuristic, no assertion priority) was being used for the counterexample trace display instead of the primary `_z3base_to_sig` map — removed the duplicate and unified to use the assertion-priority map throughout
+
+### PySlang Notes
+- `ScopedNameSyntax` represents hierarchical references like `a.b.c`; flatten with recursive `left`/`right` traversal
+- `SyntaxKind.ScopedName` is the kind value for these nodes
+- The store maps signal names to Z3 expressions; signals driven by `assign` aliases store the underlying input variable (e.g. `TCDM_data_add_DEM_TO_XBAR` → `HWPE_add_i_c0`)
+
+### Result
+```
+z3_condition: (and (not (bvugt TCDM_data_gnt_DEM_TO_XBAR_c0 #x00000001))
+ (bvuge TCDM_data_add_DEM_TO_XBAR_c0 #x1c000000)
+ (bvule TCDM_data_add_DEM_TO_XBAR_c0 #x1c080000))
+
+Counterexample trace (cycle-by-cycle):
+  Cycle 0:
+    TCDM_data_add_DEM_TO_XBAR = 470548480
+    TCDM_data_gnt_DEM_TO_XBAR = 0
+```
