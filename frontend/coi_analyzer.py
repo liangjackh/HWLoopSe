@@ -28,16 +28,19 @@ class COIAnalyzer:
     to find the minimal set of always blocks that can influence the seeds.
     """
 
-    def __init__(self, modules_dict: Dict[str, Any], cfgs_by_module: Dict[str, list], modules: list):
+    def __init__(self, modules_dict: Dict[str, Any], cfgs_by_module: Dict[str, list], modules: list,
+                 comb_by_module: Optional[Dict[str, list]] = None):
         """
         Args:
             modules_dict: instance_name -> InstanceSymbol
             cfgs_by_module: instance_name -> list of CFG objects
             modules: full list of module instances
+            comb_by_module: instance_name -> list of comb syntax nodes (for instances with 0 always blocks)
         """
         self.modules_dict = modules_dict
         self.cfgs_by_module = cfgs_by_module
         self.modules = modules
+        self.comb_by_module = comb_by_module or {}
 
         # Per (instance, cfg_idx): set of signal names written/read
         self.block_writes: Dict[Tuple[str, int], Set[str]] = {}
@@ -82,6 +85,15 @@ class COIAnalyzer:
                 self.comb_writes[instance_name] = {}
                 self.comb_reads[instance_name] = set()
                 for comb_node in cfg_list[0].comb:
+                    self._extract_comb_signals(instance_name, comb_node)
+
+        # Process comb assigns for instances with 0 always blocks (empty cfg_list)
+        # These come from comb_by_module which was collected before COI pruning
+        for instance_name, comb_nodes in self.comb_by_module.items():
+            if instance_name not in self.comb_writes and comb_nodes:
+                self.comb_writes[instance_name] = {}
+                self.comb_reads[instance_name] = set()
+                for comb_node in comb_nodes:
                     self._extract_comb_signals(instance_name, comb_node)
 
     def _extract_stmt_signals(self, stmt, writes: Set[str], reads: Set[str]):

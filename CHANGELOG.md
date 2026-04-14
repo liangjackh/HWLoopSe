@@ -1,5 +1,49 @@
 # Changelog
 
+[2026-04-14] [BugFix] Fixed cycle-0 spurious violation, unhandled SyntaxKind warnings, and malformed HACKDAC_p2 property in hackdac18 benchmark.
+
+**Root cause**: `collect_all_instances` in `engine/execution_engine.py` did not recurse into `GenerateBlockSymbol`/`GenerateBlockArraySymbol` when discovering module instances. Submodules inside generate-for blocks (e.g., `ResponseBlock_L2`, `AddressDecoder_Req_L2` inside `XBAR_L2_i.genblk3`) were never discovered, so no CFGs were built for them, no port connections were extracted, and COI could not trace through them. As a result, `TCDM_data_gnt_DEM_TO_XBAR` and `TCDM_data_add_DEM_TO_XBAR` remained as unconstrained Z3 free variables, causing a spurious unconditional assertion violation at cycle 0.
+
+**Fixes**:
+
+1. **`engine/execution_engine.py`** — Added `_collect_instances_from_generate()` helper and updated `collect_all_instances()` to recurse into `GenerateBlockArraySymbol` (via `.entries`) and `GenerateBlockSymbol` (via `block[i]` indexing), using the same pattern as `cfg.py:_collect_from_generate_block`. COI now discovers 29 relevant instances (was 2), and the cycle-0 violation is eliminated.
+
+2. **`helpers/rvalue_to_z3.py`** — Added handlers for previously unrecognized `SyntaxKind` nodes (8174 warnings → 0):
+   - `InvocationExpressionSyntax`: handles `$clog2`, `$signed`, `$unsigned`, `$bits`. Argument extraction unwraps `ArgumentListSyntax → SeparatedList → OrderedArgumentSyntax → SimplePropertyExprSyntax → SimpleSequenceExprSyntax → actual expr` via `_unwrap_arg()`.
+   - `SimplePropertyExprSyntax`, `SimpleSequenceExprSyntax`, `ParenthesizedPropertyExprSyntax`: wrapper nodes, unwrap to inner `.expr`.
+   - `BinaryPropertyExprSyntax` (`a |-> b`): implication rendered as `Or(Not(a), b)`.
+   - `AssignmentPatternExpressionSyntax` (`'{default: val}`): returns the default value expression.
+
+3. **`helpers/slang_helpers.py`** — Case statement handler (line ~1201): `case.expressions` returns a `SeparatedList` node, not its children. Added unwrapping to filter out `Token` (comma) children before iterating, fixing 1771 `SeparatedList` warnings from multi-value case items (`2'b00, 2'b01: ...`).
+
+**Analysis — HACKDAC_p2 property is malformed**:
+```systemverilog
+assert property (
+    ~((TCDM_data_gnt_DEM_TO_XBAR) >> 1) &&
+    ((TCDM_data_add_DEM_TO_XBAR >= 32'h1C00_0000) &&
+     (TCDM_data_add_DEM_TO_XBAR <= 32'h1C08_0000))
+);
+```
+- `TCDM_data_gnt_DEM_TO_XBAR` is `[12:0]` (13-bit vector). `~(gnt >> 1)` is a bitwise NOT of a shifted vector — almost always non-zero, not a meaningful security check.
+- `TCDM_data_add_DEM_TO_XBAR` is `[12:0][31:0]` (416-bit packed 2D array). Comparing it to `32'h1C00_0000` compares the entire 416-bit value against a 32-bit constant — not checking any individual master's address.
+- The intended property is per-master: for each master `i`, if `gnt[i]` is asserted then `add[i]` must be within the TCDM range. Should be written with a generate-for loop or `forall`.
+
+**Property and milestone fixes**:
+
+4. **`designs/benchmarks/hackatdac18/properties.sv`** — Uncommented the correct form of HACKDAC_p2 (outer `~` wraps the whole conjunction):
+   ```systemverilog
+   HACKDAC_p2: assert property (
+       ~(((TCDM_data_gnt_DEM_TO_XBAR) >> 1) &&
+       ((TCDM_data_add_DEM_TO_XBAR >= 32'h1C00_0000) &&
+        (TCDM_data_add_DEM_TO_XBAR <= 32'h1C08_0000)))
+   );
+   ```
+   The malformed variant (`~A && B` instead of `~(A && B)`) was in `test/src/properties.sv` and `hackdac18_wrong/src/properties.sv`. The correct form is in `hackdac18/src/properties.sv`.
+
+5. **`milestones/hackdac18/p2.json`** — Rewrote from scratch. Old file had 11 LLM-hallucinated steps built around the wrong property, with `target_expr` that was trivially satisfiable at cycle 0. New file has 5 steps with `target_expr = (gnt >> 1) != 0 && add in [0x1C00_0000, 0x1C08_0000]` — the actual counterexample condition for the correct property.
+
+PySlang usage: `GenerateBlockArraySymbol.entries` yields `GenerateBlockSymbol` instances; `GenerateBlockSymbol` is indexed via `block[i]`, raising `IndexError` when exhausted. `InvocationExpressionSyntax.arguments` is `ArgumentListSyntax`; iterating it yields `Token('(')`, `SyntaxNode(SeparatedList)`, `Token(')')`. The `SeparatedList` contains `OrderedArgumentSyntax` nodes whose `.expr` is `SimplePropertyExprSyntax`, which wraps `SimpleSequenceExprSyntax`, which wraps the actual identifier/expression.
+
 [2025-04-23] [Feature] Implemented BMC-bounded milestone verification ("LLM Proposes, BMC Disposes") across 4 files:
 
 1. **`frontend/llm_planner.py`**: Updated `SYSTEM_PROMPT` to require `"expected_cycles": <int>` per milestone in the JSON schema. Added rule #6 instructing the LLM to calculate sequential cycles from pipeline stages, counters, and FSMs. Updated all `MOCK_RESPONSES` with `expected_cycles` values.

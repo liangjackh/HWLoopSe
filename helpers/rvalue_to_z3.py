@@ -5,7 +5,7 @@ import z3
 import re
 import logging
 from z3 import Solver, Int, BitVec, Context, BitVecSort, ExprRef, BitVecRef, If, BitVecVal, And, IntVal, Int2BV, Or, Not, ULT, UGT, Z3Exception, BoolRef
-from z3 import is_and, is_app_of, Z3_OP_EXTRACT, is_eq, is_distinct
+from z3 import is_and, is_app_of, Z3_OP_EXTRACT, is_eq, is_distinct, is_bv_value
 from helpers.rvalue_parser import parse_tokens, tokenize
 from engine.execution_manager import ExecutionManager
 from engine.symbolic_state import SymbolicState, smt_stats
@@ -1292,6 +1292,118 @@ def _fallback_dispatch(e, s, m):
 
             elif class_name == "ConcatenationExpressionSyntax":
                 return _syntax_concatenation(e, s, m)
+
+            elif class_name in ("ParenthesizedPropertyExprSyntax", "SimplePropertyExprSyntax",
+                                "SimpleSequenceExprSyntax"):
+                # Wrapper nodes — unwrap to inner expr
+                inner = getattr(e, 'expr', getattr(e, 'expression', None))
+                if inner is not None:
+                    return parse_expr_to_Z3(inner, s, m)
+                return BitVecVal(0, 32)
+
+            elif class_name == "BinaryPropertyExprSyntax":
+                # a |-> b  (implication: !a || b)
+                # Also handles |=> (next-cycle implication) — treat same way
+                left = getattr(e, 'left', None)
+                right = getattr(e, 'right', None)
+                if left is not None and right is not None:
+                    lhs = parse_expr_to_Z3(left, s, m)
+                    rhs = parse_expr_to_Z3(right, s, m)
+                    # Normalise both sides to BoolRef for implication
+                    def _to_bool(v):
+                        if isinstance(v, BoolRef) and not isinstance(v, BitVecRef):
+                            return v
+                        if isinstance(v, BitVecRef):
+                            return v != BitVecVal(0, v.size())
+                        return BitVecVal(1, 1) != BitVecVal(0, 1)
+                    return Or(Not(_to_bool(lhs)), _to_bool(rhs))
+                return BitVecVal(1, 32)
+
+            elif class_name == "AssignmentPatternExpressionSyntax":
+                # '{default: val} or '{a: v1, b: v2} — return the default value if present
+                pattern = getattr(e, 'pattern', None)
+                if pattern is not None:
+                    items = getattr(pattern, 'items', None)
+                    if items is not None:
+                        if hasattr(items, '__iter__'):
+                            for item in items:
+                                key = getattr(item, 'key', None)
+                                val_node = getattr(item, 'expr', None)
+                                if key is not None and str(key).strip() == 'default' and val_node is not None:
+                                    return parse_expr_to_Z3(val_node, s, m)
+                                elif val_node is not None:
+                                    return parse_expr_to_Z3(val_node, s, m)
+                        else:
+                            val_node = getattr(items, 'expr', None)
+                            if val_node is not None:
+                                return parse_expr_to_Z3(val_node, s, m)
+                return BitVecVal(0, 32)
+
+            elif class_name == "InvocationExpressionSyntax":
+                func_name = str(getattr(e, 'left', '')).strip()
+                # Extract first argument from ArgumentListSyntax.
+                # Structure: ArgumentListSyntax -> SeparatedList -> OrderedArgumentSyntax -> .expr
+                arg_node = None
+                args = getattr(e, 'arguments', None)
+                def _unwrap_arg(node):
+                    """Unwrap OrderedArg -> SimplePropertyExpr -> SimpleSequenceExpr -> actual expr."""
+                    _WRAPPER_KINDS = {
+                        ps.SyntaxKind.OrderedArgument,
+                        ps.SyntaxKind.SimplePropertyExpr,
+                        ps.SyntaxKind.SimpleSequenceExpr,
+                    }
+                    while True:
+                        k = getattr(node, 'kind', None)
+                        if k in _WRAPPER_KINDS:
+                            inner = getattr(node, 'expr', getattr(node, 'expression', None))
+                            if inner is None:
+                                break
+                            node = inner
+                        else:
+                            break
+                    return node
+
+                if args is not None and hasattr(args, '__iter__'):
+                    for item in args:
+                        if item.__class__.__name__ == 'Token':
+                            continue
+                        # item is the SeparatedList — unwrap into first argument
+                        if getattr(item, 'kind', None) == ps.SyntaxKind.SeparatedList:
+                            for sub in item:
+                                arg_node = _unwrap_arg(sub)
+                                break
+                        else:
+                            arg_node = _unwrap_arg(item)
+                        if arg_node is not None:
+                            break
+                if func_name == '$clog2':
+                    if arg_node is not None:
+                        arg_val = parse_expr_to_Z3(arg_node, s, m)
+                        # If argument is a concrete BitVecVal, compute clog2 directly
+                        if is_bv_value(arg_val):
+                            import math
+                            int_val = arg_val.as_long()
+                            if int_val <= 0:
+                                return BitVecVal(0, 32)
+                            result = int(math.ceil(math.log2(int_val))) if int_val > 1 else 1
+                            return BitVecVal(result, 32)
+                        # Symbolic argument — can't compute, return fresh symbol
+                        return BitVec(f"clog2_{arg_val}", 32)
+                    return BitVecVal(0, 32)
+                elif func_name in ('$signed', '$unsigned'):
+                    if arg_node is not None:
+                        return parse_expr_to_Z3(arg_node, s, m)
+                    return BitVecVal(0, 32)
+                elif func_name == '$bits':
+                    # $bits returns the bit width — typically a constant
+                    if arg_node is not None:
+                        arg_val = parse_expr_to_Z3(arg_node, s, m)
+                        if isinstance(arg_val, BitVecRef):
+                            return BitVecVal(arg_val.size(), 32)
+                    return BitVecVal(32, 32)
+                else:
+                    # Unknown system function — return 0 silently
+                    return BitVecVal(0, 32)
 
             elif class_name == "Token":
                 return BitVecVal(0, 32)

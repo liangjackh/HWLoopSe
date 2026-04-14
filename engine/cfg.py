@@ -113,32 +113,72 @@ class CFG:
         self.edgelist += res 
 
 
+    def _collect_from_body(self, body):
+        """Collect always blocks, comb assigns, and net decls from a symbol body.
+
+        Recurses into GenerateBlock(Array) so that assigns inside generate-for /
+        generate-if are not missed (e.g. `assign data_gnt_o[j] = ...` inside a
+        genvar loop in XBAR_L2).
+        """
+        for item in body:
+            cname = item.__class__.__name__
+            if cname == "ProceduralBlockSymbol":
+                if hasattr(item, 'syntax') and item.syntax is not None:
+                    self.always_blocks.append(item.syntax)
+            elif cname == "ContinuousAssignSymbol":
+                if hasattr(item, 'syntax') and item.syntax is not None:
+                    self.comb.append(item.syntax)
+            elif cname == "NetSymbol":
+                if hasattr(item, 'syntax') and item.syntax is not None:
+                    self.comb.append(item.syntax)
+            elif cname == "InstanceSymbol":
+                # Do NOT recurse into child instances — each instance
+                # gets its own CFGs built separately in execute_sv().
+                pass
+            elif cname == "GenerateBlockArraySymbol":
+                # generate-for: iterate elaborated entries
+                if hasattr(item, 'entries'):
+                    for entry in item.entries:
+                        self._collect_from_generate_block(entry)
+            elif cname == "GenerateBlockSymbol":
+                # generate-if / generate-case
+                self._collect_from_generate_block(item)
+
+    def _collect_from_generate_block(self, block):
+        """Recurse into a single GenerateBlockSymbol to collect symbols."""
+        try:
+            i = 0
+            while True:
+                child = block[i]
+                cname = child.__class__.__name__
+                if cname == "ProceduralBlockSymbol":
+                    if hasattr(child, 'syntax') and child.syntax is not None:
+                        self.always_blocks.append(child.syntax)
+                elif cname == "ContinuousAssignSymbol":
+                    if hasattr(child, 'syntax') and child.syntax is not None:
+                        self.comb.append(child.syntax)
+                elif cname == "NetSymbol":
+                    if hasattr(child, 'syntax') and child.syntax is not None:
+                        self.comb.append(child.syntax)
+                elif cname == "InstanceSymbol":
+                    pass  # handled separately in execute_sv
+                elif cname == "GenerateBlockArraySymbol":
+                    if hasattr(child, 'entries'):
+                        for entry in child.entries:
+                            self._collect_from_generate_block(entry)
+                elif cname == "GenerateBlockSymbol":
+                    self._collect_from_generate_block(child)
+                i += 1
+        except (IndexError, TypeError):
+            pass
+
     def get_always_sv(self, m: ExecutionManager, s: SymbolicState, ast):
         """Extracts always blocks from PySlang AST"""
         # Handle InstanceSymbol (from topInstances or child instances)
         if ast is not None and ast.__class__.__name__ == "InstanceSymbol":
             # Iterate over the body to find ProceduralBlockSymbol, ContinuousAssign, and child instances
             if hasattr(ast, 'body'):
-                for item in ast.body:
-                    if item.__class__.__name__ == "ProceduralBlockSymbol":
-                        # Get the syntax node from the symbol
-                        if hasattr(item, 'syntax') and item.syntax is not None:
-                            self.always_blocks.append(item.syntax)
-                    elif item.__class__.__name__ == "ContinuousAssignSymbol":
-                        # Collect continuous assignments for COI analysis
-                        if hasattr(item, 'syntax') and item.syntax is not None:
-                            self.comb.append(item.syntax)
-                    elif item.__class__.__name__ == "NetSymbol":
-                        # Handle wire declarations with inline assignment:
-                        # wire x = expr; (creates NetSymbol with initializer, not ContinuousAssignSymbol)
-                        if hasattr(item, 'syntax') and item.syntax is not None:
-                            self.comb.append(item.syntax)
-                    elif item.__class__.__name__ == "InstanceSymbol":
-                        # Do NOT recurse into child instances — each instance
-                        # gets its own CFGs built separately in execute_sv().
-                        # Recursing here would duplicate CFGs under the wrong
-                        # module context, causing signal lookup mismatches.
-                        pass
+                self._collect_from_body(ast.body)
             return
 
         if (ast != None and isinstance(ast, ps.DefinitionSymbol)):

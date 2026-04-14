@@ -1008,7 +1008,10 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                             _s.add(_a)
                         if _s.check() == _sat and len(_s.model().decls()) == 0:
                             _is_unconditional = True
-                    if _is_unconditional:
+                    if _is_unconditional and cycle > 0:
+                        # Only report unconditional violations after cycle 0.
+                        # At cycle 0, signals are free Z3 vars (no reset constraints),
+                        # so ANY assertion is trivially violable — always spurious.
                         print(f"  [Unconditional] assertion violation fires with no path constraints — reporting immediately")
                         return "VIOLATION"
                     print(f"  [Suppressed] assertion violation at cycle {cycle}, milestones={item.milestones_completed}/{total_milestones} — deferring until near final milestone")

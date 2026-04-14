@@ -178,12 +178,37 @@ class ExecutionEngine:
         """
         modules = list(compilation.getRoot().topInstances)
 
+        def _collect_instances_from_generate(block, collected):
+            """Recurse into a GenerateBlockSymbol to find Instance children."""
+            try:
+                i = 0
+                while True:
+                    child = block[i]
+                    if child.kind == ps.SymbolKind.Instance:
+                        collect_all_instances(child, collected)
+                    elif child.kind == ps.SymbolKind.GenerateBlockArray:
+                        if hasattr(child, 'entries'):
+                            for entry in child.entries:
+                                _collect_instances_from_generate(entry, collected)
+                    elif child.kind == ps.SymbolKind.GenerateBlock:
+                        _collect_instances_from_generate(child, collected)
+                    i += 1
+            except (IndexError, TypeError):
+                pass
+
         def collect_all_instances(symbol, collected):
             """Recursively collect all module instances including nested ones."""
             if symbol.kind == ps.SymbolKind.Instance:
                 collected.append(symbol)
                 for child in symbol.body:
-                    collect_all_instances(child, collected)
+                    if child.kind == ps.SymbolKind.Instance:
+                        collect_all_instances(child, collected)
+                    elif child.kind == ps.SymbolKind.GenerateBlockArray:
+                        if hasattr(child, 'entries'):
+                            for entry in child.entries:
+                                _collect_instances_from_generate(entry, collected)
+                    elif child.kind == ps.SymbolKind.GenerateBlock:
+                        _collect_instances_from_generate(child, collected)
 
         # If user specified a top module, find and use only that module
         selected_module = None
@@ -826,7 +851,7 @@ class ExecutionEngine:
                                 seed_signals.append((instance_name, sig))
 
                 if seed_signals:
-                    analyzer = COIAnalyzer(modules_dict, cfgs_by_module, modules)
+                    analyzer = COIAnalyzer(modules_dict, cfgs_by_module, modules, comb_by_module=comb_by_module)
                     coi_result = analyzer.analyze(seed_signals)
 
                     # Always keep assertion-containing instances in the COI.

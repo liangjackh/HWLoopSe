@@ -1199,6 +1199,12 @@ class SymbolicDFS:
             #for case in stmt.cases:
             for case in getattr(stmt, "items", getattr(stmt, "case_items", [])):
                 exprs = getattr(case, "expressions", getattr(case, "exprs", []))
+                # exprs may be a SeparatedList node (not yet iterated into actual exprs).
+                # Unwrap: if it's a single SeparatedList, iterate its non-Token children.
+                if (hasattr(exprs, 'kind') and
+                        exprs.kind == ps.SyntaxKind.SeparatedList):
+                    exprs = [item for item in exprs
+                             if item.__class__.__name__ != 'Token']
                 #for e in case.exprs:
                 for e in exprs:
                     self.visit_expr(m, s, e)
