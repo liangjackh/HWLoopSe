@@ -1,5 +1,11 @@
 # Changelog
 
+[2026-04-15] [BugFix] Fixed multi-target milestone concatenation in auto-plan mode (`engine/execution_engine.py`).
+
+**Root cause**: The auto-plan loop at line ~960 iterated over all assertion targets and appended milestones from each LLM call into a single flat `all_milestones` list. With two targets (e.g., a `div_i` parameter assertion + `HACKDAC_p2_fixed`), the LLM was called twice and produced 7 + 6 = 13 milestones concatenated into one incoherent sequential plan. The `milestones.json` write also used the loop variable `target` after the loop, which pointed to the last target rather than the primary one.
+
+**Fix**: Replaced the per-target loop with a single-target plan using `primary_target = targets[0]`. When multiple targets are found, the engine logs a warning and ignores all but the first. Also fixed `expected_cycles` passthrough (was constructing `Milestone(desc, cond)` without `expected_cycles`, silently defaulting to 10 for all steps) and corrected the `milestones.json` metadata to always use `primary_target`.
+
 [2026-04-14] [BugFix] Fixed cycle-0 spurious violation, unhandled SyntaxKind warnings, and malformed HACKDAC_p2 property in hackdac18 benchmark.
 
 **Root cause**: `collect_all_instances` in `engine/execution_engine.py` did not recurse into `GenerateBlockSymbol`/`GenerateBlockArraySymbol` when discovering module instances. Submodules inside generate-for blocks (e.g., `ResponseBlock_L2`, `AddressDecoder_Req_L2` inside `XBAR_L2_i.genblk3`) were never discovered, so no CFGs were built for them, no port connections were extracted, and COI could not trace through them. As a result, `TCDM_data_gnt_DEM_TO_XBAR` and `TCDM_data_add_DEM_TO_XBAR` remained as unconstrained Z3 free variables, causing a spurious unconditional assertion violation at cycle 0.

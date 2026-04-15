@@ -955,49 +955,58 @@ class ExecutionEngine:
                 else:
                     print(f"[ExecutionEngine] Found {len(targets)} verification target(s) from assertions")
 
-                    # 4.2: For each target, generate milestones
+                    # 4.2: Generate milestones for the primary (first) target only.
+                    # Concatenating milestones from multiple unrelated targets into one
+                    # sequential plan is incoherent — each target requires a different
+                    # system state. Use only the first target.
+                    primary_target = targets[0]
+                    if len(targets) > 1:
+                        print(f"[ExecutionEngine] Multiple targets found — using primary target only: {primary_target.description}")
+                        print(f"[ExecutionEngine] Ignoring {len(targets)-1} additional target(s): {[t.description[:50] for t in targets[1:]]}")
+
+                    # Extract RTL context
+                    slicer = ContextSlicer(driver, compilation, modules)
+                    context = slicer.get_context(primary_target.target_expr, coi_result=self.coi_result)
+                    print(f"[ExecutionEngine] Extracted {len(context)} chars of RTL context")
+
+                    # Get valid signal names (reuse SymbolicDFS)
+                    all_signals = set()
+                    for module in modules:
+                        visitor.symbolic_store.clear()
+                        visitor.visited.clear()
+                        visitor.dfs(module)
+                        all_signals.update(visitor.symbolic_store.keys())
+                    all_signals = list(all_signals)
+                    print(f"[ExecutionEngine] Found {len(all_signals)} signals")
+
+                    # Generate milestones using LLM
+                    planner = LLMPlanner(
+                        api_key=self.llm_api_key,
+                        provider=self.llm_provider,
+                        mock=self.llm_mock,
+                        base_url=self.llm_base_url
+                    )
+                    milestone_dicts = planner.generate_plan(context, primary_target.target_expr, all_signals, num_cycles=int(num_cycles))
+                    print(f"[ExecutionEngine] Generated {len(milestone_dicts)} milestones")
+
+                    # Convert to Milestone objects
                     all_milestones = []
-                    for target in targets:
-                        print(f"[ExecutionEngine] Planning for: {target.description}")
+                    for m in milestone_dicts:
+                        try:
+                            desc = m.get('description', m.get('desc', f"Step {m.get('step', '?')}"))
+                            cond = m.get('condition', m.get('cond', None))
+                            if cond is None:
+                                print(f"[ExecutionEngine] Warning: Skipping milestone without condition: {m}")
+                                continue
+                            exp_cycles = m.get('expected_cycles', 10)
+                            milestone = Milestone(desc, cond, expected_cycles=exp_cycles)
+                            all_milestones.append(milestone)
+                            print(f"[ExecutionEngine]   Step {m.get('step', '?')}: {desc} ({cond}) [k={exp_cycles}]")
+                        except (ValueError, KeyError) as e:
+                            print(f"[ExecutionEngine] Warning: Skipping invalid milestone: {e}")
 
-                        # Extract RTL context
-                        slicer = ContextSlicer(driver, compilation, modules)
-                        context = slicer.get_context(target.target_expr, coi_result=self.coi_result)
-                        print(f"[ExecutionEngine] Extracted {len(context)} chars of RTL context")
-
-                        # Get valid signal names (reuse SymbolicDFS)
-                        all_signals = set()
-                        for module in modules:
-                            visitor.symbolic_store.clear()
-                            visitor.visited.clear()
-                            visitor.dfs(module)
-                            all_signals.update(visitor.symbolic_store.keys())
-                        all_signals = list(all_signals)
-                        print(f"[ExecutionEngine] Found {len(all_signals)} signals")
-
-                        # Generate milestones using LLM
-                        planner = LLMPlanner(
-                            api_key=self.llm_api_key,
-                            provider=self.llm_provider,
-                            mock=self.llm_mock,
-                            base_url=self.llm_base_url
-                        )
-                        milestone_dicts = planner.generate_plan(context, target.target_expr, all_signals, num_cycles=int(num_cycles))
-                        print(f"[ExecutionEngine] Generated {len(milestone_dicts)} milestones for this target")
-
-                        # Convert to Milestone objects
-                        for m in milestone_dicts:
-                            try:
-                                desc = m.get('description', m.get('desc', f"Step {m.get('step', '?')}"))
-                                cond = m.get('condition', m.get('cond', None))
-                                if cond is None:
-                                    print(f"[ExecutionEngine] Warning: Skipping milestone without condition: {m}")
-                                    continue
-                                milestone = Milestone(desc, cond)
-                                all_milestones.append(milestone)
-                                print(f"[ExecutionEngine]   Step {m.get('step', '?')}: {desc} ({cond})")
-                            except (ValueError, KeyError) as e:
-                                print(f"[ExecutionEngine] Warning: Skipping invalid milestone: {e}")
+                    # Use primary_target for metadata (was incorrectly using loop variable `target`)
+                    target = primary_target
 
                     # 4.3: Create directed strategy with milestones
                     if all_milestones:
