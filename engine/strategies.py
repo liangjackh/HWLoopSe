@@ -1275,12 +1275,20 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 if z3_cond is not None:
                     try:
                         z3_str = z3_cond.sexpr() if hasattr(z3_cond, 'sexpr') else str(z3_cond)
-                        # Replace underlying Z3 var names with assertion signal names
-                        for _z3b, _sn in _z3base_to_sig.items():
-                            # Match base_cN pattern (cycle-stamped variables)
-                            z3_str = re.sub(re.escape(_z3b) + r'(_c\d+)', _sn + r'\1', z3_str)
+                        # Replace underlying Z3 var names with assertion signal names.
+                        # Sort by descending key length so longer names are replaced first,
+                        # preventing short names (e.g. "o") from matching inside longer
+                        # ones (e.g. "FC_DATA_gnt_o").
+                        for _z3b, _sn in sorted(_z3base_to_sig.items(), key=lambda kv: -len(kv[0])):
+                            # Match base_cN pattern (cycle-stamped variables).
+                            # Use negative lookbehind to avoid matching inside longer names.
+                            z3_str = re.sub(
+                                r'(?<![A-Za-z0-9_])' + re.escape(_z3b) + r'(_c\d+)',
+                                _sn + r'\1', z3_str)
                             # Also replace bare (non-cycle-stamped) occurrences
-                            z3_str = re.sub(r'\b' + re.escape(_z3b) + r'\b', _sn, z3_str)
+                            z3_str = re.sub(
+                                r'(?<![A-Za-z0-9_])' + re.escape(_z3b) + r'(?![A-Za-z0-9_])',
+                                _sn, z3_str)
                         if len(z3_str) > 200:
                             z3_str = z3_str[:200] + "... (truncated)"
                         print(f"    z3_condition: {z3_str}")

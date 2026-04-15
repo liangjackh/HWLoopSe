@@ -1,7 +1,11 @@
 DEBUG:root:Starting over
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
-DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
+DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
+DEBUG:root:[NBA] Applying 4 pending NBA(s)
+DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
+DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
+DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
+DEBUG:root:[NBA]   ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
+DEBUG:root:UNSAT: 119 constraint(s)
 DEBUG:root:[ConditionParser] 'rstn_top == 0' -> LHS='rstn_top' op='==' RHS='0'
 DEBUG:root:[ConditionParser] 'rstn_top == 1' -> LHS='rstn_top' op='==' RHS='1'
 DEBUG:root:[ConditionParser] 'FC_DATA_req_i == 1' -> LHS='FC_DATA_req_i' op='==' RHS='1'
@@ -10,254 +14,662 @@ DEBUG:root:[ConditionParser] 'FC_DATA_gnt_o == 1' -> LHS='FC_DATA_gnt_o' op='=='
 DEBUG:root:[ConditionParser] 'FC_DATA_add_i > 32'h1C08_0000' -> LHS='FC_DATA_add_i' op='>' RHS='32'h1C08_0000'
 DEBUG:root:  [TopoSort] soc_interconnect: 52 nodes sorted
 DEBUG:root:  [TopoSort] XBAR_L2_i: 273 nodes sorted
+DEBUG:root:  [TopoSort] REQ_BLOCK_CLUSTERS_FC: 51 nodes sorted
+DEBUG:root:  [TopoSort] REQ_BLOCK_CLUSTERS_FC: 51 nodes sorted
+DEBUG:root:  [TopoSort] REQ_BLOCK_CLUSTERS_FC: 51 nodes sorted
+DEBUG:root:  [TopoSort] REQ_BLOCK_CLUSTERS_FC: 51 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_REQ: 4 nodes sorted
+DEBUG:root:  [TopoSort] MUX2_CH0_CH1: 4 nodes sorted
+DEBUG:root:  [TopoSort] MUX2_CH0_CH1: 4 nodes sorted
+DEBUG:root:  [TopoSort] MUX2_CH0_CH1: 4 nodes sorted
+DEBUG:root:  [TopoSort] MUX2_CH0_CH1: 4 nodes sorted
+DEBUG:root:  [TopoSort] MEM_RESP_TREE: 2 nodes sorted
+DEBUG:root:  [TopoSort] MEM_RESP_TREE: 2 nodes sorted
+DEBUG:root:  [TopoSort] MEM_RESP_TREE: 2 nodes sorted
+DEBUG:root:  [TopoSort] MEM_RESP_TREE: 2 nodes sorted
+DEBUG:root:  [TopoSort] MEM_RESP_TREE: 2 nodes sorted
+DEBUG:root:  [TopoSort] MEM_RESP_TREE: 2 nodes sorted
+DEBUG:root:  [TopoSort] MEM_RESP_TREE: 2 nodes sorted
+DEBUG:root:  [TopoSort] MEM_RESP_TREE: 2 nodes sorted
+DEBUG:root:  [TopoSort] MEM_RESP_TREE: 2 nodes sorted
+DEBUG:root:  [TopoSort] MEM_RESP_TREE: 2 nodes sorted
+DEBUG:root:  [TopoSort] MEM_RESP_TREE: 2 nodes sorted
+DEBUG:root:  [TopoSort] MEM_RESP_TREE: 2 nodes sorted
+DEBUG:root:  [TopoSort] MEM_RESP_TREE: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] FAN_IN_RESP: 2 nodes sorted
+DEBUG:root:  [TopoSort] XBAR_BRIDGE_i: 273 nodes sorted
+DEBUG:root:  [TopoSort] i_RequestBlock2CH_BRIDGE: 57 nodes sorted
+DEBUG:root:  [TopoSort] i_RequestBlock2CH_BRIDGE: 57 nodes sorted
+DEBUG:root:  [TopoSort] i_RequestBlock2CH_BRIDGE: 57 nodes sorted
+DEBUG:root:  [TopoSort] i_RequestBlock2CH_BRIDGE: 57 nodes sorted
+DEBUG:root:  [TopoSort] i_RequestBlock2CH_BRIDGE: 57 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Req_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_MUX2_REQ_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_MUX2_REQ_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_MUX2_REQ_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_MUX2_REQ_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_MUX2_REQ_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseBlock_BRIDGE: 12 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseBlock_BRIDGE: 12 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseBlock_BRIDGE: 12 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseBlock_BRIDGE: 12 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseBlock_BRIDGE: 12 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseBlock_BRIDGE: 12 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseBlock_BRIDGE: 12 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseBlock_BRIDGE: 12 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseBlock_BRIDGE: 12 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseBlock_BRIDGE: 12 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseBlock_BRIDGE: 12 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseBlock_BRIDGE: 12 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseBlock_BRIDGE: 12 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseTree_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseTree_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseTree_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseTree_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseTree_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseTree_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseTree_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseTree_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseTree_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseTree_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseTree_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseTree_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_ResponseTree_BRIDGE: 4 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_FanInPrimitive_Resp_BRIDGE: 2 nodes sorted
+DEBUG:root:  [TopoSort] DEMUX_MASTER_32: 11 nodes sorted
+DEBUG:root:  [TopoSort] DEMUX_MASTER_32: 11 nodes sorted
+DEBUG:root:  [TopoSort] DEMUX_MASTER_32: 11 nodes sorted
+DEBUG:root:  [TopoSort] DEMUX_MASTER_32: 11 nodes sorted
+DEBUG:root:  [TopoSort] DEMUX_MASTER_32: 11 nodes sorted
+DEBUG:root:  [TopoSort] DEMUX_AXI64: 11 nodes sorted
+DEBUG:root:  [TopoSort] DEMUX_AXI64: 11 nodes sorted
+DEBUG:root:  [TopoSort] DEMUX_AXI64: 11 nodes sorted
+DEBUG:root:  [TopoSort] DEMUX_AXI64: 11 nodes sorted
+DEBUG:root:  [TopoSort] lint_2_apb_i: 3 nodes sorted
+DEBUG:root:  [TopoSort] i_lint_2_axi: 37 nodes sorted
+DEBUG:root:  [TopoSort] axi64_2_lint32_i: 2 nodes sorted
+DEBUG:root:  [TopoSort] Slave_aw_buffer: 2 nodes sorted
+DEBUG:root:  [TopoSort] Slave_ar_buffer: 2 nodes sorted
+DEBUG:root:  [TopoSort] Slave_w_buffer: 2 nodes sorted
+DEBUG:root:  [TopoSort] Slave_b_buffer: 2 nodes sorted
+DEBUG:root:  [TopoSort] i_axi_write_ctrl: 3 nodes sorted
+DEBUG:root:  [TopoSort] parallel_lint_write: 3 nodes sorted
+DEBUG:root:  [TopoSort] parallel_lint_read: 3 nodes sorted
+DEBUG:root:  [TopoSort] i_axi_read_ctrl: 2 nodes sorted
 DEBUG:root:  [TopoSort] jg_bind_inst: 2 nodes sorted
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
 DEBUG:root:Initializing state: evaluating combinational logic to fixed-point...
-DEBUG:root:UNSAT: 1 constraint(s)
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_valid_TO_BRIDGE[2] <= 0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_valid_TO_BRIDGE[k+3] <= 0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_ID_TO_BRIDGE[k+3] <= 0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_aux_TO_BRIDGE[k+3] <= 0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_valid_TO_BRIDGE[k+3] <= 0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_ID_TO_BRIDGE[k+3] <= 0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_aux_TO_BRIDGE[k+3] <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_MASTER_32.CS <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_MASTER_32.sampled_data_aux <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_MASTER_32.CS <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_MASTER_32.sampled_data_aux <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_MASTER_32.CS <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_MASTER_32.sampled_data_aux <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_MASTER_32.CS <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_MASTER_32.sampled_data_aux <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_MASTER_32.CS <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_MASTER_32.sampled_data_aux <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_AXI64.CS <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_AXI64.sampled_data_aux <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_AXI64.CS <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_AXI64.sampled_data_aux <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_AXI64.CS <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_AXI64.sampled_data_aux <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_AXI64.CS <= 0
+DEBUG:root:[NBA] Queued NBA: DEMUX_AXI64.sampled_data_aux <= 0
+DEBUG:root:[NBA] Queued NBA: lint_2_apb_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: lint_2_apb_i.data_r_aux_o <= 0
+DEBUG:root:[NBA] Queued NBA: lint_2_apb_i.data_r_ID_o <= 0
+DEBUG:root:[NBA] Queued NBA: lint_2_apb_i.master_PADDR_Q <= 0
+DEBUG:root:[NBA] Queued NBA: lint_2_apb_i.master_PWDATA_Q <= 0
+DEBUG:root:[NBA] Queued NBA: lint_2_apb_i.master_PWRITE_Q <= 0
+DEBUG:root:[NBA] Queued NBA: lint_2_apb_i.data_r_rdata_o <= 0
+DEBUG:root:[NBA] Queued NBA: lint_2_apb_i.data_r_opc_o <= 0
+DEBUG:root:[NBA] Queued NBA: lint_2_apb_i.data_r_valid_o <= 0
+DEBUG:root:[NBA] Queued NBA: i_lint_2_axi.CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_lint_2_axi.data_rID_o <= 0
+DEBUG:root:[NBA] Queued NBA: i_lint_2_axi.data_raux_o <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_write_ctrl.CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_write_ctrl.CountBurst_CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_write_ctrl.AWID_REG <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_write_ctrl.AWUSER_REG <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_write_ctrl.AWADDR_REG <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_write_ctrl.AWLEN_REG <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_write_ctrl.AWSIZE_REG <= 0
+DEBUG:root:[NBA] Queued NBA: parallel_lint_write.CS <= 0
+DEBUG:root:[NBA] Queued NBA: parallel_lint_write.data_r_rdata_q <= 0
+DEBUG:root:[NBA] Queued NBA: parallel_lint_write.size_offset_info <= 0
+DEBUG:root:[NBA] Queued NBA: parallel_lint_write.rvalid_mask <= 0
+DEBUG:root:[NBA] Queued NBA: parallel_lint_read.CS <= 0
+DEBUG:root:[NBA] Queued NBA: parallel_lint_read.data_r_rdata_q <= 0
+DEBUG:root:[NBA] Queued NBA: parallel_lint_read.size_offset_info <= 0
+DEBUG:root:[NBA] Queued NBA: parallel_lint_read.rvalid_mask <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_read_ctrl.CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_read_ctrl.CountBurst_CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_read_ctrl.RDATA_REG <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_read_ctrl.RID_REG <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_read_ctrl.RUSER_REG <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_read_ctrl.ARADDR_REG <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_read_ctrl.ARLEN_REG <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_read_ctrl.ARSIZE_REG <= 0
 DEBUG:root:[Score] M[1]='Reset deasserted: system becomes active.' remaining=3 cycle=1 base=31 distance=1 total=32
-DEBUG:root:UNSAT: 1 constraint(s)
-DEBUG:root:[Score] M[3]='FC_DATA receives a grant for the out-of-range address, violating the property.' remaining=1 cycle=2 base=12 distance=1000 total=1012
-DEBUG:root:UNSAT: 1 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
-DEBUG:root:[NBA] Applying 4 pending NBA(s)
-DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
-DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
-DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
-DEBUG:root:[NBA]   ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: mult_i.mulh_CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
+DEBUG:root:[NBA] Applying 46 pending NBA(s)
+DEBUG:root:[NBA]   soc_interconnect.PER_data_r_valid_TO_BRIDGE[2] <= 0
+DEBUG:root:[NBA]   soc_interconnect.PER_data_r_valid_TO_BRIDGE[k+3] <= 0
+DEBUG:root:[NBA]   soc_interconnect.PER_data_r_ID_TO_BRIDGE[k+3] <= 0
+DEBUG:root:[NBA]   soc_interconnect.PER_data_r_aux_TO_BRIDGE[k+3] <= 0
+DEBUG:root:[NBA]   DEMUX_MASTER_32.CS <= 0
+DEBUG:root:[NBA]   DEMUX_MASTER_32.sampled_data_aux <= 0
+DEBUG:root:[NBA]   DEMUX_AXI64.CS <= 0
+DEBUG:root:[NBA]   DEMUX_AXI64.sampled_data_aux <= 0
+DEBUG:root:[NBA]   lint_2_apb_i.CS <= 0
+DEBUG:root:[NBA]   lint_2_apb_i.data_r_aux_o <= 0
+DEBUG:root:[NBA]   lint_2_apb_i.data_r_ID_o <= 0
+DEBUG:root:[NBA]   lint_2_apb_i.master_PADDR_Q <= 0
+DEBUG:root:[NBA]   lint_2_apb_i.master_PWDATA_Q <= 0
+DEBUG:root:[NBA]   lint_2_apb_i.master_PWRITE_Q <= 0
+DEBUG:root:[NBA]   lint_2_apb_i.data_r_rdata_o <= 0
+DEBUG:root:[NBA]   lint_2_apb_i.data_r_opc_o <= 0
+DEBUG:root:[NBA]   lint_2_apb_i.data_r_valid_o <= 0
+DEBUG:root:[NBA]   i_lint_2_axi.CS <= 0
+DEBUG:root:[NBA]   i_lint_2_axi.data_rID_o <= 0
+DEBUG:root:[NBA]   i_lint_2_axi.data_raux_o <= 0
+DEBUG:root:[NBA]   buffer_i.CS <= 0
+DEBUG:root:[NBA]   buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA]   buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:[NBA]   i_axi_write_ctrl.CS <= 0
+DEBUG:root:[NBA]   i_axi_write_ctrl.CountBurst_CS <= 0
+DEBUG:root:[NBA]   i_axi_write_ctrl.AWID_REG <= 0
+DEBUG:root:[NBA]   i_axi_write_ctrl.AWUSER_REG <= 0
+DEBUG:root:[NBA]   i_axi_write_ctrl.AWADDR_REG <= 0
+DEBUG:root:[NBA]   i_axi_write_ctrl.AWLEN_REG <= 0
+DEBUG:root:[NBA]   i_axi_write_ctrl.AWSIZE_REG <= 0
+DEBUG:root:[NBA]   parallel_lint_write.CS <= 0
+DEBUG:root:[NBA]   parallel_lint_write.data_r_rdata_q <= 0
+DEBUG:root:[NBA]   parallel_lint_write.size_offset_info <= 0
+DEBUG:root:[NBA]   parallel_lint_write.rvalid_mask <= 0
+DEBUG:root:[NBA]   parallel_lint_read.CS <= 0
+DEBUG:root:[NBA]   parallel_lint_read.data_r_rdata_q <= 0
+DEBUG:root:[NBA]   parallel_lint_read.size_offset_info <= 0
+DEBUG:root:[NBA]   parallel_lint_read.rvalid_mask <= 0
+DEBUG:root:[NBA]   i_axi_read_ctrl.CS <= 0
+DEBUG:root:[NBA]   i_axi_read_ctrl.CountBurst_CS <= 0
+DEBUG:root:[NBA]   i_axi_read_ctrl.RDATA_REG <= 0
+DEBUG:root:[NBA]   i_axi_read_ctrl.RID_REG <= 0
+DEBUG:root:[NBA]   i_axi_read_ctrl.RUSER_REG <= 0
+DEBUG:root:[NBA]   i_axi_read_ctrl.ARADDR_REG <= 0
+DEBUG:root:[NBA]   i_axi_read_ctrl.ARLEN_REG <= 0
+DEBUG:root:[NBA]   i_axi_read_ctrl.ARSIZE_REG <= 0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_ID_TO_BRIDGE[2] <= ZeroExt(31, Extract(2, 2, data_ID_i_c0))
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_valid_TO_BRIDGE[2] <= ZeroExt(31, Extract(2, 2, data_req_i_c0))
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_aux_TO_BRIDGE[2] <= ZeroExt(31, Extract(2, 2, data_aux_i_c0))
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_opc_TO_BRIDGE[2] <= 0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_valid_TO_BRIDGE[k+3] <= data_req_i_c0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_ID_TO_BRIDGE[k+3] <= data_ID_i_c0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_aux_TO_BRIDGE[k+3] <= data_aux_i_c0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_valid_TO_BRIDGE[k+3] <= data_req_i_c0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_ID_TO_BRIDGE[k+3] <= data_ID_i_c0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_aux_TO_BRIDGE[k+3] <= data_aux_i_c0
+DEBUG:root:[NBA] Queued NBA: lint_2_apb_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_lint_2_axi.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:UNSAT: 10 constraint(s)
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:UNSAT: 10 constraint(s)
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:UNSAT: 10 constraint(s)
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:UNSAT: 10 constraint(s)
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:UNSAT: 10 constraint(s)
+DEBUG:root:[NBA] Queued NBA: i_axi_write_ctrl.CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_write_ctrl.CountBurst_CS <= 0
+DEBUG:root:[NBA] Queued NBA: parallel_lint_write.CS <= 0
+DEBUG:root:[NBA] Queued NBA: parallel_lint_read.CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_read_ctrl.CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_read_ctrl.CountBurst_CS <= 0
+DEBUG:root:[Score] M[3]='FC_DATA receives a grant for the out-of-range address, violating the property.' remaining=1 cycle=2 base=12 distance=1 total=13
+DEBUG:root:[NBA] Applying 18 pending NBA(s)
+DEBUG:root:[NBA]   soc_interconnect.PER_data_r_ID_TO_BRIDGE[2] <= ZeroExt(31, Extract(2, 2, data_ID_i_c0))
+DEBUG:root:[NBA]   soc_interconnect.PER_data_r_valid_TO_BRIDGE[2] <= ZeroExt(31, Extract(2, 2, data_req_i_c0))
+DEBUG:root:[NBA]   soc_interconnect.PER_data_r_aux_TO_BRIDGE[2] <= ZeroExt(31, Extract(2, 2, data_aux_i_c0))
+DEBUG:root:[NBA]   soc_interconnect.PER_data_r_opc_TO_BRIDGE[2] <= 0
+DEBUG:root:[NBA]   soc_interconnect.PER_data_r_valid_TO_BRIDGE[k+3] <= data_req_i_c0
+DEBUG:root:[NBA]   soc_interconnect.PER_data_r_ID_TO_BRIDGE[k+3] <= data_ID_i_c0
+DEBUG:root:[NBA]   soc_interconnect.PER_data_r_aux_TO_BRIDGE[k+3] <= data_aux_i_c0
+DEBUG:root:[NBA]   lint_2_apb_i.CS <= 0
+DEBUG:root:[NBA]   i_lint_2_axi.CS <= 0
+DEBUG:root:[NBA]   buffer_i.CS <= 0
+DEBUG:root:[NBA]   buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA]   buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:[NBA]   i_axi_write_ctrl.CS <= 0
+DEBUG:root:[NBA]   i_axi_write_ctrl.CountBurst_CS <= 0
+DEBUG:root:[NBA]   parallel_lint_write.CS <= 0
+DEBUG:root:[NBA]   parallel_lint_read.CS <= 0
+DEBUG:root:[NBA]   i_axi_read_ctrl.CS <= 0
+DEBUG:root:[NBA]   i_axi_read_ctrl.CountBurst_CS <= 0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_ID_TO_BRIDGE[2] <= ZeroExt(31, Extract(2, 2, data_ID_i_c0))
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_valid_TO_BRIDGE[2] <= ZeroExt(31, Extract(2, 2, data_req_i_c0))
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_aux_TO_BRIDGE[2] <= ZeroExt(31, Extract(2, 2, data_aux_i_c0))
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_opc_TO_BRIDGE[2] <= 0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_valid_TO_BRIDGE[k+3] <= data_req_i_c0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_ID_TO_BRIDGE[k+3] <= data_ID_i_c0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_aux_TO_BRIDGE[k+3] <= data_aux_i_c0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_valid_TO_BRIDGE[k+3] <= data_req_i_c0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_ID_TO_BRIDGE[k+3] <= data_ID_i_c0
+DEBUG:root:[NBA] Queued NBA: soc_interconnect.PER_data_r_aux_TO_BRIDGE[k+3] <= data_aux_i_c0
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:[NBA] Queued NBA: lint_2_apb_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_lint_2_axi.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:[NBA] Queued NBA: buffer_i.CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Pop_Pointer_CS <= 0
+DEBUG:root:[NBA] Queued NBA: buffer_i.Push_Pointer_CS <= 0
+DEBUG:root:UNSAT: 14 constraint(s)
+DEBUG:root:[NBA] Queued NBA: i_axi_write_ctrl.CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_write_ctrl.CountBurst_CS <= 0
+DEBUG:root:[NBA] Queued NBA: parallel_lint_write.CS <= 0
+DEBUG:root:[NBA] Queued NBA: parallel_lint_read.CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_read_ctrl.CS <= 0
+DEBUG:root:[NBA] Queued NBA: i_axi_read_ctrl.CountBurst_CS <= 0
 DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
 DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
 DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
-DEBUG:root:[NBA] Applying 11 pending NBA(s)
-DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
-DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
-DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
-DEBUG:root:[NBA]   ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
-DEBUG:root:[NBA]   mult_i.mulh_CS <= 0
-DEBUG:root:[NBA]   load_store_unit_i.CS <= 0
-DEBUG:root:[NBA]   cs_registers_i.id_valid_q <= id_valid_i_c0
-DEBUG:root:[NBA]   cs_registers_i.PCER_q <= 0
-DEBUG:root:[NBA]   cs_registers_i.PCMR_q <= 3
-DEBUG:root:[NBA]   debug_unit_i.pc_tracking_fsm_cs <= 0
-DEBUG:root:[NBA]   debug_unit_i.settings_q <= 0
-DEBUG:root:UNSAT: 126 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
-DEBUG:root:[NBA] Applying 12 pending NBA(s)
-DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
-DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
-DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
-DEBUG:root:[NBA]   ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
-DEBUG:root:[NBA]   mult_i.mulh_CS <= 0
-DEBUG:root:[NBA]   load_store_unit_i.CS <= 0
-DEBUG:root:[NBA]   cs_registers_i.id_valid_q <= id_valid_i_c0
-DEBUG:root:[NBA]   cs_registers_i.PCER_q <= 0
-DEBUG:root:[NBA]   cs_registers_i.PCMR_q <= 3
-DEBUG:root:[NBA]   debug_unit_i.pc_tracking_fsm_cs <= 0
-DEBUG:root:[NBA]   debug_unit_i.settings_q <= 0
-DEBUG:root:[NBA]   axi_address_decoder_AR.CS <= 0
-DEBUG:root:UNSAT: 127 constraint(s)
-DEBUG:root:UNSAT: 128 constraint(s)
-DEBUG:root:UNSAT: 128 constraint(s)
-DEBUG:root:UNSAT: 128 constraint(s)
-DEBUG:root:UNSAT: 128 constraint(s)
-DEBUG:root:UNSAT: 128 constraint(s)
-DEBUG:root:UNSAT: 128 constraint(s)
-DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
-DEBUG:root:[NBA] Applying 5 pending NBA(s)
-DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
-DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
-DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
-DEBUG:root:[NBA]   ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
-DEBUG:root:[NBA]   mult_i.mulh_CS <= 0
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 120 constraint(s)
-DEBUG:root:UNSAT: 120 constraint(s)
-DEBUG:root:UNSAT: 120 constraint(s)
-DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
-DEBUG:root:UNSAT: 120 constraint(s)
-DEBUG:root:UNSAT: 120 constraint(s)
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
-DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
-DEBUG:root:UNSAT: 128 constraint(s)
-DEBUG:root:UNSAT: 128 constraint(s)
-DEBUG:root:UNSAT: 128 constraint(s)
-DEBUG:root:UNSAT: 128 constraint(s)
-DEBUG:root:UNSAT: 128 constraint(s)
-DEBUG:root:UNSAT: 128 constraint(s)
-DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: controller_i.ctrl_fsm_cs <= 0
-DEBUG:root:[NBA] Queued NBA: controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
-DEBUG:root:[NBA] Queued NBA: controller_i.jump_done_q <= 0 & ~id_ready_i_c0
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: mult_i.mulh_CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
-DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
-DEBUG:root:[NBA] Applying 12 pending NBA(s)
-DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
-DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
-DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
-DEBUG:root:[NBA]   ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
-DEBUG:root:[NBA]   mult_i.mulh_CS <= 0
-DEBUG:root:[NBA]   load_store_unit_i.CS <= 0
-DEBUG:root:[NBA]   cs_registers_i.id_valid_q <= id_valid_i_c0
-DEBUG:root:[NBA]   cs_registers_i.PCER_q <= 0
-DEBUG:root:[NBA]   cs_registers_i.PCMR_q <= 3
-DEBUG:root:[NBA]   debug_unit_i.pc_tracking_fsm_cs <= 0
-DEBUG:root:[NBA]   debug_unit_i.settings_q <= 0
-DEBUG:root:[NBA]   axi_address_decoder_AR.CS <= 0
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: controller_i.ctrl_fsm_cs <= 0
-DEBUG:root:[NBA] Queued NBA: controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
-DEBUG:root:[NBA] Queued NBA: controller_i.jump_done_q <= 0 & ~id_ready_i_c0
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: mult_i.mulh_CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
-DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
 DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
 DEBUG:root:[NBA] Applying 3 pending NBA(s)
 DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
 DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
 DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
 DEBUG:root:[NBA] Queued NBA: mult_i.mulh_CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
 DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
 DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
 DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
 DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
 DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
 DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
 DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
-DEBUG:root:[NBA] Applying 3 pending NBA(s)
-DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
-DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
-DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: mult_i.mulh_CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
-DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
 DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
 DEBUG:root:[NBA] Applying 6 pending NBA(s)
 DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
@@ -266,98 +678,260 @@ DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
 DEBUG:root:[NBA]   ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
 DEBUG:root:[NBA]   mult_i.mulh_CS <= 0
 DEBUG:root:[NBA]   load_store_unit_i.CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
-DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: controller_i.ctrl_fsm_cs <= 0
-DEBUG:root:[NBA] Queued NBA: controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
-DEBUG:root:[NBA] Queued NBA: controller_i.jump_done_q <= 0 & ~id_ready_i_c0
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: mult_i.mulh_CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
 DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
 DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
 DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
 DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
 DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
 DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:[NBA] Queued NBA: mult_i.mulh_CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
-DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
-DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
-DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
-DEBUG:root:UNSAT: 129 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
 DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
 DEBUG:root:[NBA] Applying 3 pending NBA(s)
 DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
 DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
 DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
-DEBUG:root:[NBA] Queued NBA: hwloop_regs_i.hwlp_end_q[hwlp_regid_i] <= ( ( (deassert_we_c0) ?  3'b0 : 0)[1] ? 0 : csr_hwlp_data_c0)
-DEBUG:root:[NBA] Queued NBA: ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
-DEBUG:root:UNSAT: 117 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
 DEBUG:root:[NBA] Queued NBA: mult_i.mulh_CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
 DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
-DEBUG:root:UNSAT: 121 constraint(s)
-DEBUG:root:UNSAT: 121 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
 DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
 DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
 DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
 DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
 DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
 DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
+DEBUG:root:[NBA] Applying 3 pending NBA(s)
+DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
+DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
+DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:[NBA] Queued NBA: mult_i.mulh_CS <= 0
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
+DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
+DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
+DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
+DEBUG:root:[NBA] Applying 3 pending NBA(s)
+DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
+DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
+DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
+DEBUG:root:[NBA] Queued NBA: ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:[NBA] Queued NBA: mult_i.mulh_CS <= 0
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
+DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
+DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
+DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
+DEBUG:root:[NBA] Applying 9 pending NBA(s)
+DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
+DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
+DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
+DEBUG:root:[NBA]   ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
+DEBUG:root:[NBA]   mult_i.mulh_CS <= 0
+DEBUG:root:[NBA]   load_store_unit_i.CS <= 0
+DEBUG:root:[NBA]   cs_registers_i.id_valid_q <= id_valid_i_c0
+DEBUG:root:[NBA]   cs_registers_i.PCER_q <= 0
+DEBUG:root:[NBA]   cs_registers_i.PCMR_q <= 3
+DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
+DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
+DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
+DEBUG:root:[NBA] Applying 12 pending NBA(s)
+DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
+DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
+DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
+DEBUG:root:[NBA]   ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
+DEBUG:root:[NBA]   mult_i.mulh_CS <= 0
+DEBUG:root:[NBA]   load_store_unit_i.CS <= 0
+DEBUG:root:[NBA]   cs_registers_i.id_valid_q <= id_valid_i_c0
+DEBUG:root:[NBA]   cs_registers_i.PCER_q <= 0
+DEBUG:root:[NBA]   cs_registers_i.PCMR_q <= 3
+DEBUG:root:[NBA]   debug_unit_i.pc_tracking_fsm_cs <= 0
+DEBUG:root:[NBA]   debug_unit_i.settings_q <= 0
+DEBUG:root:[NBA]   axi_address_decoder_AR.CS <= 0
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:[NBA] Queued NBA: controller_i.ctrl_fsm_cs <= 0
+DEBUG:root:[NBA] Queued NBA: controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
+DEBUG:root:[NBA] Queued NBA: controller_i.jump_done_q <= 0 & ~id_ready_i_c0
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:[NBA] Queued NBA: ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:[NBA] Queued NBA: mult_i.mulh_CS <= 0
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
+DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
+DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
+DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
+DEBUG:root:[NBA] Applying 9 pending NBA(s)
+DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
+DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
+DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
+DEBUG:root:[NBA]   ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
+DEBUG:root:[NBA]   mult_i.mulh_CS <= 0
+DEBUG:root:[NBA]   load_store_unit_i.CS <= 0
+DEBUG:root:[NBA]   cs_registers_i.id_valid_q <= id_valid_i_c0
+DEBUG:root:[NBA]   cs_registers_i.PCER_q <= 0
+DEBUG:root:[NBA]   cs_registers_i.PCMR_q <= 3
+DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
+DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
+DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
 DEBUG:root:UNSAT: 129 constraint(s)
 DEBUG:root:UNSAT: 129 constraint(s)
+DEBUG:root:UNSAT: 129 constraint(s)
+DEBUG:root:UNSAT: 129 constraint(s)
+DEBUG:root:UNSAT: 129 constraint(s)
+DEBUG:root:UNSAT: 129 constraint(s)
+DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
+DEBUG:root:[NBA] Applying 12 pending NBA(s)
+DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
+DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
+DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
+DEBUG:root:[NBA]   ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
+DEBUG:root:[NBA]   mult_i.mulh_CS <= 0
+DEBUG:root:[NBA]   load_store_unit_i.CS <= 0
+DEBUG:root:[NBA]   cs_registers_i.id_valid_q <= id_valid_i_c0
+DEBUG:root:[NBA]   cs_registers_i.PCER_q <= 0
+DEBUG:root:[NBA]   cs_registers_i.PCMR_q <= 3
+DEBUG:root:[NBA]   debug_unit_i.pc_tracking_fsm_cs <= 0
+DEBUG:root:[NBA]   debug_unit_i.settings_q <= 0
+DEBUG:root:[NBA]   axi_address_decoder_AR.CS <= 0
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
+DEBUG:root:[NBA] Queued NBA: controller_i.ctrl_fsm_cs <= 0
+DEBUG:root:[NBA] Queued NBA: controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
+DEBUG:root:[NBA] Queued NBA: controller_i.jump_done_q <= 0 & ~id_ready_i_c0
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:[NBA] Queued NBA: ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:UNSAT: 119 constraint(s)
+DEBUG:root:[NBA] Queued NBA: mult_i.mulh_CS <= 0
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:[NBA] Queued NBA: load_store_unit_i.CS <= 0
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:UNSAT: 123 constraint(s)
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.id_valid_q <= id_valid_i_c0
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCER_q <= 0
+DEBUG:root:[NBA] Queued NBA: cs_registers_i.PCMR_q <= 3
+DEBUG:root:[NBA] Queued NBA: debug_unit_i.pc_tracking_fsm_cs <= 0
+DEBUG:root:[NBA] Queued NBA: debug_unit_i.settings_q <= 0
+DEBUG:root:[NBA] Queued NBA: axi_address_decoder_AR.CS <= 0
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:[Score] M[8]='Now, we need the address condition to be false (address > 0x1C08_0000). But currently address is within range. We need a different request from a different master (or same master with different address) that targets an address > 0x1C08_0000. Let's have FC_INSTR issue a request with address > 0x1C08_0000 (e.g., 0x1C08_0001). This will set TCDM_data_add_DEM_TO_XBAR for index 0? Actually, FC_INSTR is index 0 in the concatenation. Ensure this request is also granted? The target condition requires the shift of gnt vector to be non-zero? Actually, (~((gnt) >> 1)) means bits [N-1:1] of gnt must all be zero? Wait, it's a logical NOT of the entire shifted vector? The expression is ambiguous. In JG, it's likely a reduction AND? But in SystemVerilog, (~((vector) >> 1)) is a bitwise NOT of the shifted vector. The condition is true only if every bit of (vector >> 1) is 1? That seems unlikely. Let's interpret: The target is an assertion that should never hold. So we need to make it hold for a counterexample. The condition is (~((gnt) >> 1) && (address >= 0x1C00_0000 && address > 0x1C08_0000)). The address part is contradictory: address >= 0x1C00_0000 && address > 0x1C08_0000 simplifies to address > 0x1C08_0000. So we need address > 0x1C08_0000. And we need (~((gnt) >> 1)) to be true. Since gnt is a vector, (gnt >> 1) shifts right by 1, then bitwise NOT. For this to be true (all bits 1), we need (gnt >> 1) to be all zeros. That means bits [N-1:1] of gnt must be zero. Bit 0 can be anything. So we need no grants for masters with index >=1. So only master index 0 can have a grant. So we need a request from master index 0 (FC_INSTR) with address > 0x1C08_0000, and it must be granted. And no other master with index >=1 should have a grant. Let's set that up.' remaining=3 cycle=5 base=35 distance=2009 total=2044
+DEBUG:root:[NBA] Applying 12 pending NBA(s)
+DEBUG:root:[NBA]   controller_i.ctrl_fsm_cs <= 0
+DEBUG:root:[NBA]   controller_i.boot_done_q <= 0 | ~0 & (0 | ~0 & (0 | ~0 & (0 | ~0 & ZeroExt(31, 0))))
+DEBUG:root:[NBA]   controller_i.jump_done_q <= 0 & ~id_ready_i_c0
+DEBUG:root:[NBA]   ex_stage_i.regfile_we_lsu <= regfile_we_ex_c0
+DEBUG:root:[NBA]   mult_i.mulh_CS <= 0
+DEBUG:root:[NBA]   load_store_unit_i.CS <= 0
+DEBUG:root:[NBA]   cs_registers_i.id_valid_q <= id_valid_i_c0
+DEBUG:root:[NBA]   cs_registers_i.PCER_q <= 0
+DEBUG:root:[NBA]   cs_registers_i.PCMR_q <= 3
+DEBUG:root:[NBA]   debug_unit_i.pc_tracking_fsm_cs <= 0
+DEBUG:root:[NBA]   debug_unit_i.settings_q <= 0
+DEBUG:root:[NBA]   axi_address_decoder_AR.CS <= 0
+DEBUG:root:UNSAT: 131 constraint(s)
+DEBUG:root:UNSAT: 131 constraint(s)

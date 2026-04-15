@@ -940,6 +940,44 @@ class SymbolicDFS:
                         rhs_str = conjunction_with_pointers(rhs, s, m)
                         rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
                         s.store[m.curr_module][lhs_name] = rhs_with_symbols
+                elif 'Concatenation' in lhs.__class__.__name__:
+                    # LHS is a concatenation: assign {a, b, c} = rhs;
+                    # Evaluate the RHS once and assign to each named member.
+                    try:
+                        rhs_z3 = self.expr_to_z3(m, s, rhs)
+                    except Exception:
+                        rhs_z3 = None
+                    expressions = getattr(lhs, 'expressions', getattr(lhs, 'operands', None))
+                    if expressions is not None:
+                        members = []
+                        for member in expressions:
+                            if hasattr(member, '__class__') and 'Token' in member.__class__.__name__:
+                                continue
+                            mname = None
+                            if hasattr(member, 'identifier'):
+                                mname = getattr(member.identifier, 'valueText',
+                                               getattr(member.identifier, 'value', None))
+                            elif hasattr(member, 'valueText'):
+                                mname = member.valueText
+                            if mname:
+                                members.append(mname)
+                        if members and rhs_z3 is not None:
+                            import z3 as _z3
+                            rhs_bits = rhs_z3.size() if hasattr(rhs_z3, 'size') else 32
+                            n = len(members)
+                            # Assign bit slices: concat members ordered MSB..LSB
+                            bits_each = rhs_bits // n if n > 0 else rhs_bits
+                            for i, mname in enumerate(members):
+                                msb = rhs_bits - i * bits_each - 1
+                                lsb = rhs_bits - (i + 1) * bits_each
+                                if msb >= lsb >= 0 and msb < rhs_bits and n > 1:
+                                    try:
+                                        slice_val = _z3.Extract(msb, lsb, rhs_z3)
+                                    except Exception:
+                                        slice_val = rhs_z3
+                                else:
+                                    slice_val = rhs_z3
+                                s.store[m.curr_module][mname] = slice_val
             return
 
         # Handle NetDeclarationSyntax / DataDeclarationSyntax with initializer: wire x = expr;

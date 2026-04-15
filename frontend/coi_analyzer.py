@@ -342,6 +342,18 @@ class COIAnalyzer:
                 self._collect_read_signals(rhs, rhs_reads)
                 self.comb_writes[instance_name][lhs_name] = rhs_reads
                 self.comb_reads[instance_name].update(rhs_reads)
+            else:
+                # LHS may be a concatenation: assign {a, b, c} = rhs
+                # Register each element individually so COI can trace through any of them.
+                lhs_cname = lhs.__class__.__name__ if lhs is not None else ''
+                if 'Concatenation' in lhs_cname:
+                    rhs_reads = set()
+                    self._collect_read_signals(rhs, rhs_reads)
+                    concat_names = set()
+                    self._collect_read_signals(lhs, concat_names)
+                    for name in concat_names:
+                        self.comb_writes[instance_name][name] = rhs_reads
+                    self.comb_reads[instance_name].update(rhs_reads)
 
     # ------------------------------------------------------------------
     # 2b. Extract cross-module port connections
@@ -352,23 +364,45 @@ class COIAnalyzer:
         for instance_name, module in self.modules_dict.items():
             if not hasattr(module, 'body'):
                 continue
+            self._extract_ports_from_body(instance_name, module.body)
 
-            # Look for child InstanceSymbol nodes in this instance's body
-            for child in module.body:
-                if child.kind != ps.SymbolKind.Instance:
-                    continue
-
+    def _extract_ports_from_body(self, parent_inst: str, body):
+        """Recurse through a module body (including generate blocks) to find child instances."""
+        for child in body:
+            if child.kind == ps.SymbolKind.Instance:
                 child_name = child.name
-                # Check if this child is one of our tracked instances
-                if child_name not in self.modules_dict:
-                    continue
+                if child_name in self.modules_dict:
+                    syntax = getattr(child, 'syntax', None)
+                    if syntax is not None:
+                        self._extract_ports_from_syntax(parent_inst, child_name, syntax)
+            elif child.kind == ps.SymbolKind.GenerateBlockArray:
+                if hasattr(child, 'entries'):
+                    for entry in child.entries:
+                        self._extract_ports_from_generate(parent_inst, entry)
+            elif child.kind == ps.SymbolKind.GenerateBlock:
+                self._extract_ports_from_generate(parent_inst, child)
 
-                # Get port connections from the syntax node
-                syntax = getattr(child, 'syntax', None)
-                if syntax is None:
-                    continue
-
-                self._extract_ports_from_syntax(instance_name, child_name, syntax)
+    def _extract_ports_from_generate(self, parent_inst: str, block):
+        """Recurse into a GenerateBlockSymbol to find Instance children."""
+        try:
+            i = 0
+            while True:
+                child = block[i]
+                if child.kind == ps.SymbolKind.Instance:
+                    child_name = child.name
+                    if child_name in self.modules_dict:
+                        syntax = getattr(child, 'syntax', None)
+                        if syntax is not None:
+                            self._extract_ports_from_syntax(parent_inst, child_name, syntax)
+                elif child.kind == ps.SymbolKind.GenerateBlockArray:
+                    if hasattr(child, 'entries'):
+                        for entry in child.entries:
+                            self._extract_ports_from_generate(parent_inst, entry)
+                elif child.kind == ps.SymbolKind.GenerateBlock:
+                    self._extract_ports_from_generate(parent_inst, child)
+                i += 1
+        except (IndexError, TypeError):
+            pass
 
     def _extract_ports_from_syntax(self, parent_inst: str, child_inst: str, syntax):
         """Extract named port connections from an instance syntax node."""

@@ -1,10 +1,35 @@
 # Changelog
 
+[2026-04-15] [BugFix] Fixed spurious unconditional violation from concat-LHS continuous assign and Z3 rename mangling (`helpers/slang_helpers.py`, `engine/strategies.py`).
+
+**Root cause 1 — concat LHS silently skipped in `evaluate_comb`**: `slang_helpers.py:evaluate_comb` handled `ContinuousAssignSyntax` by extracting the LHS name via `lhs.identifier` or `lhs.valueText`. For a concatenation LHS such as `assign {FC_INSTR_gnt_o, UDMA_TX_gnt_o, UDMA_RX_gnt_o, DBG_RX_gnt_o, FC_DATA_gnt_o} = FC_data_gnt_INT_32`, neither attribute exists, so `lhs_name` stayed `None` and the assignment was silently skipped. `FC_DATA_gnt_o` was never written to `state.store["soc_interconnect"]`, remaining as an unconstrained fresh Z3 variable. The assertion `FC_DATA_gnt_o == 1` could then be trivially satisfied at cycle 1 with no path constraints, producing a spurious unconditional violation.
+
+**Root cause 2 — Z3 rename mangling short names inside longer ones**: In `_handle_assertion_violation` (`strategies.py`), the display-renaming loop `re.sub(re.escape(_z3b) + r'(_c\d+)', _sn + r'\1', z3_str)` had no word-boundary guard. For the AES group `{('aes','o'),('mux_func','aes_out')}`, `_z3b = "o"` and `_sn = "aes_out"`. The pattern `o(_c\d+)` matched the trailing `o_c0` inside `FC_DATA_gnt_o_c0`, replacing it with `aes_out_c0` and yielding the mangled name `FC_DATA_gnt_aes_out_c0` in the displayed Z3 condition.
+
+**Fixes**:
+
+- **`helpers/slang_helpers.py`** (`evaluate_comb`, `ContinuousAssignSyntax` branch): When `lhs_name is None`, check `'Concatenation' in lhs.__class__.__name__`. If so, evaluate the RHS once, collect named members from `lhs.expressions`, and assign bit-slices of the RHS (`z3.Extract(msb, lsb, rhs_z3)`) to each member in MSB-first order. Falls back to full RHS if `Extract` fails or only one member.
+
+- **`engine/strategies.py`** (`_handle_assertion_violation`, rename loop): Sort `_z3base_to_sig` by descending key length before iteration (so `"FC_DATA_gnt_o"` is processed before `"o"`). Replace bare `re.escape(_z3b)` with `(?<![A-Za-z0-9_])` + `re.escape(_z3b)` + `(?![A-Za-z0-9_])` to prevent substring matches inside longer names.
+
+**Outcome**: The engine now finds a real counterexample for HACKDAC_p2_fixed at cycle 2 (milestones=3/4): `rstn_top=0→1`, `FC_DATA_add_i=0xFFBF0000` (outside `[0x1C000000,0x1C080000]`), `FC_DATA_gnt_o=1` — confirming the hardware Trojan grants access to an out-of-range address.
+
 [2026-04-15] [BugFix] Fixed multi-target milestone concatenation in auto-plan mode (`engine/execution_engine.py`).
 
 **Root cause**: The auto-plan loop at line ~960 iterated over all assertion targets and appended milestones from each LLM call into a single flat `all_milestones` list. With two targets (e.g., a `div_i` parameter assertion + `HACKDAC_p2_fixed`), the LLM was called twice and produced 7 + 6 = 13 milestones concatenated into one incoherent sequential plan. The `milestones.json` write also used the loop variable `target` after the loop, which pointed to the last target rather than the primary one.
 
 **Fix**: Replaced the per-target loop with a single-target plan using `primary_target = targets[0]`. When multiple targets are found, the engine logs a warning and ignores all but the first. Also fixed `expected_cycles` passthrough (was constructing `Milestone(desc, cond)` without `expected_cycles`, silently defaulting to 10 for all steps) and corrected the `milestones.json` metadata to always use `primary_target`.
+
+[2026-04-15] [BugFix] Fixed COI seeding from garbage SVA tokens and no-counterexample due to DEMUX pruning (`engine/execution_engine.py`, `frontend/coi_analyzer.py`).
+
+**Root cause 1 — garbage COI seeds**: COI seeds were extracted exclusively from `target.assertion_source` — the raw SVA property text from `properties.sv`. For `HACKDAC_p2_fixed`, this text contained `disable iff`, inline comments, and `|->`, causing `extract_signals_from_condition` to produce garbage tokens like `jg_bind_inst.TCDM` and `jg_bind_inst.Implication` as seed signals. These resolved to no real signals, so COI found only `soc_interconnect` and `XBAR_L2_i` as relevant instances with zero CFGs.
+
+**Root cause 2 — concat LHS not tracked**: `COIAnalyzer._extract_comb_signals` called `_get_signal_name_syntax(lhs)` which returns `None` for concatenation LHS nodes (`assign {FC_INSTR_gnt_o, ..., FC_DATA_gnt_o} = FC_data_gnt_INT_32`). None of the signals in the concat were registered in `comb_writes`, so COI could not trace backward through `FC_DATA_gnt_o` → `FC_data_gnt_INT_32` → `DEMUX_MASTER_32`. The demux instances were pruned, leaving the grant signal unconstrained and milestone 3 (`FC_DATA_gnt_o == 1`) unreachable.
+
+**Fixes**:
+- **`engine/execution_engine.py`**: After extracting seeds from `assertion_source`, also read `target_expr` from `self.milestone_file` and extract additional seeds from it. For plain (non-hierarchical) signals, seed to every instance in `modules_dict` — COI ignores instances that don't have the signal in their maps. Fixed `milestone_file` reference (was using undefined local instead of `self.milestone_file`).
+- **`frontend/coi_analyzer.py`**: In `_extract_comb_signals`, when `_get_signal_name_syntax(lhs)` returns `None`, check if LHS is a `ConcatenationExpressionSyntax` and register each element individually using `_collect_read_signals(lhs, concat_names)`. This correctly handles `assign {a, b, c} = rhs` by mapping `a`, `b`, `c` → `{rhs}` in `comb_writes`.
+- **`milestones/hackdac18/p2_fixed.json`**: Rewrote the milestone plan. Old plan used packed-array comparisons (`TCDM_data_add_DEM_TO_XBAR > 0x1C08_0000` on a 416-bit vector) and vector-indexed signals (`HWPE_req_i[1]`). New plan uses scalar port signals (`FC_DATA_req_i`, `FC_DATA_add_i`, `FC_DATA_gnt_o`) with 4 steps and `k=8` on the final grant step.
 
 [2026-04-14] [BugFix] Fixed cycle-0 spurious violation, unhandled SyntaxKind warnings, and malformed HACKDAC_p2 property in hackdac18 benchmark.
 

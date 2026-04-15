@@ -18,9 +18,9 @@ rm -f out.txt
 #python3 -m main 6 designs/test-designs/sub-test/sub.F --sv --milestone-file milestones/sub-test.json --coi --strategy directed
 
 #hack@dac18
-python3 -m main 30 hackdac18.F --sv --auto-plan --llm-provider deepseek --coi --strategy directed -t top_wrapper
+#python3 -m main 30 hackdac18.F --sv --auto-plan --llm-provider deepseek --coi --strategy directed -t top_wrapper
 #python3 -m main 30 hackdac18.F --sv  --auto-plan --milestone-file milestones/hackdac18/p1.json --coi --strategy directed -t top_wrapper
-#python3 -m main 30 hackdac18.F --sv  --auto-plan --milestone-file milestones/hackdac18/p2_fixed.json --coi --strategy directed -t top_wrapper
+python3 -m main 30 hackdac18.F --sv  --auto-plan --milestone-file milestones/hackdac18/p2_fixed.json --coi --strategy directed -t top_wrapper
 
 
 

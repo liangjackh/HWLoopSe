@@ -839,16 +839,40 @@ class ExecutionEngine:
                             if sig.isdigit():
                                 continue
                             if '.' in sig:
-                                # Hierarchical path like top_wrapper.soc_interconnect.TCDM_data_gnt
-                                # Instance = second-to-last component, signal = last component
                                 parts = sig.split('.')
                                 inst = parts[-2] if len(parts) >= 2 else parts[0]
                                 sig_name = parts[-1]
                                 seed_signals.append((inst, sig_name))
                             else:
-                                # Plain signal — scope to the assertion's module instance
                                 instance_name = target.module_name.split('.')[-1] if '.' in target.module_name else target.module_name
                                 seed_signals.append((instance_name, sig))
+
+                # Also seed from the milestone file's target_expr if available —
+                # it is typically cleaner than the raw SVA assertion_source (which
+                # may contain disable iff, comments, |-> etc. that produce garbage tokens).
+                milestone_target_expr = None
+                if self.milestone_file and os.path.exists(self.milestone_file):
+                    try:
+                        import json as _json
+                        with open(self.milestone_file) as _f:
+                            _mdata = _json.load(_f)
+                        milestone_target_expr = _mdata.get('target_expr', '')
+                    except Exception:
+                        pass
+                if milestone_target_expr:
+                    extra_sigs = extract_signals_from_condition(milestone_target_expr)
+                    for sig in extra_sigs:
+                        if sig.isdigit():
+                            continue
+                        if '.' in sig:
+                            parts = sig.split('.')
+                            inst = parts[-2] if len(parts) >= 2 else parts[0]
+                            sig_name = parts[-1]
+                            seed_signals.append((inst, sig_name))
+                        else:
+                            # Plain signal — seed to every instance that has it in its store/ports
+                            for inst_name in modules_dict:
+                                seed_signals.append((inst_name, sig))
 
                 if seed_signals:
                     analyzer = COIAnalyzer(modules_dict, cfgs_by_module, modules, comb_by_module=comb_by_module)
