@@ -519,27 +519,42 @@ class ExecutionEngine:
             g2 = get_or_create_group(inst2, sig2)
             merge_groups(g1, g2)
 
+        def _collect_instances_from_body(parent_inst, body_iter):
+            """Recursively collect Instance children, descending into generate blocks."""
+            for child in body_iter:
+                kind = child.kind
+                if kind == ps.SymbolKind.Instance:
+                    child_name = child.name
+                    if child_name not in modules_dict:
+                        continue
+                    syntax = getattr(child, 'syntax', None)
+                    if syntax is None:
+                        continue
+                    self._extract_port_connections_from_syntax(
+                        parent_inst, child_name, syntax, connect
+                    )
+                elif kind == ps.SymbolKind.GenerateBlockArray:
+                    if hasattr(child, 'entries'):
+                        for entry in child.entries:
+                            _collect_instances_from_body(parent_inst, _iter_generate_block(entry))
+                elif kind == ps.SymbolKind.GenerateBlock:
+                    _collect_instances_from_body(parent_inst, _iter_generate_block(child))
+
+        def _iter_generate_block(block):
+            """Yield members of a GenerateBlockSymbol via index iteration."""
+            i = 0
+            while True:
+                try:
+                    yield block[i]
+                    i += 1
+                except (IndexError, Exception):
+                    break
+
         # Walk each module looking for child instances with port connections
         for parent_inst, parent_module in modules_dict.items():
             if not hasattr(parent_module, 'body'):
                 continue
-            # Fast pre-check: skip leaf modules with no Instance children
-            body_list = list(parent_module.body)
-            if not any(child.kind == ps.SymbolKind.Instance for child in body_list):
-                continue
-            for child in body_list:
-                if child.kind != ps.SymbolKind.Instance:
-                    continue
-                child_name = child.name
-                if child_name not in modules_dict:
-                    continue
-                # Extract port connections from syntax
-                syntax = getattr(child, 'syntax', None)
-                if syntax is None:
-                    continue
-                self._extract_port_connections_from_syntax(
-                    parent_inst, child_name, syntax, connect
-                )
+            _collect_instances_from_body(parent_inst, parent_module.body)
 
         # Filter out empty groups
         result = [g for g in groups if len(g) > 1]

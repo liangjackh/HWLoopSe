@@ -1217,3 +1217,26 @@ Counterexample trace (cycle-by-cycle):
     TCDM_data_add_DEM_TO_XBAR = 470548480
     TCDM_data_gnt_DEM_TO_XBAR = 0
 ```
+
+[2026-04-17] [BugFix] Fixed case statement CFG construction to correctly explore all case arms and nested conditionals (`engine/cfg.py`, `engine/strategies.py`).
+
+**Problem**: DEMUX_MASTER_32/cfg2 (always_comb with case statement in l2_tcdm_demux.sv) generated only 1 path instead of 24, preventing exploration of the IDLE arm's ERROR sub-branch where `data_gnt_o=1` is set when no address match occurs. This blocked detection of the genuine HACKDAC_p2_fixed violation.
+
+**Root cause 1 — wrong body attribute on StandardCaseItemSyntax**: `_process_case_sv` extracted the case item body via `getattr(case_item, "statements", getattr(case_item, "statement", None))`. PySlang's `StandardCaseItemSyntax` stores its body in the `.clause` attribute, not `.statements` or `.statement`. All case arms returned `body=None`, causing `_process_case_sv` to skip every arm via the early `continue` at line 392. Since `arm_found` stayed False, the function fell through to the `if not arm_found:` block and created a single dummy edge `(parent_idx, skip_idx)`, producing only 1 path.
+
+**Root cause 2 — missing edge from arm marker to arm body**: After inserting a `CaseArmMarker` at `arm_start_idx` and processing the arm body via `basic_blocks_sv(body)`, no edge connected the marker block to the first body block. The marker node (e.g., at index 9 for IDLE arm) was added to `partition_points`, creating a separate block. The nested conditionals inside the arm body (e.g., `if(data_req_i)` at index 10) were also in separate blocks. But `edgelist` only had `(case_node, marker_node)` — no `(marker_node, body_first_node)`. When `find_leaves()` ran, the marker block had no outgoing edges, so it was identified as a leaf and connected directly to the dummy exit. Result: path 0 was `[-1, 0, 1, -2]` (case → IDLE marker → exit), with the entire arm body (blocks 2+) unreachable.
+
+**Root cause 3 — deferred violation never re-checked after sliding window advance**: When an assertion violation fired during CFG execution (inner check at line 998), it was suppressed if `item.milestones_completed < total_milestones - 1` (line 1004). The violation was saved to `_deferred_violation` (line 1029-1030). Later in the same cycle, the sliding window advanced `current_progress` from 1 to 3 (line 1102-1108), skipping the hallucinated milestone 1. But the deferred violation was never re-checked after the window advanced. The code proceeded to Step 7 (enqueue next cycle) without reporting the violation, even though the milestone threshold was now satisfied.
+
+**Fixes**:
+1. `cfg.py:_process_case_sv` line 385: Changed body extraction to `getattr(case_item, "clause", getattr(case_item, "statements", getattr(case_item, "statement", None)))` — tries `.clause` first, then falls back to `.statements`/`.statement` for compatibility.
+2. `cfg.py:_process_case_sv` line 424-426: After processing the arm body, added `if body_start_after_marker < self.curr_idx: self.edgelist.append((arm_start_idx, body_start_after_marker))` to connect the arm marker to the first node of the arm body (typically a nested conditional).
+3. `engine/strategies.py` line 1110-1115: After `advance_with_sliding_window`, added check: if `current_progress >= total_milestones - 1` and `_deferred_violation is not None`, print `[Deferred Violation]` message and return "VIOLATION".
+
+**PySlang API notes**:
+- `StandardCaseItemSyntax` attributes: `.clause` (body BlockStatementSyntax), `.colon` (Token), `.expressions` (SeparatedList of arm label expressions)
+- `.expressions` is a `SeparatedList` — must filter out `Token` nodes to get actual expression AST nodes
+- `isinstance(item, ps.CaseItemSyntax)` returns True for `StandardCaseItemSyntax` (it's a subclass)
+
+**Result**: DEMUX_MASTER_32/cfg2 now generates 24 paths (was 1). The IDLE arm's ERROR sub-branch (which sets `NS=ERROR` and `data_gnt_o=1'b1` when `data_req_i=1` and no TCDM/PER address match) is now reachable. The genuine HACKDAC_p2_fixed counterexample is found in ~22 seconds at cycle 1: `FC_DATA_add_int=0xFFBF0000` (out of TCDM range [0x1C00_0000, 0x1C08_0000]) with `TCDM_data_gnt_DEM_TO_XBAR=1`.
+
