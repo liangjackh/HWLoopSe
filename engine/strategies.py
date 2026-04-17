@@ -611,15 +611,21 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         dir_0_count = sum(1 for d in first_dirs if d == 0)
 
         # If exactly 1 path takes the true branch at the first conditional,
-        # it's likely the single reset path (no further branching inside reset).
+        # it's likely the single reset path (e.g. always_ff with if(rst_n)).
         # Prefer a non-reset path (direction[0]==0) for cycle > 0.
+        # EXCEPTION: if the CFG has many direction=1 paths (i.e., the first
+        # branch is a case statement with the first arm being sequential),
+        # rotate across ALL paths rather than only preferring direction=0 paths,
+        # so that the IDLE arm sub-paths are also explored eagerly.
         if dir_1_count == 1 and dir_0_count >= 1:
             non_reset_indices = [i for i, d in enumerate(first_dirs) if d == 0]
             # Alternate among non-reset paths by cycle to create diverse
             # constraint combinations across cycles
             return non_reset_indices[(cycle - 1) % len(non_reset_indices)]
 
-        return 0
+        # Multiple direction=1 paths (e.g. case statement with first arm sequential)
+        # or mixed: rotate across ALL paths so every arm gets a turn.
+        return (cycle - 1) % len(cfg.paths)
 
     def _propagate_ports(self, state: SymbolicState, module_name: str = None):
         """Propagate values through wire equivalence groups.
@@ -925,7 +931,6 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         'cfg_idx': cfg_idx,
                         'path_idx': self._preferred_path_idx(cfg, cycle),
                     })
-
         # Step 3: Execute CFGs sequentially, lazy-fork at branches
         state = item.state
         total_milestones = len(self.milestone_manager.milestones)
@@ -1035,6 +1040,13 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 manager.ignore = False
                 continue
 
+            # Propagate this module's output ports immediately so downstream
+            # modules (e.g. jg_bind_inst) see the updated values before they run.
+            self._propagate_ports(state, module_name)
+            # Re-evaluate comb assigns that read from this module's outputs
+            # (e.g. soc_interconnect's concat-assign reads FC_data_gnt_INT_32).
+            self._evaluate_comb_topo(visitor, manager, state)
+
         # Step 4: Re-evaluate comb after sequential logic
         self._evaluate_comb_topo(visitor, manager, state)
 
@@ -1087,6 +1099,13 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         if current_progress >= total_milestones:
             return "ALL_MILESTONES"
+
+        # If a violation was deferred earlier this cycle and the sliding window
+        # has now advanced us to the penultimate milestone, report it immediately.
+        if (current_progress >= total_milestones - 1
+                and getattr(self, '_deferred_violation', None) is not None):
+            print(f"  [Deferred Violation] Sliding window reached milestone {current_progress}/{total_milestones} — reporting deferred violation")
+            return "VIOLATION"
 
         # Step 7: Enqueue next cycle
         # Update cycle_at_last_milestone if milestones advanced this cycle

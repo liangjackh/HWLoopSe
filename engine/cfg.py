@@ -20,6 +20,31 @@ import matplotlib.pyplot as plt
 import pyslang as ps
 from pyslang import ConditionalStatementSyntax, DataDeclarationSyntax
 
+
+class CaseArmMarker:
+    """Synthetic CFG node placed at the start of each case arm's basic block.
+
+    When visit_stmt encounters this marker, it adds the correct match/mismatch
+    constraints for the case condition: all preceding arms are mismatches, and
+    this arm's expressions are a match (or it's the default arm).
+
+    Attributes:
+        case_expr:    The PySlang AST node for the case condition (e.g. CS).
+        arm_exprs:    List of PySlang AST expression nodes for this arm's labels.
+                      Empty list for a default arm.
+        prev_arms:    List of (arm_exprs_list) for all PRECEDING arms (used to
+                      build the "not any of those" constraints).
+        is_default:   True if this is a default: arm.
+        arm_index:    0-based index of this arm in the case statement.
+    """
+    def __init__(self, case_expr, arm_exprs, prev_arms, is_default, arm_index):
+        self.case_expr = case_expr
+        self.arm_exprs = arm_exprs
+        self.prev_arms = prev_arms
+        self.is_default = is_default
+        self.arm_index = arm_index
+
+
 class CFG:
     """Represents the control flow graph of a module/always block"""
     def __init__(self):
@@ -334,6 +359,85 @@ class CFG:
                         self.decls.append(ast)
                 ...
 
+    def _process_case_sv(self, m: ExecutionManager, s: SymbolicState, parent_idx: int, node) -> None:
+        """Handle CaseStatementSyntax nodes by creating one CFG edge per case arm.
+
+        Each case item (including default) gets:
+          - A CaseArmMarker synthetic node inserted at the arm body start.
+          - An edge from the case node (parent_idx) to that arm start.
+
+        The CaseArmMarker carries enough information for visit_stmt to add the
+        correct match/mismatch constraints without relying on a direction bit.
+        """
+        items = getattr(node, 'items', None)
+        if items is None:
+            return
+
+        case_expr = getattr(node, 'expr', None)
+
+        arm_found = False
+        prev_arms_exprs = []   # accumulates expr-lists for all arms processed so far
+
+        for case_item in items:
+            if not isinstance(case_item, ps.CaseItemSyntax):
+                continue
+
+            body = getattr(case_item, "clause", getattr(case_item, "statements", getattr(case_item, "statement", None)))
+            if body is None:
+                # Still need to track this arm for mismatch constraints
+                raw_exprs = getattr(case_item, "expressions", getattr(case_item, "exprs", []))
+                if hasattr(raw_exprs, 'kind') and getattr(raw_exprs, 'kind', None) == ps.SyntaxKind.SeparatedList:
+                    raw_exprs = [e for e in raw_exprs if e.__class__.__name__ != 'Token']
+                prev_arms_exprs.append(list(raw_exprs))
+                continue
+
+            # Extract the arm's label expressions
+            raw_exprs = getattr(case_item, "expressions", getattr(case_item, "exprs", []))
+            if hasattr(raw_exprs, 'kind') and getattr(raw_exprs, 'kind', None) == ps.SyntaxKind.SeparatedList:
+                raw_exprs = [e for e in raw_exprs if e.__class__.__name__ != 'Token']
+            arm_exprs_list = list(raw_exprs)
+            is_default = (len(arm_exprs_list) == 0)
+
+            # Build the CaseArmMarker for this arm
+            marker = CaseArmMarker(
+                case_expr=case_expr,
+                arm_exprs=arm_exprs_list,
+                prev_arms=list(prev_arms_exprs),  # snapshot of preceding arms
+                is_default=is_default,
+                arm_index=len(prev_arms_exprs),
+            )
+
+            # Insert marker node, then the arm body nodes
+            arm_start_idx = self.curr_idx
+            self.partition_points.add(self.curr_idx)
+            self.all_nodes.append(marker)
+            self.curr_idx += 1
+
+            # Process body (may add more nodes / partition points)
+            body_start_after_marker = self.curr_idx
+            self.basic_blocks_sv(m, s, body)
+            if self.curr_idx == body_start_after_marker:
+                # Empty body beyond the marker: add a dummy node
+                self.all_nodes.append(None)
+                self.curr_idx += 1
+
+            self.edgelist.append((parent_idx, arm_start_idx))
+            # Connect the arm marker to the first node of the body so the
+            # nested conditionals inside the arm are reachable.
+            if body_start_after_marker < self.curr_idx:
+                self.edgelist.append((arm_start_idx, body_start_after_marker))
+            arm_found = True
+
+            prev_arms_exprs.append(arm_exprs_list)
+
+        if not arm_found:
+            # No case items at all: treat like an empty else (skip path)
+            skip_idx = self.curr_idx
+            self.partition_points.add(self.curr_idx)
+            self.all_nodes.append(None)
+            self.curr_idx += 1
+            self.edgelist.append((parent_idx, skip_idx))
+
     def _process_conditional_sv(self, m: ExecutionManager, s: SymbolicState, parent_idx: int, node) -> None:
         """Handle ConditionalStatementSyntax nodes, including nested else-if chains."""
         then_body = getattr(node, "ifTrue", getattr(node, "statement", None))
@@ -414,11 +518,11 @@ class CFG:
                 elif isinstance(item, ps.CaseStatementSyntax):
                     self.all_nodes.append(item)
                     self.partition_points.add(self.curr_idx)
+                    parent_idx = self.curr_idx
                     self.curr_idx += 1
-                    #self.basic_blocks_sv(m, s, item.caselist) 
-                    self.basic_blocks_sv(m, s, item.items)
+                    self._process_case_sv(m, s, parent_idx, item)
                 elif isinstance(item, ps.CaseItemSyntax):
-                    body = getattr(item, "statements", getattr(item, "statement", None))
+                    body = getattr(item, "clause", getattr(item, "statements", getattr(item, "statement", None)))
                     self.basic_blocks_sv(m, s, body)
 
 
@@ -467,10 +571,11 @@ class CFG:
             elif isinstance(ast, ps.CaseStatementSyntax):
                 self.all_nodes.append(ast)
                 self.partition_points.add(self.curr_idx)
+                parent_idx = self.curr_idx
                 self.curr_idx += 1
-                self.basic_blocks_sv(m, s, ast.items)
+                self._process_case_sv(m, s, parent_idx, ast)
             elif isinstance(ast, ps.CaseItemSyntax):
-                body = getattr(ast, "statements", getattr(ast, "statement", None))
+                body = getattr(ast, "clause", getattr(ast, "statements", getattr(ast, "statement", None)))
                 self.basic_blocks_sv(m, s, body)
             elif isinstance(ast, ps.ForLoopStatementSyntax):
                 self.all_nodes.append(ast)

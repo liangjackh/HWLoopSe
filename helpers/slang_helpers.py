@@ -6,8 +6,9 @@ from engine.execution_manager import ExecutionManager
 from engine.symbolic_state import SymbolicState
 from helpers.rvalue_to_z3 import solve_pc, parse_verilog_literal, _match_bv_widths
 from helpers.rvalue_parser import conjunction_with_pointers
-from z3 import Not, is_bool, BoolVal, ExprRef, BitVecRef, BitVecVal, simplify, is_true, is_false
+from z3 import Not, is_bool, BoolVal, ExprRef, BitVecRef, BitVecVal, simplify, is_true, is_false, is_bv_value
 from helpers.debug import debug_print, DEBUG_ENABLED
+from engine.cfg import CaseArmMarker
 
 
 def _try_add_constraint(constraint, s, m):
@@ -962,22 +963,8 @@ class SymbolicDFS:
                             if mname:
                                 members.append(mname)
                         if members and rhs_z3 is not None:
-                            import z3 as _z3
-                            rhs_bits = rhs_z3.size() if hasattr(rhs_z3, 'size') else 32
-                            n = len(members)
-                            # Assign bit slices: concat members ordered MSB..LSB
-                            bits_each = rhs_bits // n if n > 0 else rhs_bits
-                            for i, mname in enumerate(members):
-                                msb = rhs_bits - i * bits_each - 1
-                                lsb = rhs_bits - (i + 1) * bits_each
-                                if msb >= lsb >= 0 and msb < rhs_bits and n > 1:
-                                    try:
-                                        slice_val = _z3.Extract(msb, lsb, rhs_z3)
-                                    except Exception:
-                                        slice_val = rhs_z3
-                                else:
-                                    slice_val = rhs_z3
-                                s.store[m.curr_module][mname] = slice_val
+                            for mname in members:
+                                s.store[m.curr_module][mname] = rhs_z3
             return
 
         # Handle NetDeclarationSyntax / DataDeclarationSyntax with initializer: wire x = expr;
@@ -1040,11 +1027,35 @@ class SymbolicDFS:
                     rhs_str = conjunction_with_pointers(rhs, s, m)
                     rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
                     s.store[m.curr_module][lhs_name] = rhs_with_symbols
+            elif 'Concatenation' in lhs.__class__.__name__:
+                # LHS is a concatenation: {a, b, c} = rhs
+                try:
+                    rhs_z3 = self.expr_to_z3(m, s, rhs)
+                except Exception:
+                    rhs_z3 = None
+                expressions = getattr(lhs, 'expressions', getattr(lhs, 'operands', None))
+                if expressions is not None and rhs_z3 is not None:
+                    for member in expressions:
+                        if hasattr(member, '__class__') and 'Token' in member.__class__.__name__:
+                            continue
+                        mname = None
+                        if hasattr(member, 'identifier'):
+                            mname = getattr(member.identifier, 'valueText',
+                                           getattr(member.identifier, 'value', None))
+                        elif hasattr(member, 'valueText'):
+                            mname = member.valueText
+                        if mname:
+                            s.store[m.curr_module][mname] = rhs_z3
             return
 
     def visit_stmt(self, m: ExecutionManager, s: SymbolicState, stmt, modules=None, direction=None):
         """Visits statements"""
         if stmt is None or m.ignore:
+            return
+
+        # CaseArmMarker is a plain Python object (no .kind attribute) — handle first.
+        if isinstance(stmt, CaseArmMarker):
+            self._handle_case_arm_marker(m, s, stmt)
             return
 
         kind = stmt.kind
@@ -1213,9 +1224,15 @@ class SymbolicDFS:
             if _cond is not None:
                 self.visit_expr(m, s, _cond)
 
+        # (CaseArmMarker handled above via early-return before kind = stmt.kind)
+
         #elif kind == ps.StatementKind.Case:
         elif stmt.__class__.__name__ == "CaseStatementSyntax":
-            # print("case")  # DEBUG
+            # The CFG builder places CaseArmMarker nodes at the start of each arm's
+            # basic block.  When visit_stmt is called with the CaseStatementSyntax
+            # node itself (the case header node), we only need to evaluate the
+            # condition expression for side-effects (visit_expr) and count the branch
+            # point.  All constraint-adding logic is handled by CaseArmMarker above.
             _syn = getattr(stmt, 'syntax', None)
             if _syn is not None:
                 sr = _syn.sourceRange(); _st = sr.start
@@ -1231,74 +1248,6 @@ class SymbolicDFS:
                 m.branch_points_seen.add(branch_id)
                 m.branch_count += 1
             self.visit_expr(m, s, stmt.expr)
-
-            cond_z3 = self.expr_to_z3(m, s, stmt.expr)
-
-            #for case in stmt.cases:
-            for case in getattr(stmt, "items", getattr(stmt, "case_items", [])):
-                exprs = getattr(case, "expressions", getattr(case, "exprs", []))
-                # exprs may be a SeparatedList node (not yet iterated into actual exprs).
-                # Unwrap: if it's a single SeparatedList, iterate its non-Token children.
-                if (hasattr(exprs, 'kind') and
-                        exprs.kind == ps.SyntaxKind.SeparatedList):
-                    exprs = [item for item in exprs
-                             if item.__class__.__name__ != 'Token']
-                #for e in case.exprs:
-                for e in exprs:
-                    self.visit_expr(m, s, e)
-                    s.assertion_counter += 1
-                    case_z3 = self.expr_to_z3(m, s, e)
-
-                    cond_expr = cond_z3 if isinstance(cond_z3, ExprRef) else None
-                    case_expr = case_z3 if isinstance(case_z3, ExprRef) else None
-
-                    if cond_expr is not None:
-                        if is_bool(cond_expr):
-                            match_guard = cond_expr
-                            mismatch_guard = Not(cond_expr)
-                        elif case_expr is not None:
-                            cond_expr, case_expr = _match_bv_widths(cond_expr, case_expr)
-                            match_guard = cond_expr == case_expr
-                            mismatch_guard = cond_expr != case_expr
-                        elif isinstance(cond_expr, BitVecRef):
-                            zero = BitVecVal(0, cond_expr.size())
-                            match_guard = cond_expr != zero
-                            mismatch_guard = cond_expr == zero
-                        else:
-                            match_guard = BoolVal(True)
-                            mismatch_guard = BoolVal(True)
-                    else:
-                        match_guard = BoolVal(True)
-                        mismatch_guard = BoolVal(True)
-
-                    guard = match_guard if direction else mismatch_guard
-                    if not isinstance(guard, ExprRef) or not is_bool(guard):
-                        guard = BoolVal(True)
-
-                    self.branch = bool(direction)
-                    if not _try_add_constraint(guard, s, m):
-                        m.abandon = True
-                        m.ignore = True
-                        return
-
-                    case_body = getattr(case, "statement", getattr(case, "stmt", None))
-                    if case_body is None and hasattr(case, "statements"):
-                        case_body = case.statements
-
-                    if case_body is None:
-                        continue
-
-                    if isinstance(case_body, (list, tuple)):
-                        body_iter = case_body
-                    elif hasattr(case_body, "__iter__") and not isinstance(case_body, ps.StatementSyntax):
-                        body_iter = list(case_body)
-                    else:
-                        body_iter = [case_body]
-
-                    for stmt_node in body_iter:
-                        if stmt_node is None:
-                            continue
-                        self.visit_stmt(m, s, stmt_node, modules, direction)
 
         elif kind in [ps.StatementKind.ProceduralAssign]:
             self.visit_expr(m, s, stmt.left)
@@ -1359,6 +1308,55 @@ class SymbolicDFS:
         
         elif kind == ps.StatementKind.ExpressionStatement:
             self.visit_expr(m, s, stmt.expr)
+
+    def _handle_case_arm_marker(self, m: ExecutionManager, s: SymbolicState, marker: 'CaseArmMarker'):
+        """Handle a CaseArmMarker synthetic CFG node.
+
+        Adds:
+        - Mismatch constraints for all preceding arms (case != each prev label)
+        - Match constraint for this arm (case == one of arm_exprs), unless it's the default arm.
+        Sets m.abandon / m.ignore if any constraint is UNSAT.
+        """
+        from z3 import Or as Z3Or
+        cond_z3 = self.expr_to_z3(m, s, marker.case_expr)
+        cond_expr = cond_z3 if isinstance(cond_z3, ExprRef) else None
+
+        # --- mismatch constraints for all preceding arms ---
+        for prev_arm_exprs in marker.prev_arms:
+            for e in prev_arm_exprs:
+                arm_z3 = self.expr_to_z3(m, s, e)
+                arm_expr = arm_z3 if isinstance(arm_z3, ExprRef) else None
+                if cond_expr is not None and arm_expr is not None:
+                    c, a = _match_bv_widths(cond_expr, arm_expr)
+                    mismatch = c != a
+                elif cond_expr is not None and is_bool(cond_expr):
+                    mismatch = Not(cond_expr)
+                else:
+                    mismatch = BoolVal(True)
+                if not _try_add_constraint(mismatch, s, m):
+                    m.abandon = True
+                    m.ignore = True
+                    return
+
+        # --- match constraint for this arm (skip for default arm) ---
+        if not marker.is_default:
+            arm_match_guards = []
+            for e in marker.arm_exprs:
+                arm_z3 = self.expr_to_z3(m, s, e)
+                arm_expr = arm_z3 if isinstance(arm_z3, ExprRef) else None
+                if cond_expr is not None and arm_expr is not None:
+                    c, a = _match_bv_widths(cond_expr, arm_expr)
+                    arm_match_guards.append(c == a)
+                elif cond_expr is not None and is_bool(cond_expr):
+                    arm_match_guards.append(cond_expr)
+                else:
+                    arm_match_guards.append(BoolVal(True))
+            if arm_match_guards:
+                match_guard = arm_match_guards[0] if len(arm_match_guards) == 1 else Z3Or(*arm_match_guards)
+                if not _try_add_constraint(match_guard, s, m):
+                    m.abandon = True
+                    m.ignore = True
+                    return
 
     def _handle_immediate_assertion(self, m: ExecutionManager, s: SymbolicState, stmt, modules, direction):
         """Handle ImmediateAssertionStatement (semantic node).
