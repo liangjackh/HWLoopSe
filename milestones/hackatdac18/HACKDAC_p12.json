@@ -1,0 +1,30 @@
+{
+  "target": "Violate HACKDAC_p12: it must never happen that passchk is not asserted while correct counter is <= 31 (password check counter not reset after successful check).",
+  "target_expr": "top_wrapper.adbg_tap_top.passchk == 0 && top_wrapper.adbg_tap_top.correct <= 31",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System reset applied, JTAG TAP reset asserted",
+      "condition": "rstn_top == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, JTAG TAP reset deasserted, correct counter initialized to zero",
+      "condition": "rstn_top == 1 && top_wrapper.adbg_tap_top.trstn_pad_i == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Password check completes, passchk asserted",
+      "condition": "top_wrapper.adbg_tap_top.passchk == 1",
+      "expected_cycles": 5
+    },
+    {
+      "step": 3,
+      "description": "Violation: passchk cleared but correct counter not reset (correct <= 31 after successful check)",
+      "condition": "top_wrapper.adbg_tap_top.passchk == 0 && top_wrapper.adbg_tap_top.correct <= 31",
+      "expected_cycles": 1
+    }
+  ]
+}

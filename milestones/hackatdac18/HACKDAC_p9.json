@@ -1,0 +1,30 @@
+{
+  "target": "Violate HACKDAC_p9: it must never happen that passchk is asserted while bitindex has not reached 32 (password check completes before all 32 bits are verified).",
+  "target_expr": "top_wrapper.adbg_tap_top.passchk == 1 && top_wrapper.adbg_tap_top.bitindex != 32",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System reset applied, JTAG TAP reset asserted",
+      "condition": "rstn_top == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, JTAG TAP reset deasserted, counters initialized",
+      "condition": "rstn_top == 1 && top_wrapper.adbg_tap_top.trstn_pad_i == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Password check in progress, bitindex incrementing but not yet at 32",
+      "condition": "top_wrapper.adbg_tap_top.bitindex > 0 && top_wrapper.adbg_tap_top.bitindex < 32",
+      "expected_cycles": 5
+    },
+    {
+      "step": 3,
+      "description": "Violation: passchk asserted but bitindex has not reached 32 (only 31 bits checked)",
+      "condition": "top_wrapper.adbg_tap_top.passchk == 1 && top_wrapper.adbg_tap_top.bitindex != 32",
+      "expected_cycles": 5
+    }
+  ]
+}

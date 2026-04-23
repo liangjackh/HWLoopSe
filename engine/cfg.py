@@ -729,7 +729,17 @@ class CFG:
         #self.display_cfg(G)
 
         #traversed = nx.edge_dfs(G, source=-1)
-        self.paths = list(nx.all_simple_paths(G, source=-1, target=-2))
+        # Limit path count to prevent exponential blowup in CFGs
+        # with deeply nested case statements (e.g., compressed_decoder_i)
+        MAX_PATHS_PER_CFG = 100
+        _all_paths = nx.all_simple_paths(G, source=-1, target=-2)
+        self.paths = []
+        for _idx, _path in enumerate(_all_paths):
+            if _idx >= MAX_PATHS_PER_CFG:
+                _mod = self.module_name if hasattr(self, 'module_name') else 'unknown'
+                print(f"[CFG] Warning: {_mod} has > {MAX_PATHS_PER_CFG} paths, truncating")
+                break
+            self.paths.append(_path)
         debug_print("build_cfg", f"paths computed: {len(self.paths)} paths")
         if len(self.paths) <= 5:
             debug_print("build_cfg", f"paths: {self.paths}")

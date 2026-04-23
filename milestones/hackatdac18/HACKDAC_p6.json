@@ -1,0 +1,18 @@
+{
+  "target": "Violate HACKDAC_p6: GPIO_START_ADDR must equal 0x1A101000 and GPIO_END_ADDR must equal 0x1A101FFF. Actual END_ADDR is 0x1A10AFFF (wrong).",
+  "target_expr": "32'h1A101000 != 32'h1A101000 || 32'h1A10AFFF != 32'h1A101FFF",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System reset applied",
+      "condition": "rstn_top == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Violation: GPIO_END_ADDR is 0x1A10AFFF instead of the required 0x1A101FFF",
+      "condition": "rstn_top == 1",
+      "expected_cycles": 1
+    }
+  ]
+}

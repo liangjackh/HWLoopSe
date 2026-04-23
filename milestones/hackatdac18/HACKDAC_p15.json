@@ -1,0 +1,30 @@
+{
+  "target": "Violate HACKDAC_p15: r_seconds must always be less than 0x59. Find a state where r_seconds >= 0x59 (faulty BCD wrap logic).",
+  "target_expr": "top_wrapper.rtc_clock.r_seconds >= 8'h59",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System reset applied, r_seconds cleared to 0",
+      "condition": "rstn_top == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, RTC clock starts counting",
+      "condition": "rstn_top == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "RTC seconds counter has incremented at least once (r_sec_counter wraps at 32767)",
+      "condition": "top_wrapper.rtc_clock.r_seconds > 8'h00",
+      "expected_cycles": 32768
+    },
+    {
+      "step": 3,
+      "description": "Violation: r_seconds reaches 0x59 without wrapping (BCD boundary not enforced correctly)",
+      "condition": "top_wrapper.rtc_clock.r_seconds >= 8'h59",
+      "expected_cycles": 32768
+    }
+  ]
+}

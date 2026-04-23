@@ -362,6 +362,50 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         # Build topologically sorted comb nodes (single-pass instead of 2-pass fixedpoint)
         self._sorted_comb_by_module = self._topo_sort_comb(cfgs_by_module, manager)
 
+        # Precompute ordered list of modules that actually have comb nodes,
+        # preserving names_list order. This avoids iterating all 600+ modules
+        # on every _evaluate_comb_topo call when most have no comb nodes.
+        self._sorted_comb_modules = [
+            name for name in manager.names_list
+            if self._sorted_comb_by_module.get(name)
+        ]
+
+        # Build cross-module comb dependency map: given a module whose signals
+        # just changed (e.g. after CFG execution), which OTHER modules have
+        # comb nodes that may need re-evaluation?  Uses wire_groups to find
+        # inter-module signal connections.
+        self._comb_downstream = self._build_comb_downstream_map(manager)
+
+        # Precompute the read-set for each comb node so we can skip nodes
+        # whose inputs haven't changed (input-change detection).
+        self._comb_node_reads = {}  # (module_name, node_idx) -> frozenset of signal names
+        for module_name, nodes in self._sorted_comb_by_module.items():
+            for idx, node in enumerate(nodes):
+                _writes, _reads = self._extract_comb_node_signals(node)
+                self._comb_node_reads[(module_name, idx)] = frozenset(_reads)
+        # Cache of id(store_value) for each (module, signal) at last comb eval
+        self._comb_input_snapshot = {}
+
+        # --- Module-level comb caching ---
+        # For modules with many comb nodes (like alu_ff_i with 282 nodes),
+        # per-node input-change detection still evaluates all nodes on first
+        # pass. Module-level caching skips the ENTIRE module when its
+        # store hasn't changed since the last evaluation.
+        #
+        # We fingerprint the full store (all signal id()s) before/after eval.
+        # If the pre-eval fingerprint matches the cached one, all comb outputs
+        # are unchanged and we can skip.
+        _MOD_CACHE_THRESHOLD = 20   # only cache modules with >= this many nodes
+        self._comb_mod_cache_eligible = set()  # module names eligible for caching
+        for module_name, nodes in self._sorted_comb_by_module.items():
+            if len(nodes) >= _MOD_CACHE_THRESHOLD:
+                self._comb_mod_cache_eligible.add(module_name)
+                if len(nodes) >= 50:
+                    print(f"  [ModCache] {module_name}: {len(nodes)} nodes — eligible for module-level caching", flush=True)
+        # Runtime cache: module_name -> (pre_fp, {sig: value})
+        # pre_fp = fingerprint of store BEFORE eval (i.e., inputs that drive comb)
+        self._comb_mod_cache = {}
+
         # Reset milestone progress
         self.milestone_manager.reset()
         manager.branch_count = 0
@@ -843,18 +887,230 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 for child in children:
                     MilestoneDirectedStrategy._collect_read_names(child, reads)
 
+    def _mod_store_fingerprint(self, module_name, state):
+        """Fast fingerprint of a module's store using id() of values."""
+        mod_store = state.store.get(module_name)
+        if mod_store is None:
+            return None
+        # Use frozenset of (key, id(value)) for order-independent comparison
+        return frozenset((k, id(v)) for k, v in mod_store.items())
+
+    def _try_mod_cache(self, module_name, state):
+        """Try to use module-level comb cache.
+
+        Fingerprints the entire store for this module. If it matches the
+        fingerprint captured after the last evaluation, all comb inputs are
+        unchanged so outputs are also unchanged — skip evaluation.
+        """
+        if module_name not in self._comb_mod_cache_eligible:
+            return False
+        fp = self._mod_store_fingerprint(module_name, state)
+        if fp is None:
+            return False
+        cached_fp = self._comb_mod_cache.get(module_name)
+        return cached_fp is not None and cached_fp == fp
+
+    def _update_mod_cache(self, module_name, state):
+        """Store module-level comb cache after evaluating all nodes."""
+        if module_name not in self._comb_mod_cache_eligible:
+            return
+        fp = self._mod_store_fingerprint(module_name, state)
+        if fp is not None:
+            self._comb_mod_cache[module_name] = fp
+
     def _evaluate_comb_topo(
         self,
         visitor: Any,
         manager: ExecutionManager,
         state: SymbolicState
     ):
-        """Single-pass combinational evaluation in topological order."""
-        for module_name in manager.names_list:
+        """Single-pass combinational evaluation in topological order.
+
+        Two levels of caching:
+        1. Module-level: for modules with many comb nodes (>= threshold),
+           fingerprint external inputs. On cache hit, restore outputs without
+           evaluating any nodes.  Eliminates alu_ff_i's 282 evaluations.
+        2. Node-level: for remaining modules, per-node input-change detection.
+        """
+        import time as _t
+        _t0 = _t.time()
+        _n_eval = 0
+        _n_skip = 0
+        _n_mod_hit = 0
+        snapshot = getattr(self, '_comb_input_snapshot', {})
+        node_reads = getattr(self, '_comb_node_reads', {})
+        _mod_times = {}
+
+        for module_name in getattr(self, '_sorted_comb_modules', manager.names_list):
             manager.curr_module = module_name
-            for node in self._sorted_comb_by_module.get(module_name, []):
-                visitor.evaluate_comb(manager, state, node)
+            _mt0 = _t.time()
+            _mod_n = 0
+
+            # Module-level cache check
+            if self._try_mod_cache(module_name, state):
+                nodes = self._sorted_comb_by_module.get(module_name, [])
+                _n_skip += len(nodes)
+                _n_mod_hit += 1
+                _mod_times[module_name] = (_t.time() - _mt0, 0)
+                continue
+
+            mod_store = state.store.get(module_name, {})
+            for idx, node in enumerate(self._sorted_comb_by_module.get(module_name, [])):
+                # Check if any input has changed
+                reads = node_reads.get((module_name, idx))
+                if reads is not None and len(reads) > 0:
+                    cache_key = (module_name, idx)
+                    # Build current input fingerprint (tuple of id()s)
+                    current_fp = tuple(id(mod_store.get(sig)) for sig in reads)
+                    prev_fp = snapshot.get(cache_key)
+                    if prev_fp is not None and current_fp == prev_fp:
+                        _n_skip += 1
+                        continue
+                    # Evaluate and update snapshot
+                    visitor.evaluate_comb(manager, state, node)
+                    _n_eval += 1
+                    _mod_n += 1
+                    # Refresh mod_store reference (evaluate_comb may have updated it)
+                    mod_store = state.store.get(module_name, {})
+                    snapshot[cache_key] = tuple(id(mod_store.get(sig)) for sig in reads)
+                else:
+                    visitor.evaluate_comb(manager, state, node)
+                    _n_eval += 1
+                    _mod_n += 1
+
+            # Update module-level cache after evaluation
+            self._update_mod_cache(module_name, state)
+            _mod_times[module_name] = (_t.time() - _mt0, _mod_n)
+
+        self._comb_input_snapshot = snapshot
+        _t1 = _t.time()
         self._propagate_ports(state)
+        _t2 = _t.time()
+        if _t2 - _t0 > 0.3:
+            print(f"    [comb_topo] eval={_n_eval} skip={_n_skip} mod_hit={_n_mod_hit} in {_t1-_t0:.3f}s, propagate in {_t2-_t1:.3f}s, modules={len(getattr(self, '_sorted_comb_modules', []))}", flush=True)
+            # Log top-3 slowest modules
+            _sorted_mods = sorted(_mod_times.items(), key=lambda x: -x[1][0])[:3]
+            for _mname, (_mtime, _mn) in _sorted_mods:
+                if _mtime > 0.1:
+                    print(f"      [{_mname}] {_mn} nodes in {_mtime:.3f}s ({_mtime/_mn*1000:.1f}ms/node)", flush=True)
+
+    def _build_comb_downstream_map(self, manager) -> dict:
+        """Build a map: module_name -> set of downstream module names.
+
+        When a CFG in module M executes, we need to re-evaluate comb nodes
+        in M itself plus any module connected to M via wire groups.  This
+        precomputes that relationship so the per-CFG comb evaluation only
+        touches the relevant modules instead of all 836 nodes.
+        """
+        # Map every (instance, signal) -> set of modules that share a wire group
+        sig_to_peers = {}  # (inst, sig) -> set of peer instance names
+        for group in self._wire_groups:
+            group_instances = {inst for inst, _sig in group}
+            for inst, sig in group:
+                sig_to_peers[(inst, sig)] = group_instances
+
+        # For each module M, find all modules that could be affected when M's
+        # signals change: (a) modules that share wire groups with M, and
+        # (b) modules whose comb nodes read signals propagated from M.
+        downstream = {}  # module_name -> set of downstream module names
+        all_modules = set(manager.names_list)
+        for mod in all_modules:
+            peers = set()
+            # Find all modules connected to mod via wire groups
+            for (inst, sig), group_insts in sig_to_peers.items():
+                if inst == mod:
+                    peers.update(group_insts)
+            # Only keep peers that actually have comb nodes to evaluate
+            peers_with_comb = {
+                p for p in peers
+                if p != mod and self._sorted_comb_by_module.get(p)
+            }
+            downstream[mod] = peers_with_comb
+
+        _total_downstream = sum(len(v) for v in downstream.values())
+        _mods_with_downstream = sum(1 for v in downstream.values() if v)
+        print(f"  [CombDeps] Built downstream map: {_mods_with_downstream} modules have downstream comb deps, avg={_total_downstream/max(len(downstream),1):.1f}", flush=True)
+        return downstream
+
+    def _evaluate_comb_for_module(
+        self,
+        visitor: Any,
+        manager: ExecutionManager,
+        state: SymbolicState,
+        source_module: str
+    ):
+        """Targeted comb evaluation after a CFG in source_module executes.
+
+        Instead of re-evaluating all comb nodes, only evaluates:
+        1. Comb nodes in source_module itself (its comb assigns may read
+           registers just written by the CFG)
+        2. Comb nodes in modules directly connected via wire groups
+           (port propagation carries updated values to these modules)
+
+        Uses module-level caching to skip modules whose external inputs
+        haven't changed (e.g. alu_ff_i with 282 nodes).
+        """
+        import time as _t
+        _t0 = _t.time()
+        _n_eval = 0
+        _n_skip = 0
+        _n_mod_hit = 0
+        saved_module = manager.curr_module
+        snapshot = getattr(self, '_comb_input_snapshot', {})
+        node_reads = getattr(self, '_comb_node_reads', {})
+
+        def _eval_nodes(mod):
+            nonlocal _n_eval, _n_skip, _n_mod_hit
+            nodes = self._sorted_comb_by_module.get(mod, [])
+            if not nodes:
+                return
+            manager.curr_module = mod
+
+            # Module-level cache check
+            if self._try_mod_cache(mod, state):
+                _n_skip += len(nodes)
+                _n_mod_hit += 1
+                return
+
+            mod_store = state.store.get(mod, {})
+            for idx, node in enumerate(nodes):
+                reads = node_reads.get((mod, idx))
+                if reads is not None and len(reads) > 0:
+                    cache_key = (mod, idx)
+                    current_fp = tuple(id(mod_store.get(sig)) for sig in reads)
+                    prev_fp = snapshot.get(cache_key)
+                    if prev_fp is not None and current_fp == prev_fp:
+                        _n_skip += 1
+                        continue
+                    visitor.evaluate_comb(manager, state, node)
+                    _n_eval += 1
+                    mod_store = state.store.get(mod, {})
+                    snapshot[cache_key] = tuple(id(mod_store.get(sig)) for sig in reads)
+                else:
+                    visitor.evaluate_comb(manager, state, node)
+                    _n_eval += 1
+
+            # Update module-level cache after evaluation
+            self._update_mod_cache(mod, state)
+
+        # 1. Re-evaluate comb nodes in the source module
+        _eval_nodes(source_module)
+
+        # 2. Propagate source module's ports to connected modules
+        self._propagate_ports(state, source_module)
+
+        # 3. Re-evaluate comb nodes in downstream modules
+        downstream = self._comb_downstream.get(source_module, set())
+        for mod in downstream:
+            _eval_nodes(mod)
+            # Propagate this module too (cascading)
+            self._propagate_ports(state, mod)
+
+        manager.curr_module = saved_module
+        self._comb_input_snapshot = snapshot
+        _t1 = _t.time()
+        if _t1 - _t0 > 0.3:
+            print(f"    [comb_targeted] {source_module}: eval={_n_eval} skip={_n_skip} mod_hit={_n_mod_hit} ({1+len(downstream)} modules) in {_t1-_t0:.3f}s", flush=True)
 
 # engine/strategies.py (截取 MilestoneDirectedStrategy 的修改部分)
     def _evaluate_comb_fixedpoint(
@@ -907,6 +1163,11 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         """
         cycle = item.cycle
 
+        # Clear comb input snapshot — each work item has its own state object,
+        # so id()-based fingerprints from a previous work item are meaningless.
+        self._comb_input_snapshot = {}
+        self._comb_mod_cache = {}
+
         # Step 1: Apply NBA and refresh inputs (if cycle > 0)
         if cycle > 0:
             item.state.apply_pending_nba()
@@ -917,24 +1178,44 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         remaining_cfgs = item.execution_context.get('remaining_cfgs', None)
         if remaining_cfgs is None:
             remaining_cfgs = []
+            print(f"  [CFG Build] Building CFG list for cycle {cycle}...", flush=True)
             for module_name in manager.names_list:
                 if module_name not in cfgs_by_module:
                     continue
                 for cfg_idx, cfg in enumerate(cfgs_by_module[module_name]):
                     if cycle > 0 and getattr(cfg, 'is_initial', False):
                         continue
+                    print(f"    [CFG Build] {module_name}/cfg{cfg_idx}: accessing paths...", flush=True)
                     paths = cfg.paths
                     if not paths:
+                        print(f"    [CFG Build] {module_name}/cfg{cfg_idx}: 0 paths, skipping", flush=True)
                         continue
+                    print(f"    [CFG Build] {module_name}/cfg{cfg_idx}: {len(paths)} paths", flush=True)
                     remaining_cfgs.append({
                         'module': module_name,
                         'cfg_idx': cfg_idx,
                         'path_idx': self._preferred_path_idx(cfg, cycle),
                     })
+            # Print CFG summary
+            print(f"  [CFG Summary] {len(remaining_cfgs)} CFGs to execute in cycle {cycle}:", flush=True)
+            _total_paths = 0
+            for _rc in remaining_cfgs:
+                _cfg = cfgs_by_module[_rc['module']][_rc['cfg_idx']]
+                _total_paths += len(_cfg.paths)
+                print(f"    {_rc['module']}/cfg{_rc['cfg_idx']}: {len(_cfg.paths)} paths, preferred={_rc['path_idx']}", flush=True)
+            print(f"  [CFG Summary] Total paths across all CFGs: {_total_paths}", flush=True)
+            if _total_paths > 1000:
+                print(f"  [Warning] Large path count ({_total_paths}) may cause slow execution due to lazy forking", flush=True)
         # Step 3: Execute CFGs sequentially, lazy-fork at branches
         state = item.state
         total_milestones = len(self.milestone_manager.milestones)
+        import time as _time
+
+        # Track if any CFG actually executes (not skipped/abandoned)
+        any_cfg_executed = False
+
         for i, cfg_entry in enumerate(remaining_cfgs):
+            _cfg_t0 = _time.time()
             module_name = cfg_entry['module']
             cfg_idx = cfg_entry['cfg_idx']
             chosen_path_idx = cfg_entry['path_idx']
@@ -952,10 +1233,21 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             # (i.e., not already a forked work item for a specific path),
             # push siblings for the other paths.
             if len(cfg.paths) > 1 and cfg_entry.get('forked', False) is False:
+                _fork_t0 = _time.time()
                 pre_branch_state = self._clone_state(state)
+                # Cap fork alternatives for large CFGs (e.g. 24-arm DEMUX) to
+                # prevent exponential queue growth.  CFGs with many paths are
+                # typically structural fabric (demux/mux/fan-in) whose specific
+                # routing choice doesn't affect whether a security violation occurs.
+                _MAX_FORK_ALTS = 4
+                _n_alts_total = len(cfg.paths) - 1
+                _n_alts = min(_n_alts_total, _MAX_FORK_ALTS)
+                _alt_count = 0
                 for alt_path_idx in range(len(cfg.paths)):
                     if alt_path_idx == chosen_path_idx:
                         continue
+                    if _alt_count >= _MAX_FORK_ALTS:
+                        break
                     # Build remaining CFGs for the alternative: same list from
                     # this point onward, but with this CFG using alt_path_idx
                     alt_remaining = []
@@ -977,6 +1269,11 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         cycle_at_last_milestone=item.cycle_at_last_milestone
                     )
                     heapq.heappush(worklist, alt_item)
+                    _alt_count += 1
+                if _n_alts_total > _MAX_FORK_ALTS:
+                    print(f"  [Fork] {module_name}/cfg{cfg_idx}: {_n_alts}/{_n_alts_total} alternatives forked (capped) in {_time.time()-_fork_t0:.3f}s, queue={len(worklist)}", flush=True)
+                else:
+                    print(f"  [Fork] {module_name}/cfg{cfg_idx}: {_n_alts} alternatives forked in {_time.time()-_fork_t0:.3f}s, queue={len(worklist)}", flush=True)
 
             # Execute the chosen path
             cfg_path = cfg.paths[chosen_path_idx]
@@ -987,10 +1284,22 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             pre_cfg_store = {mod: sigs.copy() for mod, sigs in state.store.items()}
             pre_cfg_nba = {mod: sigs.copy() for mod, sigs in state.pending_nba.items()}
 
+            print(f"  [Run] {module_name}/cfg{cfg_idx}/path{chosen_path_idx} ({len(cfg_path)} blocks)...", flush=True)
+            _exec_t0 = _time.time()
             result = self._execute_path(
                 engine, visitor, modules_dict, cfg, cfg_path,
                 module_name, manager, state, cfg_idx, chosen_path_idx
             )
+            _exec_elapsed = _time.time() - _exec_t0
+            _cfg_elapsed = _time.time() - _cfg_t0
+            print(f"  [Exec] {module_name}/cfg{cfg_idx}/path{chosen_path_idx}: exec={_exec_elapsed:.3f}s, total={_cfg_elapsed:.3f}s, result={result}", flush=True)
+
+            # Per-CFG timeout: if execution took too long, treat as abandoned
+            _cfg_timeout = 30.0
+            if _exec_elapsed > _cfg_timeout:
+                print(f"  [Timeout] {module_name}/cfg{cfg_idx}/path{chosen_path_idx}: execution took {_exec_elapsed:.1f}s (> {_cfg_timeout}s) — marking as abandoned")
+                manager.abandon = True
+                result = None
 
             if result == "VIOLATION":
                 # Suppress violations until we're one step away from the final milestone.
@@ -1040,12 +1349,21 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 manager.ignore = False
                 continue
 
-            # Propagate this module's output ports immediately so downstream
-            # modules (e.g. jg_bind_inst) see the updated values before they run.
-            self._propagate_ports(state, module_name)
-            # Re-evaluate comb assigns that read from this module's outputs
-            # (e.g. soc_interconnect's concat-assign reads FC_data_gnt_INT_32).
-            self._evaluate_comb_topo(visitor, manager, state)
+            # Mark that at least one CFG executed successfully
+            any_cfg_executed = True
+
+            # Propagate this module's output ports and re-evaluate only
+            # downstream comb nodes (targeted, not all 836 nodes).
+            _comb_t0 = _time.time()
+            self._evaluate_comb_for_module(visitor, manager, state, module_name)
+            _comb_elapsed = _time.time() - _comb_t0
+            if _comb_elapsed > 0.1:
+                print(f"  [Slow] {module_name}/cfg{cfg_idx}: targeted_comb={_comb_elapsed:.3f}s", flush=True)
+
+        # Check if all CFGs were skipped/abandoned — no state change occurred
+        if not any_cfg_executed:
+            print(f"  [AllSkipped] cycle {cycle}: all {len(remaining_cfgs)} CFGs abandoned — pruning path")
+            return None
 
         # Step 4: Re-evaluate comb after sequential logic
         self._evaluate_comb_topo(visitor, manager, state)

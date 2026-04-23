@@ -1,0 +1,30 @@
+{
+  "target": "Violate HACKDAC_p27: when csr_we_int is asserted, PULP_SECURE must be 1. Find a state where csr_we_int is asserted while PULP_SECURE is 0 (secure mode not required for CSR writes).",
+  "target_expr": "top_wrapper.riscv_core.cs_registers_i.csr_we_int == 1 && top_wrapper.riscv_core.cs_registers_i.PULP_SECURE == 0",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System reset applied",
+      "condition": "rstn_top == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, CSR registers initialized",
+      "condition": "rstn_top == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "CSR write to interrupt register attempted (csr_we_int asserted)",
+      "condition": "top_wrapper.riscv_core.cs_registers_i.csr_we_int == 1",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: CSR write occurs while PULP_SECURE is 0 (secure mode not enforced for interrupt register writes)",
+      "condition": "top_wrapper.riscv_core.cs_registers_i.csr_we_int == 1 && top_wrapper.riscv_core.cs_registers_i.PULP_SECURE == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

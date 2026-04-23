@@ -1,0 +1,30 @@
+{
+  "target": "Violate HACKDAC_p3: it must never happen that priv_lvl_n is machine mode (2'b11) while mstatus_n.mpp is user mode (2'b00).",
+  "target_expr": "top_wrapper.riscv_core.cs_registers_i.priv_lvl_n == 2'b11 && top_wrapper.riscv_core.cs_registers_i.mstatus_n.mpp == 2'b00",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System reset applied",
+      "condition": "rstn_top == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, RISC-V core starts boot sequence",
+      "condition": "rstn_top == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "CSR write enable asserted, privilege level update in progress",
+      "condition": "top_wrapper.riscv_core.cs_registers_i.csr_we_int == 1",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: machine privilege level assigned with user-mode MPP field",
+      "condition": "top_wrapper.riscv_core.cs_registers_i.priv_lvl_n == 2'b11 && top_wrapper.riscv_core.cs_registers_i.mstatus_n.mpp == 2'b00",
+      "expected_cycles": 1
+    }
+  ]
+}

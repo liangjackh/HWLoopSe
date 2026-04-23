@@ -846,25 +846,12 @@ class ExecutionEngine:
                 # Pass compilation and driver to search all top instances including standalone assertion modules
                 coi_targets = extract_verification_targets(modules, manager, compilation, driver)
                 seed_signals = []
-                if coi_targets:
-                    for target in coi_targets:
-                        # Extract signal names from the assertion condition
-                        signals = extract_signals_from_condition(target.assertion_source)
-                        for sig in signals:
-                            if sig.isdigit():
-                                continue
-                            if '.' in sig:
-                                parts = sig.split('.')
-                                inst = parts[-2] if len(parts) >= 2 else parts[0]
-                                sig_name = parts[-1]
-                                seed_signals.append((inst, sig_name))
-                            else:
-                                instance_name = target.module_name.split('.')[-1] if '.' in target.module_name else target.module_name
-                                seed_signals.append((instance_name, sig))
 
-                # Also seed from the milestone file's target_expr if available —
-                # it is typically cleaner than the raw SVA assertion_source (which
-                # may contain disable iff, comments, |-> etc. that produce garbage tokens).
+                # When a milestone file is provided, seed COI ONLY from the
+                # milestone's target_expr — not from every assertion in the
+                # design.  Seeding from all assertions pulls in modules that
+                # are irrelevant to the current target (e.g. the interconnect
+                # fabric from p2_fixed when checking p11).
                 milestone_target_expr = None
                 if self.milestone_file and os.path.exists(self.milestone_file):
                     try:
@@ -874,20 +861,74 @@ class ExecutionEngine:
                         milestone_target_expr = _mdata.get('target_expr', '')
                     except Exception:
                         pass
+
                 if milestone_target_expr:
+                    # Seed from milestone target_expr only
                     extra_sigs = extract_signals_from_condition(milestone_target_expr)
                     for sig in extra_sigs:
                         if sig.isdigit():
                             continue
                         if '.' in sig:
                             parts = sig.split('.')
-                            inst = parts[-2] if len(parts) >= 2 else parts[0]
-                            sig_name = parts[-1]
-                            seed_signals.append((inst, sig_name))
-                        else:
-                            # Plain signal — seed to every instance that has it in its store/ports
-                            for inst_name in modules_dict:
-                                seed_signals.append((inst_name, sig))
+                            for k in range(len(parts) - 1):
+                                seed_signals.append((parts[k], parts[k + 1]))
+                        # else: plain signal with no hierarchy — skip.
+                        # Seeding a bare name (e.g. 'rstn_top') to every instance
+                        # in modules_dict defeats COI pruning because rstn_top is
+                        # wired into virtually every module in the design.
+                    # Also seed from milestone conditions (intermediate milestones
+                    # may reference hierarchical signals not in target_expr)
+                    for ms in _mdata.get('milestones', []):
+                        cond = ms.get('condition', '')
+                        if cond:
+                            ms_sigs = extract_signals_from_condition(cond)
+                            for sig in ms_sigs:
+                                if sig.isdigit():
+                                    continue
+                                if '.' in sig:
+                                    parts = sig.split('.')
+                                    for k in range(len(parts) - 1):
+                                        seed_signals.append((parts[k], parts[k + 1]))
+                                # else: skip plain signals — same reason as above
+                else:
+                    # No milestone file — seed from all assertions
+                    if coi_targets:
+                        for target in coi_targets:
+                            # Extract signal names from the assertion condition
+                            signals = extract_signals_from_condition(target.assertion_source)
+                            for sig in signals:
+                                if sig.isdigit():
+                                    continue
+                                if '.' in sig:
+                                    parts = sig.split('.')
+                                    for k in range(len(parts) - 1):
+                                        seed_signals.append((parts[k], parts[k + 1]))
+                                else:
+                                    instance_name = target.module_name.split('.')[-1] if '.' in target.module_name else target.module_name
+                                    seed_signals.append((instance_name, sig))
+
+                # Fallback for constant-only assertions: when all extracted
+                # signals are numeric literals, seed_signals ends up empty.
+                # Use the assertion instance + top module as minimal seeds so
+                # COI still runs and prunes unrelated modules.
+                if not seed_signals and coi_targets:
+                    print("[ExecutionEngine] Warning: No signal names extracted from assertion (constant-only expression).")
+                    print("[ExecutionEngine] Using minimal COI seed: assertion instance and top-level module.")
+                    for target in coi_targets:
+                        inst = target.module_name.split('.')[-1] if '.' in target.module_name else target.module_name
+                        seed_signals.append((inst, 'clk_top'))
+                        seed_signals.append((inst, 'rstn_top'))
+                        seed_signals.append(('top_wrapper', 'clk_top'))
+                        seed_signals.append(('top_wrapper', 'rstn_top'))
+
+                # Second fallback: milestone file exists but no assertions found in design
+                # (e.g. properties.sv has assertions commented out). Seed top_wrapper
+                # so COI still runs and prunes deep hierarchies.
+                if not seed_signals and milestone_target_expr:
+                    print("[ExecutionEngine] Warning: Milestone file provided but no assertions found in design.")
+                    print("[ExecutionEngine] Using top-level module as minimal COI seed.")
+                    seed_signals.append(('top_wrapper', 'clk_top'))
+                    seed_signals.append(('top_wrapper', 'rstn_top'))
 
                 if seed_signals:
                     analyzer = COIAnalyzer(modules_dict, cfgs_by_module, modules, comb_by_module=comb_by_module)

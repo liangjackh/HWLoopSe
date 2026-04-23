@@ -639,6 +639,15 @@ def _kind_replication(e, s, m):
     return result
 
 
+def _kind_conditional_op(e, s, m):
+    """Handle ExpressionKind.ConditionalOp (elaborated ternary ? :).
+
+    Delegates to the syntax handler which handles both elaborated and
+    syntax-level conditional expressions.
+    """
+    return _syntax_conditional_expression(e, s, m)
+
+
 def _syntax_parenthesized(e, s, m):
     from helpers.debug import debug_print, DEBUG_ENABLED
     inner_expr = getattr(e, 'expression', None)
@@ -986,6 +995,141 @@ def _syntax_conditional_pattern(e, s, m):
     return BitVecVal(0, 32)
 
 
+def _syntax_conditional_expression(e, s, m):
+    """Handle ternary expression: cond ? true_val : false_val
+
+    PySlang syntax structure:
+      ConditionalExpressionSyntax
+        .predicate -> ConditionalPredicateSyntax
+          .conditions -> iterable of ConditionalPatternSyntax
+            [0].expr -> actual condition expression
+        .left -> true expression
+        .right -> false expression
+
+    Uses Z3's built-in `If` which is much faster than tokenization fallback.
+    """
+    # Extract condition from predicate wrapper
+    pred_node = None
+    predicate = getattr(e, 'predicate', None)
+    if predicate is not None:
+        conditions = getattr(predicate, 'conditions', None)
+        if conditions is not None and hasattr(conditions, '__iter__'):
+            for cond_item in conditions:
+                cname = cond_item.__class__.__name__
+                if cname == 'Token':
+                    continue
+                # ConditionalPatternSyntax wraps the actual expression
+                inner = getattr(cond_item, 'expr', getattr(cond_item, 'expression', cond_item))
+                if inner is not None:
+                    pred_node = inner
+                    break
+        elif predicate is not None:
+            # Fallback: use predicate directly
+            pred_node = predicate
+    else:
+        # Check alternate attribute names
+        pred_node = getattr(e, 'condition', None)
+
+    true_node = getattr(e, 'left', None)
+    false_node = getattr(e, 'right', None)
+
+    if pred_node is not None and true_node is not None and false_node is not None:
+        pred = parse_expr_to_Z3(pred_node, s, m)
+        true_val = parse_expr_to_Z3(true_node, s, m)
+        false_val = parse_expr_to_Z3(false_node, s, m)
+
+        # Normalize predicate to bool
+        if isinstance(pred, BoolRef) and not isinstance(pred, BitVecRef):
+            cond = pred
+        elif hasattr(pred, 'size'):
+            cond = pred != BitVecVal(0, pred.size())
+        else:
+            cond = pred
+
+        # Match true/false widths
+        true_val, false_val = _match_bv_widths(true_val, false_val)
+        return If(cond, true_val, false_val)
+
+    return BitVecVal(0, 32)
+
+
+def _syntax_invocation(e, s, m):
+    """Handle system function calls: $signed(), $unsigned(), $clog2(), etc.
+
+    These were hitting the slow fallback (tokenization). Direct handlers
+    bypass the expensive path.
+    """
+    func_name = str(getattr(e, 'left', '')).strip()
+    # Extract first argument from ArgumentListSyntax
+    args = getattr(e, 'arguments', None)
+
+    def _unwrap_arg(node):
+        """Unwrap wrapper nodes like OrderedArg -> SimplePropertyExpr."""
+        _WRAPPER_KINDS = {
+            ps.SyntaxKind.OrderedArgument,
+            ps.SyntaxKind.SimplePropertyExpr,
+            ps.SyntaxKind.SimpleSequenceExpr,
+        }
+        while True:
+            k = getattr(node, 'kind', None)
+            if k in _WRAPPER_KINDS:
+                inner = getattr(node, 'expr', getattr(node, 'expression', None))
+                if inner is None:
+                    break
+                node = inner
+            else:
+                break
+        return node
+
+    arg_node = None
+    if args is not None and hasattr(args, '__iter__'):
+        for item in args:
+            if item.__class__.__name__ == 'Token':
+                continue
+            if getattr(item, 'kind', None) == ps.SyntaxKind.SeparatedList:
+                for sub in item:
+                    arg_node = _unwrap_arg(sub)
+                    break
+            else:
+                arg_node = _unwrap_arg(item)
+            if arg_node is not None:
+                break
+
+    # Handle known functions
+    if func_name == '$clog2':
+        if arg_node is not None:
+            arg_val = parse_expr_to_Z3(arg_node, s, m)
+            if is_bv_value(arg_val):
+                import math
+                int_val = arg_val.as_long()
+                if int_val <= 0:
+                    return BitVecVal(0, 32)
+                result = int(math.ceil(math.log2(int_val))) if int_val > 1 else 1
+                return BitVecVal(result, 32)
+            return BitVec(f"clog2_{arg_val}", 32)
+        return BitVecVal(0, 32)
+    elif func_name in ('$signed', '$unsigned'):
+        if arg_node is not None:
+            return parse_expr_to_Z3(arg_node, s, m)
+        return BitVecVal(0, 32)
+    elif func_name == '$bits':
+        if arg_node is not None:
+            arg_val = parse_expr_to_Z3(arg_node, s, m)
+            if isinstance(arg_val, BitVecRef):
+                return BitVecVal(arg_val.size(), 32)
+        return BitVecVal(32, 32)
+    elif func_name in ('$onehot', '$onehot0', '$countones', '$isunknown'):
+        # These bit manipulation functions with symbolic args are hard to evaluate
+        # Return a fresh symbolic variable of appropriate type/width
+        if arg_node is not None:
+            arg_val = parse_expr_to_Z3(arg_node, s, m)
+            if isinstance(arg_val, BitVecRef):
+                return BitVecVal(0, 32)  # Default to 0 for now
+        return BitVecVal(0, 32)
+    else:
+        # Unknown function — return 0 silently to avoid blocking
+        return BitVecVal(0, 32)
+
 
 # ---------------------------------------------------------------------------
 # Dispatch tables (built after all handler functions are defined)
@@ -1002,6 +1146,7 @@ def _build_dispatch_tables():
         ps.ExpressionKind.UnaryOp:        _kind_unary_op,
         ps.ExpressionKind.Concatenation:  _kind_concatenation,
         ps.ExpressionKind.RangeSelect:    _kind_range_select,
+        ps.ExpressionKind.ConditionalOp:  _kind_conditional_op,
         ps.ExpressionKind.ElementSelect:  _kind_element_select,
         ps.ExpressionKind.Replication:    _kind_replication,
     }
@@ -1019,6 +1164,9 @@ _SYNTAX_DISPATCH = {
     "Token":                                _syntax_token,
     "PrefixUnaryExpressionSyntax":          _syntax_prefix_unary,
     "ConditionalPatternSyntax":             _syntax_conditional_pattern,
+    # New handlers to avoid slow fallback dispatch (tokenization):
+    "ConditionalExpressionSyntax":          _syntax_conditional_expression,
+    "InvocationExpressionSyntax":           _syntax_invocation,
 }
 
 

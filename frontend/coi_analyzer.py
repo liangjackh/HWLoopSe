@@ -484,6 +484,29 @@ class COIAnalyzer:
     # 2c. Backward fixpoint analysis
     # ------------------------------------------------------------------
 
+    # Signals that are global infrastructure (clock/reset) and should NOT
+    # be traced through port connections.  They fan out to the entire design
+    # and would pull every module into the cone.
+    _GLOBAL_INFRA_PATTERNS = frozenset([
+        'rst', 'rstn', 'rst_n', 'rst_ni', 'reset', 'resetn', 'reset_n',
+        'clk', 'clk_i', 'clock', 'clock_i',
+        'rstn_top', 'clk_top',
+        'HRESETn', 'trstn_pad_i',
+    ])
+
+    @staticmethod
+    def _is_global_infra(signal: str) -> bool:
+        """Return True if *signal* looks like a clock or reset."""
+        low = signal.lower()
+        # Exact match
+        if signal in COIAnalyzer._GLOBAL_INFRA_PATTERNS or low in COIAnalyzer._GLOBAL_INFRA_PATTERNS:
+            return True
+        # Substring heuristics for common patterns
+        for pat in ('rst', 'reset', 'clk', 'clock'):
+            if pat in low and len(signal) < 20:
+                return True
+        return False
+
     def analyze(self, seed_signals: List[Tuple[str, str]]) -> COIResult:
         """Run backward COI analysis from seed signals.
 
@@ -531,6 +554,11 @@ class COIAnalyzer:
                             worklist.append((instance, read_sig))
 
             # 3. Trace through port connections
+            #    Skip clock/reset signals — they fan out to the entire design
+            #    and are not data dependencies.
+            if self._is_global_infra(signal):
+                continue
+
             # If signal is a port on a child instance, trace to parent
             if (instance, signal) in self.port_map_child_to_parent:
                 parent_inst, parent_sig = self.port_map_child_to_parent[(instance, signal)]
