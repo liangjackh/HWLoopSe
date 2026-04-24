@@ -1,0 +1,30 @@
+{
+  "target": "Violate HACKDAC_p14: when vector_mode_i is VEC_MODE16 (2'b10) or VEC_MODE8 (2'b11), adder_in_a[18] must be 0. Find a state where it is 1.",
+  "target_expr": "(top_wrapper.riscv_core.ex_stage_i.alu_i.vector_mode_i == 2'b10 || top_wrapper.riscv_core.ex_stage_i.alu_i.vector_mode_i == 2'b11) && top_wrapper.riscv_core.ex_stage_i.alu_i.adder_in_a[18] == 1'b1",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System reset applied",
+      "condition": "rstn_top == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, ALU operational",
+      "condition": "rstn_top == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "ALU receives a vector mode instruction (VEC_MODE16 or VEC_MODE8)",
+      "condition": "top_wrapper.riscv_core.ex_stage_i.alu_i.vector_mode_i == 2'b10 || top_wrapper.riscv_core.ex_stage_i.alu_i.vector_mode_i == 2'b11",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: adder_in_a[18] is not cleared to 0 in vector mode (carry bit not masked, incomplete case statement)",
+      "condition": "(top_wrapper.riscv_core.ex_stage_i.alu_i.vector_mode_i == 2'b10 || top_wrapper.riscv_core.ex_stage_i.alu_i.vector_mode_i == 2'b11) && top_wrapper.riscv_core.ex_stage_i.alu_i.adder_in_a[18] == 1'b1",
+      "expected_cycles": 1
+    }
+  ]
+}

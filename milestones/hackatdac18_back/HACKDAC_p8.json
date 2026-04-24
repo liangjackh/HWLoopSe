@@ -1,0 +1,18 @@
+{
+  "target": "Violate HACKDAC_p8: address ranges for GPIO, UDMA, and SOC_CTRL must not overlap. Actual GPIO_END_ADDR (0x1A10AFFF) overlaps with UDMA_START_ADDR (0x1A102000).",
+  "target_expr": "32'h1A10AFFF > 32'h1A102000",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System reset applied",
+      "condition": "rstn_top == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Violation: GPIO_END_ADDR (0x1A10AFFF) exceeds UDMA_START_ADDR (0x1A102000), causing address range overlap",
+      "condition": "rstn_top == 1",
+      "expected_cycles": 1
+    }
+  ]
+}

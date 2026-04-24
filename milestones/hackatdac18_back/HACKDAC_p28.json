@@ -1,0 +1,24 @@
+{
+  "target": "Verify HACKDAC_p28: td_i must always be 0 or 1 (trivially true for a 1-bit signal — no violation expected, JTAG interface is not password protected).",
+  "target_expr": "top_wrapper.jtag_tap_top.td_i != 1 && top_wrapper.jtag_tap_top.td_i != 0",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System reset applied",
+      "condition": "rstn_top == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, JTAG interface operational",
+      "condition": "rstn_top == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "JTAG td_i signal receives data (always 0 or 1 for a 1-bit wire — property trivially holds)",
+      "condition": "top_wrapper.jtag_tap_top.td_i == 1 || top_wrapper.jtag_tap_top.td_i == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

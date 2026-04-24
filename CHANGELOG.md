@@ -1,5 +1,71 @@
 # Changelog
 
+[2026-04-23] [BugFix] Fixed lazy fork explosion by moving fork after abandon check (`engine/strategies.py`)
+
+**Problem:** p9 and p10 timed out at 300s with queue explosion (~5000 items). The `adbg_tap_top/cfg1` CFG has 43 paths (JTAG state machine). Lazy forking enqueued 4 alternatives BEFORE execution. When the chosen path was abandoned (UNSAT), the 4 alternatives were already in the queue. Each alternative also forked 4 more, creating exponential growth: 4^N queue explosion even though most paths were UNSAT.
+
+**Root cause:** Lines 1232-1276 in `strategies.py` performed lazy fork BEFORE executing the chosen path. The fork block was located between "Clamp path index" and "Execute the chosen path". When `manager.abandon` was set during execution (line 1341-1350), the alternatives were already pushed to the worklist and couldn't be removed.
+
+**Fix:** Moved the lazy fork block from before execution (lines 1232-1276) to after the abandon check (after line 1307, "Mark that at least one CFG executed successfully"). Now alternatives are only enqueued if the chosen path succeeds (not abandoned). The pre-CFG snapshot (`pre_cfg_store`, `pre_cfg_nba`) is used as the fork base.
+
+**Key changes:**
+1. Removed fork block from lines 1232-1276 (before execution)
+2. Added fork block after line 1307 (after abandon check, before comb evaluation)
+3. Fork base uses `pre_cfg_store` and `pre_cfg_nba` snapshots taken before CFG execution
+4. Comment updated: "IMPORTANT: Only fork AFTER the chosen path succeeds (not abandoned)"
+
+**Results:**
+- p9: Queue 5000 → 1025 (80% reduction), timeout → 49s ✅
+- p10: Queue 5000 → 1025 (80% reduction), timeout → 49s ✅
+- p11: No regression, still passes in 13.3s ✅
+- Both p9/p10 now exhaust search (UNSAT) instead of timing out — milestone plans need improvement
+
+**Note:** p9 and p10 don't find violations because the milestone plans are LLM-hallucinated (milestone 0 "rstn_top == 0" is never reached, BMC prunes at cycle 12). The lazy fork fix is correct — the search completes efficiently, but the guidance is wrong. This is a separate issue from the queue explosion.
+
+[2026-04-23] [Test Results] HackAtDAC18 v3 Run - 7/12 (58%) passing with current committed code
+
+**Test Date:** 2026-04-23 10:11-10:47
+**Test Location:** `/tmp/hackdac_v3/`
+**Configuration:** Commit 4fbd0a6 (constant-only assertion fallback + MAX_FORK_ALTS=4 cap)
+
+**Pass Rate: 7/12 (58%)** — up from 5/12 baseline (+17% improvement)
+
+**Passing properties (7):**
+- p3 (~300s): Violation found at end of timeout window (borderline)
+- p5 (~300s): Violation found at end of timeout window (borderline)
+- p6 (9.77s): Primary goal — constant-only assertion fix ✅
+- p8 (9.71s): Primary goal — constant-only assertion fix ✅
+- p11 (15.08s): RISC-V core property
+- p14 (15.03s): RISC-V core property
+- p16 (9.75s): GPIO property
+
+**Timeout properties (5):**
+- p4 (37 MB log, queue ~740): Suppressed violation loop + queue explosion
+- p9 (41 MB log, queue ~5000): Lazy fork explosion (43-path CFG), BMC equilibrium
+- p10 (41 MB log, queue ~5000): Lazy fork explosion (same as p9)
+- p13 (2.6 MB log, queue ~5000): RISC-V core path explosion
+- p27 (2.5 MB log, queue ~5000): RISC-V core path explosion
+
+**Key findings:**
+- Primary goal (p6, p8 constant-only assertion fix) achieved ✅
+- p3 and p5 are new passes but borderline (barely within 300s timeout)
+- Queue stabilizes at ~5000 for p9/p10/p13/p27 due to BMC bound pruning (not explicit queue limit)
+- p4 queue grows linearly (~740), no BMC equilibrium
+- No queue management fixes (skip forking on suppressed violations, prune dead fork alternatives, global queue limit) are present in current code
+- `hackdac18_final_results.md` claiming 8/12 (67%) was written during development but those fixes were reverted before committing
+
+**Current code state:**
+- `_MAX_FORK_ALTS = 4` cap is present (line 1242 in strategies.py)
+- No `_violation_suppressed_this_cycle`, `PruneFork`, `_MAX_QUEUE`, or `QueuePrune` logic
+- BMC bound check (`local_depth > expected_cycles + margin`) provides natural queue pruning for some properties
+
+**Recommendations for future work:**
+1. Verify which queue management fixes should be re-implemented
+2. Focus on remaining 5 timeouts with clear root causes:
+   - p4: Implement suppressed violation deduplication
+   - p9, p10: Move lazy fork after execution (only fork if path succeeds)
+   - p13, p27: Lower queue threshold or MAX_FORK_ALTS, or improve COI pruning
+
 [2026-04-15] [BugFix] Fixed spurious unconditional violation from concat-LHS continuous assign and Z3 rename mangling (`helpers/slang_helpers.py`, `engine/strategies.py`).
 
 **Root cause 1 — concat LHS silently skipped in `evaluate_comb`**: `slang_helpers.py:evaluate_comb` handled `ContinuousAssignSyntax` by extracting the LHS name via `lhs.identifier` or `lhs.valueText`. For a concatenation LHS such as `assign {FC_INSTR_gnt_o, UDMA_TX_gnt_o, UDMA_RX_gnt_o, DBG_RX_gnt_o, FC_DATA_gnt_o} = FC_data_gnt_INT_32`, neither attribute exists, so `lhs_name` stayed `None` and the assignment was silently skipped. `FC_DATA_gnt_o` was never written to `state.store["soc_interconnect"]`, remaining as an unconstrained fresh Z3 variable. The assertion `FC_DATA_gnt_o == 1` could then be trivially satisfied at cycle 1 with no path constraints, producing a spurious unconditional violation.

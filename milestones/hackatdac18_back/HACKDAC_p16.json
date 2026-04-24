@@ -1,0 +1,30 @@
+{
+  "target": "Violate HACKDAC_p16: trstn_pad_i must be asserted OR correct must be 0. Find a state where trstn_pad_i is deasserted while correct is non-zero (reset not operational).",
+  "target_expr": "top_wrapper.adbg_tap_top.trstn_pad_i == 0 && top_wrapper.adbg_tap_top.correct != 0",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System reset applied, JTAG TAP reset asserted",
+      "condition": "rstn_top == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, JTAG TAP reset deasserted, correct counter initialized to zero",
+      "condition": "rstn_top == 1 && top_wrapper.adbg_tap_top.trstn_pad_i == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Password check in progress, correct counter non-zero",
+      "condition": "top_wrapper.adbg_tap_top.correct > 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: JTAG TAP reset asserted but correct counter is non-zero (reset does not clear correct counter)",
+      "condition": "top_wrapper.adbg_tap_top.trstn_pad_i == 0 && top_wrapper.adbg_tap_top.correct != 0",
+      "expected_cycles": 1
+    }
+  ]
+}

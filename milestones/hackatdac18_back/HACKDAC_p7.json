@@ -1,0 +1,24 @@
+{
+  "target": "Violate HACKDAC_p7: when outstanding_trans_i is asserted, CS must not equal NS (the FSM must transition to ERROR state on address decode error).",
+  "target_expr": "top_wrapper.axi_address_decoder_AR.outstanding_trans_i == 1 && top_wrapper.axi_address_decoder_AR.CS == top_wrapper.axi_address_decoder_AR.NS",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System reset applied",
+      "condition": "rstn_top == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, AXI address decoder in OPERATIVE state",
+      "condition": "rstn_top == 1 && top_wrapper.axi_address_decoder_AR.CS == 1'b0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Violation: outstanding transactions present while CS equals NS (decoder ignores error, no state change)",
+      "condition": "top_wrapper.axi_address_decoder_AR.outstanding_trans_i == 1 && top_wrapper.axi_address_decoder_AR.CS == top_wrapper.axi_address_decoder_AR.NS",
+      "expected_cycles": 2
+    }
+  ]
+}

@@ -1229,58 +1229,13 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             if chosen_path_idx >= len(cfg.paths):
                 chosen_path_idx = 0
 
-            # Lazy fork: if this CFG has multiple paths and we're taking path 0
-            # (i.e., not already a forked work item for a specific path),
-            # push siblings for the other paths.
-            if len(cfg.paths) > 1 and cfg_entry.get('forked', False) is False:
-                _fork_t0 = _time.time()
-                pre_branch_state = self._clone_state(state)
-                # Cap fork alternatives for large CFGs (e.g. 24-arm DEMUX) to
-                # prevent exponential queue growth.  CFGs with many paths are
-                # typically structural fabric (demux/mux/fan-in) whose specific
-                # routing choice doesn't affect whether a security violation occurs.
-                _MAX_FORK_ALTS = 4
-                _n_alts_total = len(cfg.paths) - 1
-                _n_alts = min(_n_alts_total, _MAX_FORK_ALTS)
-                _alt_count = 0
-                for alt_path_idx in range(len(cfg.paths)):
-                    if alt_path_idx == chosen_path_idx:
-                        continue
-                    if _alt_count >= _MAX_FORK_ALTS:
-                        break
-                    # Build remaining CFGs for the alternative: same list from
-                    # this point onward, but with this CFG using alt_path_idx
-                    alt_remaining = []
-                    alt_remaining.append({
-                        'module': module_name,
-                        'cfg_idx': cfg_idx,
-                        'path_idx': alt_path_idx,
-                        'forked': True,  # mark so we don't re-fork
-                    })
-                    for j in range(i + 1, len(remaining_cfgs)):
-                        alt_remaining.append(dict(remaining_cfgs[j]))
-                    alt_ctx = {'remaining_cfgs': alt_remaining}
-                    alt_item = WorkItem(
-                        score=item.score + 1,
-                        cycle=cycle,
-                        milestones_completed=item.milestones_completed,
-                        state=self._clone_state(pre_branch_state),
-                        execution_context=alt_ctx,
-                        cycle_at_last_milestone=item.cycle_at_last_milestone
-                    )
-                    heapq.heappush(worklist, alt_item)
-                    _alt_count += 1
-                if _n_alts_total > _MAX_FORK_ALTS:
-                    print(f"  [Fork] {module_name}/cfg{cfg_idx}: {_n_alts}/{_n_alts_total} alternatives forked (capped) in {_time.time()-_fork_t0:.3f}s, queue={len(worklist)}", flush=True)
-                else:
-                    print(f"  [Fork] {module_name}/cfg{cfg_idx}: {_n_alts} alternatives forked in {_time.time()-_fork_t0:.3f}s, queue={len(worklist)}", flush=True)
-
             # Execute the chosen path
             cfg_path = cfg.paths[chosen_path_idx]
             manager.ignore = False
             manager.abandon = False
 
             # Snapshot store & pending_nba so we can rollback on abandon
+            # Also snapshot for lazy fork (if path succeeds, we'll fork from here)
             pre_cfg_store = {mod: sigs.copy() for mod, sigs in state.store.items()}
             pre_cfg_nba = {mod: sigs.copy() for mod, sigs in state.pending_nba.items()}
 
@@ -1351,6 +1306,58 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
             # Mark that at least one CFG executed successfully
             any_cfg_executed = True
+
+            # Lazy fork: if this CFG has multiple paths and we're taking the preferred path
+            # (i.e., not already a forked work item for a specific path),
+            # push siblings for the other paths. IMPORTANT: Only fork AFTER the chosen
+            # path succeeds (not abandoned). This prevents forking alternatives when the
+            # chosen path is UNSAT, which would cause exponential queue growth.
+            if len(cfg.paths) > 1 and cfg_entry.get('forked', False) is False:
+                _fork_t0 = _time.time()
+                # Use the pre-CFG snapshot as the fork base (before this CFG executed)
+                pre_branch_state = self._clone_state(state)
+                pre_branch_state.store = {mod: sigs.copy() for mod, sigs in pre_cfg_store.items()}
+                pre_branch_state.pending_nba = {mod: sigs.copy() for mod, sigs in pre_cfg_nba.items()}
+
+                # Cap fork alternatives for large CFGs (e.g. 43-path JTAG) to
+                # prevent exponential queue growth. CFGs with many paths are
+                # typically structural fabric (demux/mux/fan-in) whose specific
+                # routing choice doesn't affect whether a security violation occurs.
+                _MAX_FORK_ALTS = 4
+                _n_alts_total = len(cfg.paths) - 1
+                _n_alts = min(_n_alts_total, _MAX_FORK_ALTS)
+                _alt_count = 0
+                for alt_path_idx in range(len(cfg.paths)):
+                    if alt_path_idx == chosen_path_idx:
+                        continue
+                    if _alt_count >= _MAX_FORK_ALTS:
+                        break
+                    # Build remaining CFGs for the alternative: same list from
+                    # this point onward, but with this CFG using alt_path_idx
+                    alt_remaining = []
+                    alt_remaining.append({
+                        'module': module_name,
+                        'cfg_idx': cfg_idx,
+                        'path_idx': alt_path_idx,
+                        'forked': True,  # mark so we don't re-fork
+                    })
+                    for j in range(i + 1, len(remaining_cfgs)):
+                        alt_remaining.append(dict(remaining_cfgs[j]))
+                    alt_ctx = {'remaining_cfgs': alt_remaining}
+                    alt_item = WorkItem(
+                        score=item.score + 1,
+                        cycle=cycle,
+                        milestones_completed=item.milestones_completed,
+                        state=self._clone_state(pre_branch_state),
+                        execution_context=alt_ctx,
+                        cycle_at_last_milestone=item.cycle_at_last_milestone
+                    )
+                    heapq.heappush(worklist, alt_item)
+                    _alt_count += 1
+                if _n_alts_total > _MAX_FORK_ALTS:
+                    print(f"  [Fork] {module_name}/cfg{cfg_idx}: {_n_alts}/{_n_alts_total} alternatives forked (capped) in {_time.time()-_fork_t0:.3f}s, queue={len(worklist)}", flush=True)
+                else:
+                    print(f"  [Fork] {module_name}/cfg{cfg_idx}: {_n_alts} alternatives forked in {_time.time()-_fork_t0:.3f}s, queue={len(worklist)}", flush=True)
 
             # Propagate this module's output ports and re-evaluate only
             # downstream comb nodes (targeted, not all 836 nodes).

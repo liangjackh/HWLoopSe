@@ -6,7 +6,7 @@ find . -name '*.pyc' -delete && find . -name '__pycache__' -type d -exec rm -rf 
 rm -f out.txt
 #test_2
 #python3 -m main 6 designs/test-designs/test_2.v --sv  --auto-plan --llm-provider deepseek --coi --strategy directed
-#python3 -m main 7 designs/test-designs/test_2.v --sv --milestone-file milestones/test_2.json --coi --strategy directed
+python3 -m main 7 designs/test-designs/test_2.v --sv --milestone-file milestones/test_2.json --coi --strategy directed
 
 #or1200
 #python3 -m main 60 or1200_subset.F --sv  --auto-plan --llm-provider deepseek --coi --strategy directed -t or1200_top
@@ -21,7 +21,7 @@ rm -f out.txt
 #python3 -m main 30 hackdac18.F --sv --auto-plan --llm-provider deepseek --coi --strategy directed -t top_wrapper
 #python3 -m main 30 hackdac18.F --sv  --auto-plan --milestone-file milestones/hackdac18/p1.json --coi --strategy directed -t top_wrapper
 #python3 -m main 30 hackdac18.F --sv  --auto-plan --milestone-file milestones/hackdac18/p2_fixed.json --coi --strategy directed -t top_wrapper
-python3 -m main 30 hackdac18.F --sv  --auto-plan --milestone-file milestones/hackatdac18/HACKDAC_p11.json --coi --strategy directed -t top_wrapper
+#python3 -m main 30 hackdac18.F --sv  --auto-plan --milestone-file milestones/hackatdac18/HACKDAC_p11.json --coi --strategy directed -t top_wrapper
 
 
 
