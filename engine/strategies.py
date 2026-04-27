@@ -1367,10 +1367,16 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             if _comb_elapsed > 0.1:
                 print(f"  [Slow] {module_name}/cfg{cfg_idx}: targeted_comb={_comb_elapsed:.3f}s", flush=True)
 
-        # Check if all CFGs were skipped/abandoned — no state change occurred
+        # If all CFGs were skipped/abandoned, only continue if this is the preferred-path
+        # item (not a forked alternative). Forked items that hit UNSAT should die here —
+        # their siblings will cover the other paths. The preferred-path item should advance
+        # so the work item isn't lost when the preferred path is UNSAT at this cycle.
         if not any_cfg_executed:
-            print(f"  [AllSkipped] cycle {cycle}: all {len(remaining_cfgs)} CFGs abandoned — pruning path")
-            return None
+            is_forked_item = any(rc.get('forked', False) for rc in remaining_cfgs)
+            if is_forked_item:
+                print(f"  [AllSkipped] cycle {cycle}: forked item, all CFGs abandoned — pruning path")
+                return None
+            print(f"  [AllSkipped] cycle {cycle}: preferred-path item, all CFGs abandoned — continuing to next cycle")
 
         # Step 4: Re-evaluate comb after sequential logic
         self._evaluate_comb_topo(visitor, manager, state)
