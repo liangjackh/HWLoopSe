@@ -1193,19 +1193,25 @@ class SymbolicDFS:
                         cond_z3 = cond_z3 != BitVecVal(0, 32)
                 # Persistently add branch condition to path condition
                 # Short-circuit concrete values and deduplicate constraints
-                constraint = cond_z3 if direction else Not(cond_z3)
-                self.branch = bool(direction)
-                if not _try_add_constraint(constraint, s, m):
-                    m.abandon = True
-                    m.ignore = True
-                    return
+                # direction=None means this conditional is inside a branch body
+                # being executed by the conditional body fix — skip constraint,
+                # just execute the then-branch body unconditionally.
+                if direction is None:
+                    pass  # no constraint added for nested conditionals
+                else:
+                    constraint = cond_z3 if direction else Not(cond_z3)
+                    self.branch = bool(direction)
+                    if not _try_add_constraint(constraint, s, m):
+                        m.abandon = True
+                        m.ignore = True
+                        return
 
             # Execute the selected branch body.
             # ConditionalStatementSyntax uses .statement (then) / .elseClause.statement (else).
             # Semantic ConditionalStatement uses .ifTrue / .elseBody.
             # Fall back to .body for other node types.
-            if direction:
-                # then-branch
+            if direction is None or direction:
+                # then-branch (also default when direction=None)
                 _branch_body = (getattr(stmt, 'ifTrue', None)
                                 or getattr(stmt, 'statement', None)
                                 or getattr(stmt, 'body', None))
