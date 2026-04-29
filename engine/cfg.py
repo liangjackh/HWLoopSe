@@ -11,7 +11,7 @@ from typing import Optional
 import random, string
 import time
 import gc
-from itertools import product, permutations, combinations
+from itertools import product, permutations
 import logging
 from helpers.utils import to_binary
 import sys
@@ -129,13 +129,19 @@ class CFG:
         return directions
     
     def resolve_independent_branch_pts(self, idx):
-        """After visiting a basic block, form edges between the branching points at that same level."""
+        """After visiting a basic block, form sequential edges between sibling branch points.
+
+        When a block body contains multiple independent conditionals/cases,
+        they need sequential flow edges so paths can traverse them in order.
+        Creates pairwise edges between consecutive branch points (sorted by
+        node index) instead of N-element combination tuples.
+        """
         if len(self.ind_branch_points[idx]) <= 1:
-            return 
+            return
 
-        res = list(combinations(self.ind_branch_points[idx], r=len(self.ind_branch_points[idx])))
-
-        self.edgelist += res 
+        sorted_pts = sorted(self.ind_branch_points[idx])
+        for i in range(len(sorted_pts) - 1):
+            self.edgelist.append((sorted_pts[i], sorted_pts[i + 1]))
 
 
     def _collect_from_body(self, body):
