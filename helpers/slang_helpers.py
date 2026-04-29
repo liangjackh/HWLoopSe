@@ -12,16 +12,10 @@ from engine.cfg import CaseArmMarker
 
 
 def _try_add_constraint(constraint, s, m):
-    """Add a branch constraint to the path condition with short-circuit and dedup.
-
-    Returns True if the constraint was added (or was trivially true / already present).
-    Returns False if the constraint is infeasible (caller should abandon the path).
-    """
+    """Add a branch constraint to the path condition with short-circuit and dedup."""
     simplified = simplify(constraint)
-
-    # 1. Concrete short-circuit
     if is_true(simplified):
-        return True   # trivially True — nothing to add
+        return True
     if is_false(simplified):
         return False  # trivially False — abandon path
 
@@ -717,18 +711,65 @@ class SymbolicDFS:
                 self.visit_expr(m, s, expr.right)
 
         elif kind == ps.ExpressionKind.UnaryOp:
-            self.visit_expr(m, s, expr.operand)
+            op = getattr(expr, 'op', None)
+            if op in (ps.UnaryOperator.Preincrement, ps.UnaryOperator.Postincrement,
+                      ps.UnaryOperator.Predecrement, ps.UnaryOperator.Postdecrement):
+                # Write-back: var++ / var-- modifies the variable in store
+                operand = expr.operand
+                op_kind = getattr(operand, 'kind', None)
+                var_name = None
+                if op_kind == ps.ExpressionKind.NamedValue and hasattr(operand, 'symbol'):
+                    var_name = operand.symbol.name
+                if var_name is not None:
+                    try:
+                        new_val = self.expr_to_z3(m, s, expr)  # calls _kind_unary_op -> operand ± 1
+                        s.store[m.curr_module][var_name] = new_val
+                    except Exception:
+                        pass
+            else:
+                self.visit_expr(m, s, expr.operand)
 
         elif kind == ps.ExpressionKind.ConditionalOp:
             self.visit_expr(m, s, expr.predicate)
             self.visit_expr(m, s, expr.left)
             self.visit_expr(m, s, expr.right)
 
+        elif kind == ps.ExpressionKind.Assignment:
+            # Semantic blocking assignment node (elaborated, e.g. from Verilog .v files)
+            # LHS is a NamedValue/ElementSelect expression, RHS is the value.
+            lhs = getattr(expr, 'left', None)
+            rhs = getattr(expr, 'right', None)
+            if lhs is not None and rhs is not None:
+                lhs_var = None
+                lhs_kind = getattr(lhs, 'kind', None)
+                if lhs_kind == ps.ExpressionKind.NamedValue and hasattr(lhs, 'symbol'):
+                    lhs_var = lhs.symbol.name
+                elif lhs_kind == ps.ExpressionKind.ElementSelect:
+                    base = getattr(lhs, 'value', None)
+                    sel = getattr(lhs, 'selector', None)
+                    if base is not None and hasattr(base, 'symbol'):
+                        base_name = base.symbol.name
+                        if sel is not None:
+                            try:
+                                idx = int(str(self.expr_to_z3(m, s, sel)))
+                                lhs_var = f"{base_name}[{idx}]"
+                            except Exception:
+                                lhs_var = base_name
+                        else:
+                            lhs_var = base_name
+                if lhs_var is not None:
+                    try:
+                        rhs_z3 = self.expr_to_z3(m, s, rhs)
+                        s.store[m.curr_module][lhs_var] = rhs_z3
+                    except Exception:
+                        pass
+
         elif kind == ps.SyntaxKind.AssignmentExpression:
             # Get LHS variable name (handle array element selects)
             lhs_var = None
             lhs = expr.left
             lhs_class = lhs.__class__.__name__
+
             # Check IdentifierSelectNameSyntax FIRST (pipe[0], in_a_history[1], etc.)
             if lhs_class == 'IdentifierSelectNameSyntax' and hasattr(lhs, 'selectors'):
                 base_name = lhs.identifier.value if hasattr(lhs.identifier, 'value') else str(lhs.identifier)
@@ -776,6 +817,7 @@ class SymbolicDFS:
                     rhs_z3 = self.expr_to_z3(m, s, expr.right)
                     s.store[m.curr_module][lhs_var] = rhs_z3
                 except Exception:
+                    pass
                     # Fall back to string-based representation
                     rhs_str = conjunction_with_pointers(expr.right, s, m)
                     rhs_with_symbols = substitute_symbols(rhs_str, s.store[m.curr_module])
@@ -1084,6 +1126,10 @@ class SymbolicDFS:
         if kind == ps.SyntaxKind.ExpressionStatement:
             self.visit_expr(m, s, stmt.expr)
 
+        elif kind == ps.SyntaxKind.AssignmentExpression:
+            # Blocking assignment passed directly as a statement node (Verilog .v files)
+            self.visit_expr(m, s, stmt)
+
         elif kind == ps.StatementKind.Block and getattr(stmt, "body", None) is not None:
             #print(f"[visiting statement: Block]")  # DEBUG
             for substmt in stmt.body:
@@ -1154,10 +1200,26 @@ class SymbolicDFS:
                     m.ignore = True
                     return
 
-        elif kind == ps.StatementKind.List:
-            
-            for s_sub in stmt.body:
-                self.visit_stmt(m, s, s_sub, modules, direction)
+            # Execute the selected branch body.
+            # ConditionalStatementSyntax uses .statement (then) / .elseClause.statement (else).
+            # Semantic ConditionalStatement uses .ifTrue / .elseBody.
+            # Fall back to .body for other node types.
+            if direction:
+                # then-branch
+                _branch_body = (getattr(stmt, 'ifTrue', None)
+                                or getattr(stmt, 'statement', None)
+                                or getattr(stmt, 'body', None))
+            else:
+                # else-branch
+                _else_clause = getattr(stmt, 'elseClause', None) or getattr(stmt, 'elseBody', None)
+                if _else_clause is not None:
+                    _branch_body = (getattr(_else_clause, 'statement', None)
+                                    or getattr(_else_clause, 'clause', None)
+                                    or _else_clause)
+                else:
+                    _branch_body = None
+            if _branch_body is not None:
+                self.visit_stmt(m, s, _branch_body, modules, None)
 
         elif kind == ps.StatementKind.ForLoop:
             _v = getattr(stmt, "init", None)

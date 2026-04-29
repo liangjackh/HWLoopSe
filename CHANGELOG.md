@@ -1,5 +1,43 @@
 # Changelog
 
+[2026-04-29] [BugFix] Fix Verilog (.v) symbolic execution for blocking assignments, bit-select, increment, and CFG construction
+
+**Problem:** p9/p10 (JTAG TAP password check) could never reach milestone 1 (`bitindex > 0`). The JTAG TAP state machine in `adbg_tap_top.v` uses Verilog-style blocking assignments, post-increment operators, and dynamic bit-selects that were not handled by the symbolic execution engine.
+
+**Root causes (9 bugs fixed):**
+
+1. **`ExpressionKind.Assignment` not handled in `visit_expr`** (slang_helpers.py): Verilog blocking assignments (`TAP_state = next_TAP_state`) use `ExpressionKind.Assignment` (semantic node), but only `SyntaxKind.AssignmentExpression` (syntax node) was handled. Added handler to write LHS = RHS to store.
+
+2. **`SyntaxKind.AssignmentExpression` as statement** (slang_helpers.py): When a blocking assignment is passed directly as a statement node (not wrapped in ExpressionStatement), `visit_stmt` had no handler. Added `elif kind == ps.SyntaxKind.AssignmentExpression: self.visit_expr(m, s, stmt)`.
+
+3. **Symbolic bit-select `pass[bitindex]`** (rvalue_to_z3.py): `_kind_element_select` returned `BitVecVal(0, 32)` when the selector was symbolic (couldn't call `.as_long()`). Now builds a Z3 If-chain: `If(sel==0, bit0, If(sel==1, bit1, ...))`.
+
+4. **Post-increment `correct++` / `bitindex++`** (rvalue_to_z3.py + slang_helpers.py): `_kind_unary_op` had no handler for `Preincrement/Postincrement/Predecrement/Postdecrement`, returning 0. Now returns `operand ± 1`. Also added write-back logic in `visit_expr` for `ExpressionKind.UnaryOp` increment/decrement.
+
+5. **`find_leaves` self-loop exclusion** (cfg.py): Case arm bodies whose only intra-block edge was a self-loop (e.g., `(3,4)` mapping to `(block1, block1)`) were not identified as leaves, so they never connected to the dummy exit. Fixed by excluding self-loops: `starts_no_self = set(e[0] for e in cfg_edges if e[0] != e[1])`.
+
+6. **`make_paths` multi-element tuple skip** (cfg.py): `resolve_independent_branch_pts` produces N-element tuples representing sibling branch point sets. `make_paths` was treating `edge[0], edge[1]` of these tuples as direct edges, creating spurious cross-arm connections. Now skips tuples with `len(edge) != 2`.
+
+7. **Sequential flow edge for conditionals** (cfg.py): When a `ConditionalStatementSyntax` follows a plain statement inside a `BlockStatementSyntax`, no edge connected the preceding block to the conditional's block. Added `self.edgelist.append((parent_idx - 1, parent_idx))` when the preceding node is not already a partition point.
+
+8. **Conditional body execution** (slang_helpers.py): After adding the branch constraint, the selected branch body was fetched via `getattr(stmt, 'body', None)` which doesn't exist on `ConditionalStatementSyntax`. Fixed to use `stmt.statement` (then) / `stmt.elseClause.statement` (else) / `stmt.ifTrue` (semantic). Body is executed with `direction=None` to avoid propagating the parent's direction to nested conditionals.
+
+9. **`stmt.body` crash on ConditionalStatementSyntax** (slang_helpers.py): The `StatementKind.Conditional` handler ended with `for s_sub in stmt.body:` which crashed on `ConditionalStatementSyntax` (no `.body` attribute). Replaced with `getattr(stmt, 'body', None)` guard.
+
+**Key changes:**
+- `helpers/rvalue_to_z3.py`: `_kind_element_select` symbolic If-chain, `_kind_unary_op` increment/decrement
+- `helpers/slang_helpers.py`: `ExpressionKind.Assignment` handler, `SyntaxKind.AssignmentExpression` in visit_stmt, UnaryOp write-back, conditional body fix
+- `engine/cfg.py`: `find_leaves` self-loop exclusion, `make_paths` tuple filter, sequential flow edge
+
+**Results:**
+- cfg1 (JTAG TAP state machine) paths now execute correctly: arm=0 (`STATE_test_logic_reset`) and arm=1 (`STATE_run_test_idle`) both reachable
+- `TAP_state` correctly transitions from 15 → 12 across cycles
+- `pass = 0xDEADBEEF` correctly written to store
+- `passchk`, `correct`, `bitindex` assignments now functional
+- Remaining issue: nested conditionals inside arm bodies (e.g., `if(correct >= 0x1FFFF) ... else if(tdi_o == pass[bitindex])`) have missing CFG edges due to `resolve_independent_branch_pts` interaction — tracked separately
+
+---
+
 [2026-04-23] [BugFix] Fixed lazy fork explosion by moving fork after abandon check (`engine/strategies.py`)
 
 **Problem:** p9 and p10 timed out at 300s with queue explosion (~5000 items). The `adbg_tap_top/cfg1` CFG has 43 paths (JTAG state machine). Lazy forking enqueued 4 alternatives BEFORE execution. When the chosen path was abandoned (UNSAT), the 4 alternatives were already in the queue. Each alternative also forked 4 more, creating exponential growth: 4^N queue explosion even though most paths were UNSAT.

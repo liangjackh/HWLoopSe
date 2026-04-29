@@ -511,6 +511,9 @@ class CFG:
                     self.all_nodes.append(item)
                     self.partition_points.add(self.curr_idx)
                     parent_idx = self.curr_idx
+                    # Add sequential flow edge from the previous node to this conditional
+                    if parent_idx > 0 and (parent_idx - 1) not in self.partition_points:
+                        self.edgelist.append((parent_idx - 1, parent_idx))
                     self.curr_idx += 1
 
                     self._process_conditional_sv(m, s, parent_idx, item)
@@ -668,18 +671,32 @@ class CFG:
         return len(self.basic_block_list) - 1
 
     def make_paths(self):
-        """Map the edge between AST nodes to a path between basic blocks."""
+        """Map the edge between AST nodes to a path between basic blocks.
+
+        Only process 2-element tuples (source, target).  Multi-element tuples
+        produced by resolve_independent_branch_pts represent sets of sibling
+        branch points and are not direct edges; processing them as (edge[0],
+        edge[1]) creates spurious cross-arm connections.
+        """
         for edge in self.edgelist:
+            if len(edge) != 2:
+                continue  # skip resolve_independent_branch_pts tuples
             block1 = self.find_basic_block(edge[0])
             block2 = self.find_basic_block(edge[1])
             path = (block1, block2)
             self.cfg_edges.append(path)
 
     def find_leaves(self):
-        """Find leaves in cfg, to know which nodes need to connect to dummy exit."""
-        starts = set(edge[0] for edge in self.cfg_edges)
-        ends = set(edges[1] for edges in self.cfg_edges)
-        self.leaves = ends - starts
+        """Find leaves in cfg, to know which nodes need to connect to dummy exit.
+
+        A block is a leaf if it has no outgoing edges to *other* blocks.
+        Self-loops (block -> block) are excluded so that arm bodies whose only
+        intra-block edge is a self-loop are still treated as leaves and get
+        connected to the dummy exit node.
+        """
+        starts_no_self = set(e[0] for e in self.cfg_edges if e[0] != e[1])
+        ends = set(e[1] for e in self.cfg_edges)
+        self.leaves = ends - starts_no_self
 
     def display_cfg(self, graph):
         """Display CFG."""

@@ -532,6 +532,13 @@ def _kind_unary_op(e, s, m):
         return -operand
     elif op == ps.UnaryOperator.Plus:
         return operand
+    elif op in (ps.UnaryOperator.Preincrement, ps.UnaryOperator.Postincrement):
+        # Return operand + 1; the write-back to store is handled in visit_expr
+        bw = operand.size() if hasattr(operand, 'size') else 32
+        return operand + BitVecVal(1, bw)
+    elif op in (ps.UnaryOperator.Predecrement, ps.UnaryOperator.Postdecrement):
+        bw = operand.size() if hasattr(operand, 'size') else 32
+        return operand - BitVecVal(1, bw)
     else:
         print(f"[Warning] Unhandled unary operator: {op}")
         return BitVecVal(0, 32)
@@ -592,16 +599,31 @@ def _kind_range_select(e, s, m):
 def _kind_element_select(e, s, m):
     base = parse_expr_to_Z3(e.value, s, m)
     selector = parse_expr_to_Z3(e.selector, s, m)
+    # Concrete index: fast path
     try:
         idx = selector.as_long() if hasattr(selector, 'as_long') else int(str(selector))
-    except (ValueError, z3.Z3Exception):
+        if hasattr(base, 'size'):
+            bw = base.size()
+            if idx < bw:
+                bit = z3.Extract(idx, idx, base)
+                return z3.ZeroExt(31, bit)
         return BitVecVal(0, 32)
-    if hasattr(base, 'size'):
-        bw = base.size()
-        if idx < bw:
-            bit = z3.Extract(idx, idx, base)
-            return z3.ZeroExt(31, bit)
-    return BitVecVal(0, 32)
+    except (ValueError, z3.Z3Exception):
+        pass
+    # Symbolic index: build If-chain over all bit positions
+    # pass[bitindex] where bitindex is a Z3 BitVec -> If(bitindex==0, bit0, If(bitindex==1, bit1, ...))
+    if not hasattr(base, 'size'):
+        return BitVecVal(0, 32)
+    bw = base.size()
+    sel = selector
+    if hasattr(sel, 'size') and sel.size() != 32:
+        sel = z3.ZeroExt(32 - sel.size(), sel) if sel.size() < 32 else z3.Extract(31, 0, sel)
+    result = BitVecVal(0, 32)
+    for i in range(bw - 1, -1, -1):
+        bit = z3.Extract(i, i, base)
+        bit32 = z3.ZeroExt(31, bit)
+        result = z3.If(sel == BitVecVal(i, 32), bit32, result)
+    return result
 
 
 def _kind_replication(e, s, m):
