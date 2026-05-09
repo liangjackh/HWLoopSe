@@ -33,10 +33,10 @@ The Symbolic Execution Engine will use your milestones to steer the search. If t
 5.  **Multiple File Output Format**:
     * You must generate a SEPARATE JSON list for each property.
     * Do NOT combine them into a single JSON object.
-    * To allow the automated pipeline to parse and save these as individual files, you MUST output each property's JSON list wrapped in a markdown code block, immediately preceded by a special file marker: `[FILE: milestones/hackatdac18/<property_name>.json]`
+    * To allow the automated pipeline to parse and save these as individual files, you MUST output each property's JSON list wrapped in a markdown code block, immediately preceded by a special file marker: `[FILE: milestones/hackatdac19/<property_name>.json, milestones/hackatdac19/<property_name>.json]`
     
 7.  **Batch Processing & Property Translation**:
-    * You will be provided with the contents of `hackdac18.F` and `properties.sv`.
+    * You will be provided with the contents of `hackdac19.F` and `designs/benchmarks/hackatdac19/properties.sv` ,`hackdac21.F` and `designs/benchmarks/hackatdac21/properties.sv`.
     * You must analyze `properties.sv` to identify all verification properties (e.g., `p1`, `p2`).
     * For each property, extract the core boolean trigger condition and final target condition, discarding SVA temporal operators (`|->`, `##N`, etc.).
     * Generate the corresponding milestones and output them strictly following the format below.

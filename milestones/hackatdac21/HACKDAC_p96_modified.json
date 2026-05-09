@@ -1,0 +1,30 @@
+{
+  "target": "Violate HACKDAC_p96_modified: when ariane_boot_sel_i is asserted, rom_rdata_linux must be asserted. Find a state where ariane_boot_sel_i==1 but rom_rdata_linux==0.",
+  "target_expr": "top_wrapper_dac21.riscv_peripherals_i.ariane_boot_sel_i == 1 && top_wrapper_dac21.riscv_peripherals_i.rom_rdata_linux == 0",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System in reset",
+      "condition": "rst_ni == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset deasserted, peripherals active",
+      "condition": "rst_ni == 1",
+      "expected_cycles": 2
+    },
+    {
+      "step": 2,
+      "description": "Linux boot mode selected (ariane_boot_sel_i asserted)",
+      "condition": "top_wrapper_dac21.riscv_peripherals_i.ariane_boot_sel_i == 1",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: Linux boot selected but rom_rdata_linux is 0 — ROM module hardcoded, does not serve Linux bootrom data",
+      "condition": "top_wrapper_dac21.riscv_peripherals_i.ariane_boot_sel_i == 1 && top_wrapper_dac21.riscv_peripherals_i.rom_rdata_linux == 0",
+      "expected_cycles": 2
+    }
+  ]
+}

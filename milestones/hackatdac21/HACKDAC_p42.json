@@ -1,0 +1,24 @@
+{
+  "target": "Violate HACKDAC_p42: either (rst_ni==1 AND rst_6==1) OR acct_mem.read_data_0[0]==0 must hold. Find a state where rst_ni==1, rst_6==0, and read_data_0[0] != 0.",
+  "target_expr": "top_wrapper_dac21.acct_wrapper_i.rst_ni == 1 && top_wrapper_dac21.rst_6 == 0 && top_wrapper_dac21.acct_wrapper_i.acct_mem.read_data_0[0] != 0",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System in reset",
+      "condition": "rst_ni == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset deasserted, acct_wrapper active, rst_6 is 0",
+      "condition": "rst_ni == 1 && top_wrapper_dac21.rst_6 == 0",
+      "expected_cycles": 2
+    },
+    {
+      "step": 2,
+      "description": "Violation: rst_ni==1 and rst_6==0 but acct_mem.read_data_0[0] is non-zero — access control initialized to full access instead of restricted",
+      "condition": "top_wrapper_dac21.acct_wrapper_i.rst_ni == 1 && top_wrapper_dac21.rst_6 == 0 && top_wrapper_dac21.acct_wrapper_i.acct_mem.read_data_0[0] != 0",
+      "expected_cycles": 3
+    }
+  ]
+}

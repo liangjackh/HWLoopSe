@@ -1,0 +1,30 @@
+{
+  "target": "Violate HACKDAC_p1: when runtime_j==6 (CLINT master accessing PLIC slot), access_ctrl_i[runtime_i][7][priv_lvl_i] must be 0. Find a state where runtime_j==6 AND the PLIC access control bit is 1.",
+  "target_expr": "formal_top.dut.axi_node_intf_wrap_i.i_connectivity_map.runtime_j == 6 && formal_top.dut.axi_node_intf_wrap_i.i_connectivity_map.access_ctrl_i[formal_top.dut.axi_node_intf_wrap_i.i_connectivity_map.runtime_i][7][formal_top.dut.axi_node_intf_wrap_i.i_connectivity_map.priv_lvl_i] == 1",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System in reset",
+      "condition": "rst_ni == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset deasserted, AXI node active",
+      "condition": "rst_ni == 1",
+      "expected_cycles": 2
+    },
+    {
+      "step": 2,
+      "description": "AXI connectivity map begins iterating: runtime_i and runtime_j are non-zero, indicating an active access check",
+      "condition": "formal_top.dut.axi_node_intf_wrap_i.i_connectivity_map.runtime_i > 0 && formal_top.dut.axi_node_intf_wrap_i.i_connectivity_map.runtime_j > 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: runtime_j reaches 6 (PLIC subordinate index) while access_ctrl_i grants access (bit is 1), meaning CLINT access incorrectly enables PLIC access",
+      "condition": "formal_top.dut.axi_node_intf_wrap_i.i_connectivity_map.runtime_j == 6 && formal_top.dut.axi_node_intf_wrap_i.i_connectivity_map.access_ctrl_i[formal_top.dut.axi_node_intf_wrap_i.i_connectivity_map.runtime_i][7][formal_top.dut.axi_node_intf_wrap_i.i_connectivity_map.priv_lvl_i] == 1",
+      "expected_cycles": 4
+    }
+  ]
+}

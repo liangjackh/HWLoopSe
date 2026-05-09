@@ -477,14 +477,21 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 manager.violated_assertions = []
 
             # Execute one cycle for all modules
-            result = self._execute_cycle(
+            result, current_progress = self._execute_cycle(
                 engine, visitor, modules_dict, cfgs_by_module,
                 manager, item, worklist
             )
 
             if result == "VIOLATION":
-                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=VIOLATION, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}")
+                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=VIOLATION, milestones={current_progress}/{len(self.milestone_manager.milestones)}")
                 print(f"[DirectedStrategy] Assertion violation found!")
+                # Restore deferred violation record if the current manager state was cleared
+                # (happens when a deferred violation is reported via sliding window).
+                if not (hasattr(manager, 'violated_assertions') and manager.violated_assertions):
+                    deferred = getattr(self, '_deferred_violation', None)
+                    if deferred is not None:
+                        saved_violations, _ = deferred
+                        manager.violated_assertions = saved_violations
                 self._handle_assertion_violation(engine, manager, item.state)
                 return
 
@@ -503,9 +510,9 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
             # Path ended without violation
             if result is None:
-                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=CONTINUE, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}")
+                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=CONTINUE, milestones={current_progress}/{len(self.milestone_manager.milestones)}")
             elif result == "TIMEOUT":
-                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=TIMEOUT, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}")
+                print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=TIMEOUT, milestones={current_progress}/{len(self.milestone_manager.milestones)}")
 
         print(f"[DirectedStrategy] Search exhausted (UNSAT)")
         print(f"[DirectedStrategy] Paths explored: {self.paths_explored}")
@@ -1148,8 +1155,11 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         manager: ExecutionManager,
         item: WorkItem,
         worklist: List[WorkItem]
-    ) -> Optional[str]:
+    ) -> tuple:
         """Execute one clock cycle (Sylvia-style: lazy fork at branch points).
+
+        Returns (result_str, current_progress) where result_str is one of
+        "VIOLATION", "ALL_MILESTONES", "TIMEOUT", or None.
 
         Executes CFGs sequentially on a single state. When a branching CFG is
         encountered, we execute one path and push the remaining paths as new
@@ -1263,7 +1273,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 # Exception: if the violation is unconditional (path condition has no free
                 # variables), report immediately regardless of milestone progress.
                 if item.milestones_completed >= total_milestones - 1:
-                    return "VIOLATION"
+                    return "VIOLATION", item.milestones_completed
                 else:
                     # Check if violation is unconditional (no symbolic constraints)
                     _is_unconditional = False
@@ -1282,7 +1292,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         # At cycle 0, signals are free Z3 vars (no reset constraints),
                         # so ANY assertion is trivially violable — always spurious.
                         print(f"  [Unconditional] assertion violation fires with no path constraints — reporting immediately")
-                        return "VIOLATION"
+                        return "VIOLATION", item.milestones_completed
                     print(f"  [Suppressed] assertion violation at cycle {cycle}, milestones={item.milestones_completed}/{total_milestones} — deferring until near final milestone")
                     # Save the violation record so we can report it if ALL_MILESTONES is reached
                     if not hasattr(self, '_deferred_violation'):
@@ -1375,7 +1385,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             is_forked_item = any(rc.get('forked', False) for rc in remaining_cfgs)
             if is_forked_item:
                 print(f"  [AllSkipped] cycle {cycle}: forked item, all CFGs abandoned — pruning path")
-                return None
+                return None, item.milestones_completed
             print(f"  [AllSkipped] cycle {cycle}: preferred-path item, all CFGs abandoned — continuing to next cycle")
 
         # Step 4: Re-evaluate comb after sequential logic
@@ -1384,7 +1394,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         # Step 5: Check SAT
         if state.pc.check() != sat:
             print(f"  [Pruned] cycle {cycle}: UNSAT after execution")
-            return None
+            return None, item.milestones_completed
 
         # Step 6: Milestone/violation handling
         current_progress = item.milestones_completed
@@ -1406,7 +1416,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             if current_progress > 0 or is_unconditional:
                 if is_unconditional:
                     print(f"  [Unconditional] assertion violation fires with no path constraints — reporting immediately")
-                return "VIOLATION"
+                return "VIOLATION", current_progress
             else:
                 print(f"  [Suppressed] assertion violation at cycle {cycle} before any milestone reached — likely spurious")
                 manager.assertion_violation = False
@@ -1418,7 +1428,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 f"  [Preemption] Final milestone SAT after reset progress "
                 f"{current_progress}/{total_milestones}; reporting VIOLATION"
             )
-            return "VIOLATION"
+            return "VIOLATION", current_progress
 
         current_progress, skipped_idx = self.milestone_manager.advance_with_sliding_window(
             state,
@@ -1429,14 +1439,14 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             print(f"  [Sliding Window] Skipped hallucinated milestone {skipped_idx} -> advanced to {current_progress}")
 
         if current_progress >= total_milestones:
-            return "ALL_MILESTONES"
+            return "ALL_MILESTONES", current_progress
 
         # If a violation was deferred earlier this cycle and the sliding window
         # has now advanced us to the penultimate milestone, report it immediately.
         if (current_progress >= total_milestones - 1
                 and getattr(self, '_deferred_violation', None) is not None):
             print(f"  [Deferred Violation] Sliding window reached milestone {current_progress}/{total_milestones} — reporting deferred violation")
-            return "VIOLATION"
+            return "VIOLATION", current_progress
 
         # Step 7: Enqueue next cycle
         # Update cycle_at_last_milestone if milestones advanced this cycle
@@ -1461,7 +1471,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         else:
             print(f"  [MaxCycle] cycle {next_cycle} >= limit {self.max_cycles}, not enqueued")
 
-        return None
+        return None, current_progress
 
     def _execute_cfg_step_by_step(
         self,
@@ -1648,11 +1658,19 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         # Solve the CURRENT path condition (accumulated over all cycles) to get
         # the full multi-cycle model with _c0, _c1, ..., _cN stamped symbols.
-        # Build one fresh solver, check it, and read the model from the SAME
-        # solver instance — calling model() on an unchecked solver gives empty decls.
+        # Also add the negated assertion condition (the violation witness) so that
+        # unconstrained signals like FC_DATA_gnt_o get concrete values that actually
+        # satisfy the violation (e.g. gnt_o=1), not arbitrary solver defaults.
         ce_solver = Solver()
         for assertion in state.pc.assertions():
             ce_solver.add(assertion)
+        # Add violation witness constraints from all violated assertions
+        if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+            from z3 import Not as z3_Not
+            for _va in manager.violated_assertions:
+                _z3_cond = _va.get('z3_condition')
+                if _z3_cond is not None:
+                    ce_solver.add(z3_Not(_z3_cond))
         if ce_solver.check() != z3_sat:
             print("\n(path condition UNSAT — cannot derive counterexample)")
             return
@@ -1695,6 +1713,57 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             else:
                 display = _z3base_to_sig.get(sym_name, sym_name)
                 ungrouped[display] = val
+
+        # Supplement by_cycle with assertion signals that are in state.store but
+        # were not assigned by the solver (unconstrained free variables or derived
+        # expressions like Extract from concat-assign).
+        # model.eval(..., model_completion=True) evaluates any Z3 expression.
+        #
+        # Search both the current state.store (has _cN symbols for the latest cycle)
+        # and the deferred violation's saved state (has _c0 symbols for cycle 0).
+        # This covers the case where a deferred violation fires at cycle N but the
+        # assertion signal is a derived expression (e.g. Extract from concat-assign)
+        # that only appears in the model via its free variables.
+        if _assertion_signals and by_cycle:
+            import z3 as _z3
+            _deferred = getattr(self, '_deferred_violation', None)
+            _stores_to_search = [state.store]
+            if _deferred is not None:
+                _stores_to_search.append(_deferred[1].store)
+            for _search_store in _stores_to_search:
+                for _mod, _sigs in _search_store.items():
+                    for _sig_name, _z3_val in _sigs.items():
+                        if _sig_name not in _assertion_signals:
+                            continue
+                        try:
+                            # Determine the cycle from the Z3 variable name.
+                            # For free vars: decl().name() gives e.g. "FC_DATA_gnt_o_c1"
+                            # For compound exprs (Extract etc.): walk free variables.
+                            _cyc = None
+                            if hasattr(_z3_val, 'decl') and _z3_val.num_args() == 0:
+                                _z3_name = _z3_val.decl().name()
+                                _m = cycle_re.match(_z3_name)
+                                if _m:
+                                    _cyc = int(_m.group(2))
+                            else:
+                                _free = _z3.z3util.get_vars(_z3_val)
+                                for _fv in _free:
+                                    _m = cycle_re.match(_fv.decl().name())
+                                    if _m:
+                                        _cyc = int(_m.group(2))
+                                        break
+                            if _cyc is None or _cyc not in by_cycle:
+                                continue
+                            _display = _sig_name
+                            _eval_val = model.eval(_z3_val, model_completion=True)
+                            # Add to the found cycle and all later cycles that lack this signal.
+                            # Combinational signals may retain an earlier cycle stamp (_c0)
+                            # even in later cycles, so propagate the value forward.
+                            for _target_cyc in sorted(by_cycle.keys()):
+                                if _target_cyc >= _cyc and _display not in by_cycle[_target_cyc]:
+                                    by_cycle[_target_cyc][_display] = _eval_val
+                        except Exception:
+                            pass
 
         if by_cycle:
             print("\nCounterexample trace (cycle-by-cycle):")

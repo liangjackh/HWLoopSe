@@ -1,0 +1,30 @@
+{
+  "target": "Violate HACKDAC_p18: when writing CSR_SIE (0x104), mie_d must equal (mie_q & ~mideleg_q) | (csr_wdata & mideleg_q). Find a state where csr_we targets SIE but mie_d is set incorrectly.",
+  "target_expr": "top_wrapper_dac21.ariane_i.csr_regfile_i.csr_we == 1 && top_wrapper_dac21.ariane_i.csr_regfile_i.csr_addr.address == 12'h104 && top_wrapper_dac21.ariane_i.csr_regfile_i.mie_d != ((top_wrapper_dac21.ariane_i.csr_regfile_i.mie_q & ~top_wrapper_dac21.ariane_i.csr_regfile_i.mideleg_q) | (top_wrapper_dac21.ariane_i.csr_regfile_i.csr_wdata & top_wrapper_dac21.ariane_i.csr_regfile_i.mideleg_q))",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "System in reset",
+      "condition": "rst_ni == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset deasserted, CSR file active",
+      "condition": "rst_ni == 1",
+      "expected_cycles": 2
+    },
+    {
+      "step": 2,
+      "description": "A CSR write is issued targeting SIE register (address 0x104)",
+      "condition": "top_wrapper_dac21.ariane_i.csr_regfile_i.csr_we == 1 && top_wrapper_dac21.ariane_i.csr_regfile_i.csr_addr.address == 12'h104",
+      "expected_cycles": 4
+    },
+    {
+      "step": 3,
+      "description": "Violation: SIE write accepted but mie_d does not respect mideleg masking — lower privilege can set interrupt enables beyond delegated bits",
+      "condition": "top_wrapper_dac21.ariane_i.csr_regfile_i.csr_we == 1 && top_wrapper_dac21.ariane_i.csr_regfile_i.csr_addr.address == 12'h104 && top_wrapper_dac21.ariane_i.csr_regfile_i.mie_d != ((top_wrapper_dac21.ariane_i.csr_regfile_i.mie_q & ~top_wrapper_dac21.ariane_i.csr_regfile_i.mideleg_q) | (top_wrapper_dac21.ariane_i.csr_regfile_i.csr_wdata & top_wrapper_dac21.ariane_i.csr_regfile_i.mideleg_q))",
+      "expected_cycles": 3
+    }
+  ]
+}

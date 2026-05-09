@@ -1,48 +1,27 @@
 DEBUG:root:Starting over
-DEBUG:root:[ConditionParser] 'RST == 1' -> LHS='RST' op='==' RHS='1'
-DEBUG:root:[ConditionParser] 'RST == 0' -> LHS='RST' op='==' RHS='0'
-DEBUG:root:[ConditionParser] 'test_1.out == 0' -> LHS='test_1.out' op='==' RHS='0'
-DEBUG:root:[ConditionParser] 'RST == 0' -> LHS='RST' op='==' RHS='0'
-DEBUG:root:[ConditionParser] 'test_1.out == 1' -> LHS='test_1.out' op='==' RHS='1'
-DEBUG:root:[ConditionParser] 'RST == 0' -> LHS='RST' op='==' RHS='0'
-DEBUG:root:[ConditionParser] 'test_1.out == 2' -> LHS='test_1.out' op='==' RHS='2'
-DEBUG:root:[ConditionParser] 'RST == 0' -> LHS='RST' op='==' RHS='0'
-DEBUG:root:[ConditionParser] 'test_1.out == 3' -> LHS='test_1.out' op='==' RHS='3'
-DEBUG:root:[ConditionParser] 'test_1.out > 3' -> LHS='test_1.out' op='>' RHS='3'
-DEBUG:root:  [TopoSort] test_1: 2 nodes sorted
+DEBUG:root:[ConditionParser] 'rstn_top == 1' -> LHS='rstn_top' op='==' RHS='1'
+DEBUG:root:[ConditionParser] 'top_wrapper.adbg_tap_top.trstn_pad_i == 1' -> LHS='top_wrapper.adbg_tap_top.trstn_pad_i' op='==' RHS='1'
+DEBUG:root:[ConditionParser] 'top_wrapper.adbg_tap_top.bitindex > 0' -> LHS='top_wrapper.adbg_tap_top.bitindex' op='>' RHS='0'
+DEBUG:root:[ConditionParser] 'top_wrapper.adbg_tap_top.bitindex < 32' -> LHS='top_wrapper.adbg_tap_top.bitindex' op='<' RHS='32'
+DEBUG:root:[ConditionParser] 'top_wrapper.adbg_tap_top.passchk == 1' -> LHS='top_wrapper.adbg_tap_top.passchk' op='==' RHS='1'
+DEBUG:root:[ConditionParser] 'top_wrapper.adbg_tap_top.bitindex != 32' -> LHS='top_wrapper.adbg_tap_top.bitindex' op='!=' RHS='32'
+DEBUG:root:  [TopoSort] adbg_tap_top: 38 nodes sorted
+DEBUG:root:  [TopoSort] jg_bind_inst: 2 nodes sorted
 DEBUG:root:Initializing state: evaluating combinational logic to fixed-point...
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0
-DEBUG:root:[Score] M[1]='Reset released, counter starts at 0' remaining=5 cycle=1 base=51 distance=999 total=1050
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
-DEBUG:root:[Score] M[2]='Counter increments to 1' remaining=4 cycle=2 base=42 distance=1 total=43
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1
-DEBUG:root:UNSAT: 4 constraint(s)
-DEBUG:root:[Score] M[3]='Counter increments to 2' remaining=3 cycle=3 base=33 distance=1 total=34
-DEBUG:root:UNSAT: 5 constraint(s)
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1 + 1
-DEBUG:root:[Score] M[3]='Counter increments to 2' remaining=3 cycle=3 base=33 distance=1 total=34
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1 + 1
-DEBUG:root:UNSAT: 5 constraint(s)
-DEBUG:root:UNSAT: 4 constraint(s)
-DEBUG:root:UNSAT: 4 constraint(s)
 DEBUG:root:UNSAT: 3 constraint(s)
-DEBUG:root:[Score] M[2]='Counter increments to 1' remaining=4 cycle=2 base=42 distance=1 total=43
-DEBUG:root:UNSAT: 4 constraint(s)
-DEBUG:root:[Score] M[2]='Counter increments to 1' remaining=4 cycle=3 base=43 distance=1 total=44
-DEBUG:root:[NBA] Queued NBA: test_1.out <= 0 + 1
-DEBUG:root:[Score] M[2]='Counter increments to 1' remaining=4 cycle=3 base=43 distance=1 total=44
-DEBUG:root:[NBA] Applying 1 pending NBA(s)
-DEBUG:root:[NBA]   test_1.out <= 0 + 1
+DEBUG:root:[Score] M[0]='Reset released, JTAG TAP reset deasserted, counters initialized' remaining=3 cycle=1 base=31 distance=2 total=33
 DEBUG:root:UNSAT: 5 constraint(s)
-DEBUG:root:UNSAT: 5 constraint(s)
-DEBUG:root:UNSAT: 4 constraint(s)
-DEBUG:root:UNSAT: 4 constraint(s)
-DEBUG:root:UNSAT: 3 constraint(s)
-DEBUG:root:UNSAT: 3 constraint(s)
-DEBUG:root:UNSAT: 2 constraint(s)
-DEBUG:root:UNSAT: 2 constraint(s)
-DEBUG:root:UNSAT: 2 constraint(s)
+DEBUG:root:[Score] M[1]='Password check in progress, bitindex incrementing but not yet at 32' remaining=2 cycle=2 base=22 distance=0 total=22
+DEBUG:root:UNSAT: 7 constraint(s)
+DEBUG:root:[Score] M[1]='Password check in progress, bitindex incrementing but not yet at 32' remaining=2 cycle=3 base=23 distance=0 total=23
+DEBUG:root:UNSAT: 6 constraint(s)
+DEBUG:root:UNSAT: 7 constraint(s)
+DEBUG:root:[Score] M[1]='Password check in progress, bitindex incrementing but not yet at 32' remaining=2 cycle=3 base=23 distance=0 total=23
+DEBUG:root:UNSAT: 7 constraint(s)
+DEBUG:root:UNSAT: 7 constraint(s)
+DEBUG:root:[Score] M[1]='Password check in progress, bitindex incrementing but not yet at 32' remaining=2 cycle=3 base=23 distance=0 total=23
+DEBUG:root:UNSAT: 7 constraint(s)
+DEBUG:root:[Score] M[1]='Password check in progress, bitindex incrementing but not yet at 32' remaining=2 cycle=3 base=23 distance=0 total=23
+DEBUG:root:UNSAT: 7 constraint(s)
+DEBUG:root:UNSAT: 7 constraint(s)
+DEBUG:root:[Score] M[1]='Password check in progress, bitindex incrementing but not yet at 32' remaining=2 cycle=3 base=23 distance=0 total=23
