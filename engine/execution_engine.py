@@ -590,12 +590,44 @@ class ExecutionEngine:
                     break
             primary_input_groups.append(is_primary_input)
 
+        # Determine bit-width for each wire group by inspecting PySlang port types.
+        # Walk each group member until a non-default width is found; default to 32.
+        wire_group_widths = []
+        for group in result:
+            width = 32
+            for inst, sig in group:
+                module = modules_dict.get(inst)
+                if module is None or not hasattr(module, 'body'):
+                    continue
+                try:
+                    for member in module.body:
+                        if not (hasattr(member, 'name') and member.name == sig):
+                            continue
+                        if not hasattr(member, 'type'):
+                            break
+                        t = member.type
+                        if hasattr(t, 'getBitVectorRange'):
+                            bvr = t.getBitVectorRange()
+                            w = getattr(bvr, 'width', None)
+                            if w and w > 0:
+                                width = w
+                        elif hasattr(t, 'bitWidth'):
+                            w = t.bitWidth
+                            if w and w > 0:
+                                width = w
+                        break
+                except Exception:
+                    pass
+                if width != 32:
+                    break
+            wire_group_widths.append(width)
+
         if result:
             print(f"[PortPropagation] Built {len(result)} wire equivalence group(s):")
             for i, g in enumerate(result):
                 pi_marker = " [PRIMARY INPUT]" if primary_input_groups[i] else ""
                 print(f"  group {i}: {g}{pi_marker}")
-        return result, primary_input_groups
+        return result, primary_input_groups, wire_group_widths
 
     def _extract_port_connections_from_syntax(self, parent_inst, child_inst, syntax, connect_fn):
         """Extract named port connections from an instance syntax node."""
@@ -831,7 +863,7 @@ class ExecutionEngine:
             pass  # definitions_to_instances not available (manager was passed in)
 
         # Build port propagation map (wire equivalence groups)
-        wire_groups, primary_input_flags = self._build_port_propagation_map(modules_dict)
+        wire_groups, primary_input_flags, wire_group_widths = self._build_port_propagation_map(modules_dict)
 
         # Step 3.5: COI pruning (if enabled)
         if self.coi_enabled:
@@ -1160,7 +1192,8 @@ class ExecutionEngine:
             num_cycles=num_cycles,
             comb_by_module=comb_by_module,
             wire_groups=wire_groups,
-            primary_input_flags=primary_input_flags
+            primary_input_flags=primary_input_flags,
+            wire_group_widths=wire_group_widths
         )
 
         self.module_depth -= 1

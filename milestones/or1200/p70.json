@@ -1,0 +1,30 @@
+{
+  "target": "Violate p70: or1200_cpu.rfwb_op==1 and or1200_cpu.rf_addrw==0 => or1200_cpu.rf_dataw==0 (r0 must always read 0)",
+  "target_expr": "!(!((or1200_cpu.rfwb_op == 1) && (or1200_cpu.rf_addrw == 0)) || or1200_cpu.rf_dataw == 0 || or1200_cpu.rst == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Register file write enable asserted",
+      "condition": "or1200_cpu.rfwb_op == 1 && or1200_cpu.rst == 0",
+      "expected_cycles": 4
+    },
+    {
+      "step": 3,
+      "description": "Violation: write to r0 (addrw==0) with non-zero data",
+      "condition": "or1200_cpu.rfwb_op == 1 && or1200_cpu.rf_addrw == 0 && or1200_cpu.rf_dataw != 0 && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "target": "Violate p21: Privilege escalation / deescalation (CWE-1198) - FPV: Violation found",
+  "target_expr": "((or1200_ctrl.ex_insn & 4227858432) >> 26 == 9) && or1200_cpu.rst == 0 && !(or1200_except.eear == or1200_cpu.prev_eear)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, pipeline running",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Antecedent holds: (or1200_ctrl.ex_insn & 4227858432) >> 26 == 9",
+      "condition": "(or1200_ctrl.ex_insn & 4227858432) >> 26 == 9 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: consequent fails",
+      "condition": "(or1200_ctrl.ex_insn & 4227858432) >> 26 == 9 && or1200_cpu.rst == 0 && !(or1200_except.eear == or1200_cpu.prev_eear)",
+      "expected_cycles": 1
+    }
+  ]
+}

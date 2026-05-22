@@ -1,0 +1,30 @@
+{
+  "target": "Violate p14: type-3 insn => epcr unchanged",
+  "target_expr": "!(!(((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 3) || or1200_cpu.epcr == or1200_cpu.prev_epcr || or1200_cpu.rst == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, epcr initialized",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Type-3 instruction reaches EX stage",
+      "condition": "((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 3 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: epcr changed while type-3 insn in EX",
+      "condition": "((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 3 && or1200_cpu.epcr != or1200_cpu.prev_epcr && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

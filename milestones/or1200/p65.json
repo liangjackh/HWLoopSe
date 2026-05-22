@@ -1,0 +1,30 @@
+{
+  "target": "Violate p65: load/store opcode 37 => or1200_cpu.dcpu_adr_o == or1200_cpu.operand_a + or1200_cpu.ex_simm",
+  "target_expr": "!(!(((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 37) || or1200_cpu.dcpu_adr_o == or1200_cpu.operand_a + or1200_cpu.ex_simm || or1200_cpu.rst == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Load/store opcode 37 reaches EX stage",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 37 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: or1200_cpu.dcpu_adr_o does not equal or1200_cpu.operand_a + or1200_cpu.ex_simm",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 37 && or1200_cpu.dcpu_adr_o != or1200_cpu.operand_a + or1200_cpu.ex_simm && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "target": "Violate p1: or1200_cpu.wb_pc must equal or1200_cpu.spr_dat_ppc unless in reset",
+  "target_expr": "!(or1200_cpu.wb_pc == or1200_cpu.spr_dat_ppc || or1200_cpu.rst == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, pipeline starts",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "WB stage has a valid PC (wb_pc captured from ex_pc)",
+      "condition": "or1200_cpu.rst == 0 && or1200_cpu.wb_pc != 0",
+      "expected_cycles": 4
+    },
+    {
+      "step": 3,
+      "description": "Violation: wb_pc diverges from spr_dat_ppc",
+      "condition": "or1200_cpu.wb_pc != or1200_cpu.spr_dat_ppc && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

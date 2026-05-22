@@ -1,5 +1,36 @@
 # Changelog
 
+[2026-05-22] [Fix] Fixed COI over-pruning for or1200 benchmark: bare signal names in milestone files caused `Relevant instances: set()`, producing spurious violations in ~1.7s.
+
+**Problem**: All 71 or1200 milestone files used bare signal names (`rst_i`, `except_wb_pc`, `sprs_spr_dat_ppc`, etc.) in `target_expr` and `condition` fields. The COI seeding code in `execution_engine.py` explicitly skips bare signals (no `.` separator) to avoid seeding every module. With no valid seeds, COI fell back to a hardcoded `top_wrapper.clk_top` / `top_wrapper.rstn_top` seed — a hackatdac-specific module that doesn't exist in or1200. Result: `Relevant instances: set()`, all design CFGs pruned, only `u_assertions` executed, and `except_wb_pc`/`sprs_spr_dat_ppc` remained unconstrained free Z3 variables → trivial spurious violation in 1.7s.
+
+**Root cause in milestone generation**: `prompt1.md` Rule 1 said "use hierarchical path if target is in a submodule" but didn't explain that bare signals are silently ignored by COI, and didn't instruct the LLM to trace assertion module inputs back to the parent module's wire names.
+
+**Fixes**:
+
+1. **`prompt1.md`** — Rule 1 rewritten with two new requirements:
+   - Every signal MUST include at least one level of hierarchy (bare names are silently ignored by COI — most common failure mode)
+   - For assertion/property modules: inputs are wires from the parent module; trace port connections (`.port(wire)`) and use the parent module's wire name with the parent module as prefix (e.g., `or1200_cpu.wb_pc`, not `except_wb_pc`)
+
+2. **`milestones/or1200/*.json` (71 files)** — Batch-fixed all bare signal names using port connection map from `or1200_cpu.v` lines 1029–1068:
+   - `rst_i` → `or1200_cpu.rst`, `except_wb_pc` → `or1200_cpu.wb_pc`, `sprs_spr_dat_ppc` → `or1200_cpu.spr_dat_ppc`, etc.
+   - `target_expr` and all milestone `condition` fields updated
+
+3. **`milestones/or1200_original_properties/` (71 files, new)** — Generated fresh milestone set from `docs/or1200_properties.md` using the original hierarchical signal names (`or1200_ctrl.ex_insn`, `or1200_sprs.spr_dat_ppc`, etc.) converted to implication form:
+   - `~A || B || (rst==1)` → `target_expr: (A) && rst==0 && !(B)`; step2 condition = antecedent; step3 condition = full violation
+   - Bare signals (`rst`, `operand_a`, `prev_ex_insn`, etc.) prefixed with `or1200_cpu.`; already-hierarchical signals (`or1200_ctrl.ex_insn`) preserved as-is
+   - Hex literals converted to decimal for milestone condition parser compatibility
+
+4. **`designs/benchmarks/or1200/buggy-or1200/or1200_assertions_imp.sv` (new)** — Rewrote all 71 assertions from `or1200_assertions.sv` in implication form:
+   - `~A || B || (rst==1)` → `assert (!A || rst || B)` (pure boolean, no SVA temporal operators)
+   - p46 (no rst guard) and p71 (extra `rf_rf_dataw==0` exemption) handled correctly
+
+**PySlang notes**: No changes to PySlang usage. All fixes are in milestone JSON files, prompt template, and a new SV assertion file.
+
+---
+
+
+
 [2026-04-29] [BugFix] Fix Verilog (.v) symbolic execution for blocking assignments, bit-select, increment, and CFG construction
 
 **Problem:** p9/p10 (JTAG TAP password check) could never reach milestone 1 (`bitindex > 0`). The JTAG TAP state machine in `adbg_tap_top.v` uses Verilog-style blocking assignments, post-increment operators, and dynamic bit-selects that were not handled by the symbolic execution engine.

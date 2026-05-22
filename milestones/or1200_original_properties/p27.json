@@ -1,0 +1,30 @@
+{
+  "target": "Violate p27: Privilege escalation / deescalation (CWE-1198) - FPV: Violation found",
+  "target_expr": "((or1200_cpu.prev_ex_insn & 4294901760) >> 16 == 8192) && or1200_cpu.rst == 0 && !((~((or1200_ctrl.ex_insn & 4294901760) >> 16 != 8192)) && (or1200_except.spr_dat_npc == or1200_except.epcr))",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, pipeline running",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Antecedent holds: (or1200_cpu.prev_ex_insn & 4294901760) >> 16 == 8192",
+      "condition": "(or1200_cpu.prev_ex_insn & 4294901760) >> 16 == 8192 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: consequent fails",
+      "condition": "(or1200_cpu.prev_ex_insn & 4294901760) >> 16 == 8192 && or1200_cpu.rst == 0 && !((~((or1200_ctrl.ex_insn & 4294901760) >> 16 != 8192)) && (or1200_except.spr_dat_npc == or1200_except.epcr))",
+      "expected_cycles": 1
+    }
+  ]
+}

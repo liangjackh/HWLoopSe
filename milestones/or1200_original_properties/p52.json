@@ -1,0 +1,30 @@
+{
+  "target": "Violate p52: Memory access (CWE-1202) - FPV: Violation found",
+  "target_expr": "or1200_cpu.rst == 0 && !(or1200_cpu.operand_b == or1200_cpu.dcpu_dat_o)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, pipeline running",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Pipeline active",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: consequent fails",
+      "condition": "or1200_cpu.rst == 0 && !(or1200_cpu.operand_b == or1200_cpu.dcpu_dat_o)",
+      "expected_cycles": 1
+    }
+  ]
+}

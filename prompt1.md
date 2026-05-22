@@ -6,8 +6,11 @@ Your task is to analyze the provided SystemVerilog code and break down the path 
 The Symbolic Execution Engine will use your milestones to steer the search. If the milestones are too far apart or logically impossible, the engine will fail.
 
 **CRITICAL RULES:**
-1.  **Exact Signal Names**: You MUST use the exact signal names found in the source code.
-    * If the target is in a submodule, use the hierarchical path (e.g., `u_core.u_alu.result`, NOT just `result`).
+1.  **Exact Signal Names with Mandatory Hierarchy**: You MUST use hierarchical signal names in ALL conditions.
+    * **Every signal MUST include at least one level of hierarchy** (e.g., `or1200_cpu.wb_pc`, NOT bare `wb_pc`).
+    * Bare signal names without a dot (e.g., `rst_i`, `except_wb_pc`) are **silently ignored** by the COI engine and will cause the entire design to be pruned, producing spurious violations. This is the most common failure mode.
+    * Use the hierarchical path from the module where the signal is actually defined/driven (e.g., `u_core.u_alu.result`, NOT just `result`).
+    * **For assertion/property modules**: The assertion module's inputs are wires from the parent design module. You MUST look at the instantiation port connections (e.g., `.except_wb_pc(wb_pc)`) and use the **parent module's wire name** with the parent module's instance/type name as prefix (e.g., `or1200_cpu.wb_pc`, NOT `except_wb_pc` or `u_assertions.except_wb_pc`).
     * Do not invent signals (e.g., do not use `fifo_count` if the code says `fifo_cnt`).
 2.  **Simple Conditions**: Milestones must be boolean expressions using simple operators:
     * Allowed: `==`, `!=`, `>`, `<`, `>=`, `<=`, `&&`, `||`, `!`.
@@ -33,10 +36,10 @@ The Symbolic Execution Engine will use your milestones to steer the search. If t
 5.  **Multiple File Output Format**:
     * You must generate a SEPARATE JSON list for each property.
     * Do NOT combine them into a single JSON object.
-    * To allow the automated pipeline to parse and save these as individual files, you MUST output each property's JSON list wrapped in a markdown code block, immediately preceded by a special file marker: `[FILE: milestones/hackatdac19/<property_name>.json, milestones/hackatdac19/<property_name>.json]`
+    * To allow the automated pipeline to parse and save these as individual files, you MUST output each property's JSON list wrapped in a markdown code block, immediately preceded by a special file marker: `[FILE: milestones/or1200/<property_name>.json`
     
 7.  **Batch Processing & Property Translation**:
-    * You will be provided with the contents of `hackdac19.F` and `designs/benchmarks/hackatdac19/properties.sv` ,`hackdac21.F` and `designs/benchmarks/hackatdac21/properties.sv`.
+    * You will be provided with the contents of `hackdac19.F` and `designs/benchmarks/or1200/buggy-or1200-subset/or1200_assertions.sv`.
     * You must analyze `properties.sv` to identify all verification properties (e.g., `p1`, `p2`).
     * For each property, extract the core boolean trigger condition and final target condition, discarding SVA temporal operators (`|->`, `##N`, etc.).
     * Generate the corresponding milestones and output them strictly following the format below.
@@ -45,7 +48,7 @@ The Symbolic Execution Engine will use your milestones to steer the search. If t
     * Step 0 MUST strictly and comprehensively constrain the reset state (e.g., `"condition": "rst_n == 0"`). Do not include any other operational signals in Step 0 to prevent cycle-0 false alarms.
 
 **EXPECTED OUTPUT STRUCTURE:**
-[FILE: milestones/hackatdac18/p1.json]
+[FILE: milestones/or1200/p1.json]
 ```json
 [
   {

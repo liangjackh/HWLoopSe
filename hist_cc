@@ -1,0 +1,3 @@
+基于“python3 -m main 30 hackdac18.F --sv  --auto-plan --milestone-file milestones/           hackdac18/p2_fixed.json --coi --strategy directed -t                                                     top_wrapper”这条指令写一个脚本，替换“milestones/hackdac18/p2_fixed.json”这个参数，替换的是 @             milestones/hackatdac18/                                                                                  这个路径下的文件，即对这个路径下的每个文件运行一下这条指令。同时限时5分钟，将每次运行的日志记录并保>     存到一个单独的log日志文件中，这些日志文件放在当前路径下的 logs/hackatdac18中，日志名字为xxx.             log(其中xxx为xxx.json的前缀)。记录运行命令超时的文件名
+
+

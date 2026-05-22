@@ -1,0 +1,30 @@
+{
+  "target": "Violate p48: Correct results (CWE-1221) - FPV: No violations found",
+  "target_expr": "((or1200_ctrl.ex_insn & 3221225472) >> 30 == 3) && or1200_cpu.rst == 0 && !((or1200_ctrl.ex_insn & 65011712) >> 21 == or1200_rf.addrw)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, pipeline running",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Antecedent holds: (or1200_ctrl.ex_insn & 3221225472) >> 30 == 3",
+      "condition": "(or1200_ctrl.ex_insn & 3221225472) >> 30 == 3 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: consequent fails",
+      "condition": "(or1200_ctrl.ex_insn & 3221225472) >> 30 == 3 && or1200_cpu.rst == 0 && !((or1200_ctrl.ex_insn & 65011712) >> 21 == or1200_rf.addrw)",
+      "expected_cycles": 1
+    }
+  ]
+}

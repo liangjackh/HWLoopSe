@@ -1,0 +1,30 @@
+{
+  "target": "Violate p71: Memory access (CWE-1202) - FPV: Violation found",
+  "target_expr": "((or1200_ctrl.ex_insn & 4227859407) == 3758096584) && or1200_cpu.rst == 0 && !((((or1200_cpu.operand_a << (6'd32 - {1'b0, or1200_cpu.operand_b[4:0]})) | (or1200_cpu.operand_a >> or1200_cpu.operand_b[4:0])) == or1200_rf.rf_dataw) && (or1200_rf.rf_dataw == 0))",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, pipeline running",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Antecedent holds: (or1200_ctrl.ex_insn & 4227859407) == 3758096584",
+      "condition": "(or1200_ctrl.ex_insn & 4227859407) == 3758096584 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: consequent fails",
+      "condition": "(or1200_ctrl.ex_insn & 4227859407) == 3758096584 && or1200_cpu.rst == 0 && !((((or1200_cpu.operand_a << (6'd32 - {1'b0, or1200_cpu.operand_b[4:0]})) | (or1200_cpu.operand_a >> or1200_cpu.operand_b[4:0])) == or1200_rf.rf_dataw) && (or1200_rf.rf_dataw == 0))",
+      "expected_cycles": 1
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "target": "Violate p22: opcode 9 (l.rfe) => epcr unchanged",
+  "target_expr": "!(!(((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 9) || or1200_cpu.epcr == or1200_cpu.prev_epcr || or1200_cpu.rst == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "l.rfe (opcode 9) reaches EX stage",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 9 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: epcr changed while l.rfe in EX",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 9 && or1200_cpu.epcr != or1200_cpu.prev_epcr && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

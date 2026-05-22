@@ -1,0 +1,30 @@
+{
+  "target": "Violate p11: type-3 insn with non-zero subfield => sr[0] unchanged (no violation expected)",
+  "target_expr": "!(!(((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 3 && (or1200_cpu.ex_insn & 32'h3C000000) != 0) || or1200_cpu.sr[0] == or1200_cpu.prev_sr0 || or1200_cpu.rst == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Type-3 insn with non-zero subfield reaches EX stage",
+      "condition": "((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 3 && (or1200_cpu.ex_insn & 32'h3C000000) != 0 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: sr[0] changed while type-3 non-zero-subfield insn in EX",
+      "condition": "((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 3 && (or1200_cpu.ex_insn & 32'h3C000000) != 0 && or1200_cpu.sr[0] != or1200_cpu.prev_sr0 && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

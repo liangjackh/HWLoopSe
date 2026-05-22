@@ -1,0 +1,30 @@
+{
+  "target": "Violate p69: or1200_cpu.dcpu_dat_i must equal or1200_cpu.dcpu_dat_i",
+  "target_expr": "!(or1200_cpu.dcpu_dat_i == or1200_cpu.dcpu_dat_i || or1200_cpu.rst == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Load instruction reaches EX stage, LSU active",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 32 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: or1200_cpu.dcpu_dat_i does not equal or1200_cpu.dcpu_dat_i",
+      "condition": "or1200_cpu.dcpu_dat_i != or1200_cpu.dcpu_dat_i && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

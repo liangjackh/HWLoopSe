@@ -1,0 +1,30 @@
+{
+  "target": "Violate p46: opcode 48 (l.mtspr) => or1200_cpu.spr_dat_cpu == or1200_cpu.operand_b",
+  "target_expr": "!(!(((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 48) || or1200_cpu.spr_dat_cpu == or1200_cpu.operand_b)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "l.mtspr (opcode 48) reaches EX stage",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 48 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: spr_dat_o does not equal or1200_cpu.operand_b during l.mtspr",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 48 && or1200_cpu.spr_dat_cpu != or1200_cpu.operand_b",
+      "expected_cycles": 1
+    }
+  ]
+}

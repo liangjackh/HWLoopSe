@@ -331,6 +331,11 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         self.max_paths = max_paths
         self.bmc_margin = bmc_margin
         self.paths_explored = 0
+        # Suppression tracking: deferred violation and stagnation detection
+        self._deferred_violation = None   # (assertions, state)
+        self._deferred_at_milestone = -1  # milestone progress when violation was saved
+        self._deferred_at_cycle = -1      # cycle when violation was saved
+        self._stagnation_counter = 0      # paths explored without milestone progress
 
     def run(
         self,
@@ -344,7 +349,8 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         num_cycles: int,
         comb_by_module: Optional[Dict[str, List[Any]]] = None,
         wire_groups: Optional[List[Any]] = None,
-        primary_input_flags: Optional[List[bool]] = None
+        primary_input_flags: Optional[List[bool]] = None,
+        wire_group_widths: Optional[List[int]] = None
     ) -> None:
         """Execute milestone-directed search with priority queue."""
 
@@ -357,6 +363,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         self._comb_by_module = comb_by_module or {}
         self._wire_groups = wire_groups or []
         self._primary_input_flags = primary_input_flags or []
+        self._wire_group_widths = wire_group_widths or []
         self._active_instances = set(manager.names_list)
 
         # Build topologically sorted comb nodes (single-pass instead of 2-pass fixedpoint)
@@ -466,6 +473,26 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                     )
                     continue
 
+            # Tier-2 stagnation release: if a deferred violation exists and either
+            # (a) its milestone is close enough to the end, or (b) the search has
+            # been stuck at the same milestone for too many paths, release it now.
+            if self._deferred_violation is not None:
+                _total = len(self.milestone_manager.milestones)
+                _release = False
+                _reason = ""
+                if self._deferred_at_milestone >= _total - 2:
+                    _release = True
+                    _reason = f"milestone {self._deferred_at_milestone}/{_total} >= total-2"
+                elif self._stagnation_counter >= 100:
+                    _release = True
+                    _reason = f"stagnation {self._stagnation_counter} paths without milestone progress"
+                if _release:
+                    print(f"[DirectedStrategy] Releasing deferred violation ({_reason})")
+                    deferred_va, deferred_state = self._deferred_violation
+                    manager.violated_assertions = deferred_va
+                    self._handle_assertion_violation(engine, manager, deferred_state)
+                    return
+
             self.paths_explored += 1
             print(f"\n--- [Path {self.paths_explored}] Popped: score={item.score}, cycle={item.cycle}, milestones={item.milestones_completed}/{len(self.milestone_manager.milestones)}, queue={len(worklist)}")
 
@@ -513,6 +540,19 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=CONTINUE, milestones={current_progress}/{len(self.milestone_manager.milestones)}")
             elif result == "TIMEOUT":
                 print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=TIMEOUT, milestones={current_progress}/{len(self.milestone_manager.milestones)}")
+
+        # Tier-3 fallback: if the worklist is exhausted (or path limit hit) and a
+        # deferred violation was saved, report it as the best available result.
+        if self._deferred_violation is not None:
+            _total = len(self.milestone_manager.milestones)
+            print(
+                f"[DirectedStrategy] Search exhausted — reporting best deferred violation "
+                f"(milestone {self._deferred_at_milestone}/{_total}, cycle {self._deferred_at_cycle})"
+            )
+            deferred_va, deferred_state = self._deferred_violation
+            manager.violated_assertions = deferred_va
+            self._handle_assertion_violation(engine, manager, deferred_state)
+            return
 
         print(f"[DirectedStrategy] Search exhausted (UNSAT)")
         print(f"[DirectedStrategy] Paths explored: {self.paths_explored}")
@@ -728,11 +768,12 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         if not self._wire_groups:
             return
 
-        for group in self._wire_groups:
+        for i, group in enumerate(self._wire_groups):
             # Pick a representative name for the group
             rep_inst, rep_sig = next(iter(group))
             sym_name = f"{rep_sig}_c{cycle}"
-            shared_bv = BitVec(sym_name, 32)
+            width = self._wire_group_widths[i] if i < len(self._wire_group_widths) else 32
+            shared_bv = BitVec(sym_name, width)
 
             # Assign to all members
             for inst, sig in group:
@@ -754,7 +795,8 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
             rep_inst, rep_sig = next(iter(group))
             sym_name = f"{rep_sig}_c{cycle}"
-            shared_bv = BitVec(sym_name, 32)
+            width = self._wire_group_widths[i] if i < len(self._wire_group_widths) else 32
+            shared_bv = BitVec(sym_name, width)
 
             for inst, sig in group:
                 if inst in state.store:
@@ -1294,11 +1336,13 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         print(f"  [Unconditional] assertion violation fires with no path constraints — reporting immediately")
                         return "VIOLATION", item.milestones_completed
                     print(f"  [Suppressed] assertion violation at cycle {cycle}, milestones={item.milestones_completed}/{total_milestones} — deferring until near final milestone")
-                    # Save the violation record so we can report it if ALL_MILESTONES is reached
-                    if not hasattr(self, '_deferred_violation'):
-                        self._deferred_violation = None
-                    if self._deferred_violation is None and hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+                    # Save the violation with the highest milestone progress seen so far.
+                    # This ensures the most "trusted" violation is reported if released later.
+                    _cur_ms = item.milestones_completed
+                    if _cur_ms >= self._deferred_at_milestone and hasattr(manager, 'violated_assertions') and manager.violated_assertions:
                         self._deferred_violation = (list(manager.violated_assertions), self._clone_state(state))
+                        self._deferred_at_milestone = _cur_ms
+                        self._deferred_at_cycle = cycle
                     manager.assertion_violation = False
                     if hasattr(manager, 'violated_assertions'):
                         manager.violated_assertions = []
@@ -1437,6 +1481,12 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         )
         if skipped_idx is not None:
             print(f"  [Sliding Window] Skipped hallucinated milestone {skipped_idx} -> advanced to {current_progress}")
+
+        # Update stagnation counter: reset if milestone advanced, increment otherwise
+        if current_progress > item.milestones_completed:
+            self._stagnation_counter = 0
+        else:
+            self._stagnation_counter += 1
 
         if current_progress >= total_milestones:
             return "ALL_MILESTONES", current_progress
@@ -1765,13 +1815,33 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         except Exception:
                             pass
 
+        def _fmt_val(v) -> str:
+            """Format a Z3 model value as hex (with decimal in parentheses).
+
+            For BitVec values we show 0x<hex> (decimal).
+            For Bool values we show True/False.
+            Anything else falls back to str().
+            """
+            try:
+                import z3 as _z3
+                if isinstance(v, _z3.BitVecNumRef):
+                    int_val = v.as_long()
+                    size = v.size()
+                    hex_digits = (size + 3) // 4
+                    return f"0x{int_val:0{hex_digits}X}  ({int_val})"
+                if isinstance(v, _z3.BoolRef):
+                    return str(v)
+            except Exception:
+                pass
+            return str(v)
+
         if by_cycle:
             print("\nCounterexample trace (cycle-by-cycle):")
             for cyc in sorted(by_cycle.keys()):
                 print(f"  Cycle {cyc}:")
                 for sig in sorted(by_cycle[cyc].keys()):
-                    print(f"    {sig} = {by_cycle[cyc][sig]}")
+                    print(f"    {sig} = {_fmt_val(by_cycle[cyc][sig])}")
         if ungrouped:
             print("\nOther model values:")
             for sym, val in sorted(ungrouped.items()):
-                print(f"  {sym} = {val}")
+                print(f"  {sym} = {_fmt_val(val)}")

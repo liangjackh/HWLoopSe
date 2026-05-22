@@ -1,0 +1,30 @@
+{
+  "target": "Violate p5: Control Flow (CWE-1281) - FPV: Violation found",
+  "target_expr": "(((or1200_ctrl.ex_insn & 4292870144) >> 21 == 1826) && (or1200_cpu.operand_a > or1200_cpu.operand_b)) && or1200_cpu.rst == 0 && !(or1200_sprs.to_sr[9] == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, pipeline running",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Antecedent holds: ((or1200_ctrl.ex_insn & 4292870144) >> 21 == 1826) && (or1200_cpu.oper",
+      "condition": "((or1200_ctrl.ex_insn & 4292870144) >> 21 == 1826) && (or1200_cpu.operand_a > or1200_cpu.operand_b) && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: consequent fails",
+      "condition": "((or1200_ctrl.ex_insn & 4292870144) >> 21 == 1826) && (or1200_cpu.operand_a > or1200_cpu.operand_b) && or1200_cpu.rst == 0 && !(or1200_sprs.to_sr[9] == 1)",
+      "expected_cycles": 1
+    }
+  ]
+}

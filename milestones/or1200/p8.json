@@ -1,0 +1,30 @@
+{
+  "target": "Violate p8: type-2 insn => or1200_cpu.rf_addrw != 9",
+  "target_expr": "!(!(((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 2) || or1200_cpu.rf_addrw != 9 || or1200_cpu.rst == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Type-2 instruction reaches EX stage",
+      "condition": "((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 2 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: or1200_cpu.rf_addrw == 9 while type-2 insn in EX",
+      "condition": "((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 2 && or1200_cpu.rf_addrw == 9 && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

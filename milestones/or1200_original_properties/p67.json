@@ -1,0 +1,30 @@
+{
+  "target": "Violate p67: Memory access (CWE-1202) - FPV: No violations found",
+  "target_expr": "((or1200_ctrl.ex_insn & 4227858432) >> 26 == 37) && or1200_cpu.rst == 0 && !((or1200_lsu.or1200_mem2reg.regdata & 164294901760) == 0)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, pipeline running",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Antecedent holds: (or1200_ctrl.ex_insn & 4227858432) >> 26 == 37",
+      "condition": "(or1200_ctrl.ex_insn & 4227858432) >> 26 == 37 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: consequent fails",
+      "condition": "(or1200_ctrl.ex_insn & 4227858432) >> 26 == 37 && or1200_cpu.rst == 0 && !((or1200_lsu.or1200_mem2reg.regdata & 164294901760) == 0)",
+      "expected_cycles": 1
+    }
+  ]
+}

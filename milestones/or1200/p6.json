@@ -1,0 +1,30 @@
+{
+  "target": "Violate p6: insn-field==1829 with or1200_cpu.operand_a<=or1200_cpu.operand_b => to_sr[9]==1",
+  "target_expr": "!(!(((or1200_cpu.ex_insn & 32'hFFE00000) >> 21) == 1829 && or1200_cpu.operand_a <= or1200_cpu.operand_b) || or1200_cpu.to_sr[9] == 1 || or1200_cpu.rst == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Instruction with field 1829 reaches EX stage",
+      "condition": "((or1200_cpu.ex_insn & 32'hFFE00000) >> 21) == 1829 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: or1200_cpu.operand_a <= or1200_cpu.operand_b but to_sr[9] not set",
+      "condition": "((or1200_cpu.ex_insn & 32'hFFE00000) >> 21) == 1829 && or1200_cpu.operand_a <= or1200_cpu.operand_b && or1200_cpu.to_sr[9] != 1 && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

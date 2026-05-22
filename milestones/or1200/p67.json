@@ -1,0 +1,30 @@
+{
+  "target": "Violate p67: opcode 37 (l.lhz) => or1200_cpu.rf_dataw upper 16 bits == 0",
+  "target_expr": "!(!(((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 37) || (or1200_cpu.rf_dataw & 32'hFFFF0000) == 0 || or1200_cpu.rst == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "l.lhz (opcode 37) reaches EX stage",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 37 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: or1200_cpu.rf_dataw upper 16 bits are not zero",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 37 && (or1200_cpu.rf_dataw & 32'hFFFF0000) != 0 && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

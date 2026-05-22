@@ -1,0 +1,36 @@
+{
+  "target": "Violate p27: when l.sys (insn[31:16]==0x2000) is in WB stage, spr_dat_npc must equal epcr",
+  "target_expr": "!(!(((or1200_cpu.wb_insn & 32'hFFFF0000) >> 16) == 8192) || or1200_cpu.spr_dat_npc == or1200_cpu.epcr || or1200_cpu.rst == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "l.sys instruction (upper-16==0x2000) reaches EX stage",
+      "condition": "((or1200_cpu.ex_insn & 32'hFFFF0000) >> 16) == 8192 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "l.sys advances to WB stage (wb_insn has upper-16==0x2000)",
+      "condition": "((or1200_cpu.wb_insn & 32'hFFFF0000) >> 16) == 8192 && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 4,
+      "description": "Violation: spr_dat_npc does not equal epcr while l.sys in WB",
+      "condition": "((or1200_cpu.wb_insn & 32'hFFFF0000) >> 16) == 8192 && or1200_cpu.spr_dat_npc != or1200_cpu.epcr && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

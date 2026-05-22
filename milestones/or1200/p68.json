@@ -1,0 +1,30 @@
+{
+  "target": "Violate p68: opcode 53 (l.sh) => reg2mem lower 16 bits match",
+  "target_expr": "!(!(((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 53) || (or1200_cpu.dcpu_dat_o & 32'hFFFF) == (or1200_cpu.operand_b & 32'hFFFF) || or1200_cpu.rst == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "l.sh (opcode 53) reaches EX stage",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 53 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: reg2mem lower 16 bits of memdata do not match regdata",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 53 && (or1200_cpu.dcpu_dat_o & 32'hFFFF) != (or1200_cpu.operand_b & 32'hFFFF) && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "target": "Violate p4: type-3 insn (bits[31:30]==3) => or1200_cpu.ex_pc == or1200_cpu.spr_dat_npc",
+  "target_expr": "!(!(((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 3) || or1200_cpu.ex_pc == or1200_cpu.spr_dat_npc || or1200_cpu.rst == 1)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "Type-3 instruction (bits[31:30]==3) reaches EX stage",
+      "condition": "((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 3 && or1200_cpu.rst == 0",
+      "expected_cycles": 3
+    },
+    {
+      "step": 3,
+      "description": "Violation: or1200_cpu.ex_pc does not match spr_dat_npc",
+      "condition": "((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 3 && or1200_cpu.ex_pc != or1200_cpu.spr_dat_npc && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}

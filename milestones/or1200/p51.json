@@ -1,0 +1,30 @@
+{
+  "target": "Violate p51: or1200_cpu.if_insn must be NOP, or1200_cpu.icpu_dat_i, 0, or or1200_cpu.if_insn_saved",
+  "target_expr": "!(or1200_cpu.if_insn == 32'h14610000 || or1200_cpu.if_insn == 32'h14410000 || or1200_cpu.if_insn == or1200_cpu.icpu_dat_i || or1200_cpu.if_insn == 0 || or1200_cpu.rst == 1 || or1200_cpu.if_insn == or1200_cpu.if_insn_saved)",
+  "milestones": [
+    {
+      "step": 0,
+      "description": "Reset asserted",
+      "condition": "or1200_cpu.rst == 1",
+      "expected_cycles": 1
+    },
+    {
+      "step": 1,
+      "description": "Reset released, IF stage active",
+      "condition": "or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 2,
+      "description": "IF stage has a non-zero, non-NOP instruction",
+      "condition": "or1200_cpu.if_insn != 0 && or1200_cpu.if_insn != 32'h14610000 && or1200_cpu.if_insn != 32'h14410000 && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    },
+    {
+      "step": 3,
+      "description": "Violation: or1200_cpu.if_insn is not NOP, not or1200_cpu.icpu_dat_i, not 0, not saved",
+      "condition": "or1200_cpu.if_insn != 32'h14610000 && or1200_cpu.if_insn != 32'h14410000 && or1200_cpu.if_insn != or1200_cpu.icpu_dat_i && or1200_cpu.if_insn != 0 && or1200_cpu.if_insn != or1200_cpu.if_insn_saved && or1200_cpu.rst == 0",
+      "expected_cycles": 1
+    }
+  ]
+}
