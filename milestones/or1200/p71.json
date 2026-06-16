@@ -17,13 +17,13 @@
     {
       "step": 2,
       "description": "Rotate-right instruction reaches EX stage",
-      "condition": "(or1200_cpu.ex_insn & 32'hFC0003CF) == 32'hE00000C8 && or1200_cpu.rst == 0",
+      "condition": "(or1200_cpu.ex_insn & 32'hFC0003CF) == 32'hE00000C8",
       "expected_cycles": 3
     },
     {
       "step": 3,
       "description": "Violation: or1200_cpu.rf_dataw does not match expected rotation result",
-      "condition": "(or1200_cpu.ex_insn & 32'hFC0003CF) == 32'hE00000C8 && or1200_cpu.rf_dataw != 0 && ((or1200_cpu.operand_a << (32 - or1200_cpu.operand_b[4:0])) | (or1200_cpu.operand_a >> or1200_cpu.operand_b[4:0])) != or1200_cpu.rf_dataw && or1200_cpu.rst == 0",
+      "condition": "(or1200_cpu.ex_insn & 32'hFC0003CF) == 32'hE00000C8 && or1200_cpu.rf_dataw != 0 && ((or1200_cpu.operand_a << (32 - or1200_cpu.operand_b[4:0])) | (or1200_cpu.operand_a >> or1200_cpu.operand_b[4:0])) != or1200_cpu.rf_dataw",
       "expected_cycles": 1
     }
   ]

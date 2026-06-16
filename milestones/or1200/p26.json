@@ -17,19 +17,19 @@
     {
       "step": 2,
       "description": "l.sys instruction (upper-16==0x2000) reaches EX stage",
-      "condition": "((or1200_cpu.ex_insn & 32'hFFFF0000) >> 16) == 8192 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFFFF0000) >> 16) == 8192",
       "expected_cycles": 3
     },
     {
       "step": 3,
       "description": "l.sys advances to WB stage (wb_insn has upper-16==0x2000)",
-      "condition": "((or1200_cpu.wb_insn & 32'hFFFF0000) >> 16) == 8192 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.wb_insn & 32'hFFFF0000) >> 16) == 8192",
       "expected_cycles": 1
     },
     {
       "step": 4,
       "description": "Violation: lsu_addr does not equal eear while l.sys in WB",
-      "condition": "((or1200_cpu.wb_insn & 32'hFFFF0000) >> 16) == 8192 && or1200_cpu.dcpu_adr_o != or1200_cpu.eear && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.wb_insn & 32'hFFFF0000) >> 16) == 8192 && or1200_cpu.dcpu_adr_o != or1200_cpu.eear",
       "expected_cycles": 1
     }
   ]

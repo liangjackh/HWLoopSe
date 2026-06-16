@@ -17,13 +17,13 @@
     {
       "step": 2,
       "description": "Instruction with bits[31:24]==21 reaches EX stage",
-      "condition": "((or1200_cpu.ex_insn & 32'hFF000000) >> 24) == 21 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFF000000) >> 24) == 21",
       "expected_cycles": 3
     },
     {
       "step": 3,
       "description": "Violation: or1200_cpu.rfwb_op asserted while insn[31:24]==21 in EX",
-      "condition": "((or1200_cpu.ex_insn & 32'hFF000000) >> 24) == 21 && or1200_cpu.rfwb_op == 1 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFF000000) >> 24) == 21 && or1200_cpu.rfwb_op == 1",
       "expected_cycles": 1
     }
   ]

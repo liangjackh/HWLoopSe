@@ -17,13 +17,13 @@
     {
       "step": 2,
       "description": "Store instruction reaches EX stage (opcode 35=l.sw)",
-      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 35 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 35",
       "expected_cycles": 3
     },
     {
       "step": 3,
       "description": "Violation: or1200_cpu.operand_b does not equal or1200_cpu.dcpu_dat_o",
-      "condition": "or1200_cpu.operand_b != or1200_cpu.dcpu_dat_o && or1200_cpu.rst == 0",
+      "condition": "or1200_cpu.operand_b != or1200_cpu.dcpu_dat_o",
       "expected_cycles": 1
     }
   ]

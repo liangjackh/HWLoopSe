@@ -17,13 +17,13 @@
     {
       "step": 2,
       "description": "Instruction with field 1826 reaches EX stage",
-      "condition": "((or1200_cpu.ex_insn & 32'hFFE00000) >> 21) == 1826 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFFE00000) >> 21) == 1826",
       "expected_cycles": 3
     },
     {
       "step": 3,
       "description": "Violation: or1200_cpu.operand_a > or1200_cpu.operand_b but to_sr[9] not set",
-      "condition": "((or1200_cpu.ex_insn & 32'hFFE00000) >> 21) == 1826 && or1200_cpu.operand_a > or1200_cpu.operand_b && or1200_cpu.to_sr[9] != 1 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFFE00000) >> 21) == 1826 && or1200_cpu.operand_a > or1200_cpu.operand_b && or1200_cpu.to_sr[9] != 1",
       "expected_cycles": 1
     }
   ]

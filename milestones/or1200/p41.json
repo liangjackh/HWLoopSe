@@ -17,13 +17,13 @@
     {
       "step": 2,
       "description": "opcode 17 (opcode 17) reaches EX stage",
-      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 17 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 17",
       "expected_cycles": 3
     },
     {
       "step": 3,
       "description": "Violation: or1200_cpu.rfwb_op asserted while opcode 17 in EX",
-      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 17 && or1200_cpu.rfwb_op == 1 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 17 && or1200_cpu.rfwb_op == 1",
       "expected_cycles": 1
     }
   ]

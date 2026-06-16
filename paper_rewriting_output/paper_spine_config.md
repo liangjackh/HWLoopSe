@@ -1,0 +1,17 @@
+# PaperSpine Config
+
+- workflow: rewrite_existing
+- scene: conference
+- tier: flash
+- output_language: en
+- target_name: IEEE conference paper on dataflow-guided RTL symbolic execution
+- draft_path: iccd2026/prior_work/hacdac2025_draft.tex
+- materials_dir: 
+- user_motivation: Improve the dataflow-guided symbolic execution draft around its actual contribution to pruning redundant intra-block RTL paths.
+- official_urls: []
+- special_requirements: []
+- word_output: none
+- translation_package: none
+- reference_mode: local_first
+- reference_paths: [., iccd2026/prior_work, docs]
+- citation_target_count: 20

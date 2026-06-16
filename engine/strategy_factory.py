@@ -33,7 +33,9 @@ class StrategyFactory:
             milestone_manager = MilestoneManager([])
             return MilestoneDirectedStrategy(
                 milestone_manager,
-                max_cycles=config.num_cycles
+                max_cycles=config.num_cycles,
+                enable_eager_target_eval=config.enable_eager_target_eval,
+                enable_sliding_window=config.enable_sliding_window,
             )
 
         elif strategy_name == "lookahead":

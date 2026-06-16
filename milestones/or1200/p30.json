@@ -17,13 +17,13 @@
     {
       "step": 2,
       "description": "Instruction with upper-16==8192 reaches EX stage",
-      "condition": "((or1200_cpu.ex_insn & 32'hFFFF0000) >> 16) == 8192 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFFFF0000) >> 16) == 8192",
       "expected_cycles": 3
     },
     {
       "step": 3,
       "description": "Violation: or1200_cpu.rf_addrw does not match insn[25:21]",
-      "condition": "((or1200_cpu.ex_insn & 32'hFFFF0000) >> 16) == 8192 && or1200_cpu.rf_addrw != ((or1200_cpu.ex_insn & 32'h03E00000) >> 21) && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFFFF0000) >> 16) == 8192 && or1200_cpu.rf_addrw != ((or1200_cpu.ex_insn & 32'h03E00000) >> 21)",
       "expected_cycles": 1
     }
   ]

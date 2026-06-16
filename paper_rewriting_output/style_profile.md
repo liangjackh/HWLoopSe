@@ -1,0 +1,7 @@
+| Style Dimension | Target Venue Expectation | Exemplar Pattern | Applied To This Paper |
+|---|---|---|---|
+| Opening | State one scalability bottleneck and one contribution quickly. | Sylvia-style introductions front-load the bottleneck and technique. | Open with redundant intra-block RTL path exploration, then name dataflow-guided pruning immediately. |
+| Motivation flow | Use one motivating example to bridge background into method. | The local HacDAC draft is strongest when the motivating example precedes the method formalization. | Keep the motivating example, but compress generic verification background. |
+| Method framing | Present one mechanism, one correctness rationale, and one implementation story. | Conference exemplars compress the claim and let later sections justify it. | Frame the method as semantic pruning within a combinational always block, not as a general verification platform. |
+| Claim calibration | Narrow scope explicitly and quantify where possible. | Strong conference papers use precise nouns and avoid platform overclaims. | Limit the claim to pruning redundant intra-block symbolic paths and tie it to path/query/runtime reductions. |
+| Evaluation | Use a focused benchmark set and highlight one measured effect. | Exemplars use representative designs instead of broad but shallow experiment lists. | Emphasize comparison to Sylvia on PICORV32, DarkRISCV, and HACK@DAC'18. |

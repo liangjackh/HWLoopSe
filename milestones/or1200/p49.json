@@ -17,19 +17,19 @@
     {
       "step": 2,
       "description": "Opcode 0x1c appears in IF stage",
-      "condition": "((or1200_cpu.if_insn & 32'hFC000000) >> 26) == 32'h1c && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.if_insn & 32'hFC000000) >> 26) == 32'h1c",
       "expected_cycles": 1
     },
     {
       "step": 3,
       "description": "Opcode 0x1c advances to ID stage",
-      "condition": "((or1200_cpu.id_insn & 32'hFC000000) >> 26) == 32'h1c && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.id_insn & 32'hFC000000) >> 26) == 32'h1c",
       "expected_cycles": 1
     },
     {
       "step": 4,
       "description": "Violation: opcode 0x1c reaches EX stage",
-      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 32'h1c && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 32'h1c",
       "expected_cycles": 1
     }
   ]

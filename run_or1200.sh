@@ -1,11 +1,30 @@
 #!/bin/bash
+# Usage: ./run_or1200.sh [--no-eager] [--no-sliding] [--both-off]
+#   --no-eager    : disable eager target evaluation
+#   --no-sliding  : disable sliding-window lookahead
+#   --both-off    : disable both (baseline)
+#   (default)     : both optimizations enabled
+
+EXTRA_FLAGS=""
+ABLATION_TAG="full"
+
+for arg in "$@"; do
+    case "$arg" in
+        --no-eager)   EXTRA_FLAGS="$EXTRA_FLAGS --no-eager-target-eval"; ABLATION_TAG="no_eager" ;;
+        --no-sliding) EXTRA_FLAGS="$EXTRA_FLAGS --no-sliding-window";    ABLATION_TAG="no_sliding" ;;
+        --both-off)   EXTRA_FLAGS="$EXTRA_FLAGS --no-eager-target-eval --no-sliding-window"; ABLATION_TAG="baseline" ;;
+        *) echo "Unknown option: $arg"; exit 1 ;;
+    esac
+done
 
 MILESTONE_DIR="milestones/or1200"
-LOG_DIR="logs/or1200"
+LOG_DIR="logs/or1200/${ABLATION_TAG}"
 FILELIST="or1200_bind.F"
 TOP_MODULE="or1200_top"
 TIMEOUT_SEC=300
 TIMED_OUT_FILES=()
+
+echo "=== Ablation: ${ABLATION_TAG} (extra flags: ${EXTRA_FLAGS:-none}) ==="
 
 # Python helper: comment out all assertion blocks except the target one.
 # Usage: python3 -c "..." <assertions.sv> <target_label>
@@ -100,12 +119,14 @@ for milestone_file in "$MILESTONE_DIR"/p*.json; do
     # Isolate this assertion in or1200_assertions.sv
     isolate_assertion "$prefix"
 
-    timeout "$TIMEOUT_SEC" python3 -m main 10 "$FILELIST" --sv \
+    /usr/bin/time -v \
+        timeout "$TIMEOUT_SEC" python3 -m main 10 "$FILELIST" --sv \
         --auto-plan \
         --milestone-file "$milestone_file" \
         --coi \
         --strategy directed \
         -t "$TOP_MODULE" \
+        $EXTRA_FLAGS \
         > "$log_file" 2>&1
 
     exit_code=$?

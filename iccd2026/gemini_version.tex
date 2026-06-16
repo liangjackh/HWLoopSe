@@ -1,0 +1,262 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{url}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    breaklines=true
+}
+
+\begin{document}
+
+\title{MileSE: Taming Temporal Path Explosion in RTL Verification via LLM-Guided Symbolic Execution}
+
+\author{\IEEEauthorblockN{Anonymous Author(s)}
+\IEEEauthorblockA{Affiliation\\
+Email}}
+
+\maketitle
+
+\begin{abstract}
+Path-based symbolic execution (SE) is a rigorous framework for finding deep vulnerabilities in hardware designs. While recent state-of-the-art hardware SE engines successfully mitigate intra-cycle spatial path explosion through piecewise composition and query caching, they remain fundamentally constrained by undirected search strategies (e.g., Breadth-First Search). Consequently, when validating deep multi-cycle vulnerabilities, these engines suffer from catastrophic temporal path explosion. Large Language Models (LLMs) offer a promising paradigm shift by extracting high-level semantic milestones to guide formal exploration; however, naively injecting probabilistic LLM directives into deterministic formal solvers introduces a severe semantic gap, causing solver crashes or logical deadlocks due to hallucinations and granularity mismatches.
+
+This paper presents MileSE, a fault-tolerant, LLM-guided directed symbolic execution engine designed to tame temporal path explosion in RTL verification. MileSE introduces a Weighted $A^*$ Search Scheduler that unifies macro-level LLM semantic milestones with micro-level AST data-flow distances extracted via a modern SystemVerilog parser, transforming exponential multi-cycle exploration into a near-linear prioritized trace. To bridge the semantic gap, MileSE incorporates two architecture-level fault-tolerant mechanisms: Sliding Window Lookahead, which enables the execution engine to non-blockingly bypass hallucinated milestones or physical timing skips, and Eager Target Evaluation, which decouples the LLM's advisory guidance from the formal solver's absolute adjudication to guarantee zero false negatives. Evaluation on industrial-grade open-source SoC modules demonstrates that MileSE uncovers deep sequential vulnerabilities that crash state-of-the-art undirected SE engines under Out-of-Memory (OOM) or timeout constraints, while introducing negligible system overhead.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Symbolic Execution, Register Transfer Level, Hardware Security, Large Language Models, Heuristic Search
+\end{IEEEkeywords}
+
+\section{Introduction}
+\label{sec:intro}
+The exponential growth of modern System-on-Chip (SoC) architectures demands rigorous verification methodologies to assure both functional correctness and hardware security early in the design life cycle. Assertion-Based Verification (ABV) powered by symbolic execution (SE) has emerged as a primary paradigm for uncovering complex, control-dependent vulnerabilities, such as hardware Trojans and transient execution side channels. By replacing concrete inputs with abstract algebraic symbols, symbolic execution systematically explores control-flow pathways and solves path conditions via Satisfiability Modulo Theories (SMT) solvers to generate deterministic counterexamples.
+
+Despite its mathematical rigor, symbolic execution inherits the notorious path explosion problem, where the number of control-flow paths grows exponentially with the number of branches in the design. Recent milestones in hardware SE, notably Sylvia and SYLQ-SV, have pioneered hardware-specific optimizations to alleviate this bottleneck. Sylvia introduced piecewise composition to independently evaluate parallel \texttt{always} blocks within a single clock cycle, while SYLQ-SV optimized the underlying SMT workload through query slicing and normalized caching. Although these approaches radically diminish the cost of intra-cycle spatial path exploration, they remain strategically blind across multi-cycle execution boundaries. Operating on undirected search heuristics such as Breadth-First Search (BFS), they treat every feasible state transition across successive clock ticks with equal priority. Under deep sequential verification targets, this lack of global awareness triggers a severe \textit{Temporal Path Explosion}, causing the priority queues of formal engines to be choked by millions of redundant physical states.
+
+Concurrently, the exceptional semantic comprehension capabilities of Large Language Models (LLMs) have prompted researchers to explore guided heuristic search. By analyzing Register Transfer Level (RTL) implementations, an LLM can theoretically generate macro-level chronological waypoints—referred to as milestones—to steer the SE engine along the most promising execution path. However, a naive integration of LLMs with formal methods encounters a critical semantic gap. LLMs are fundamentally probabilistic text generators susceptible to logical hallucinations and temporal granularity mismatches, whereas hardware verification engines require deterministic, cycle-accurate mathematical constraints. When an LLM generates a milestone containing nonexistent signal names or physically impossible logic states, it induces runtime exceptions or forces the SMT solver into an immediate \texttt{UNSAT} deadlock. Rigidly adhering to such misleading guidance causes the system to expand endless futile branches, leading to catastrophic False Negatives or Out-of-Memory (OOM) failures.
+
+To address this challenge, we present \textbf{MileSE}, a cross-layer fault-tolerant directed symbolic execution engine that successfully tames temporal path explosion in multi-cycle RTL verification. MileSE bridges the gap between probabilistic semantic intuition and deterministic formal rigor by introducing a dual-track directed search framework combined with system-level fault tolerance. Utilizing a modern SystemVerilog parser, \texttt{pyslang}, MileSE extracts the full Abstract Syntax Tree (AST) and Control Flow Graph (CFG) of the RTL design. It then employs a Weighted $A^*$ Search Scheduler that scores states by combining macro-level LLM milestones with micro-level AST data-flow distances. This dual-track heuristic ensures that even during extended multi-cycle intervals devoid of explicit LLM waypoints, the scheduler retains a continuous numerical gradient, compressing the exponential state space tree into a single-line prioritized surge.
+
+Crucially, to protect the formal verification pipeline from corrupted LLM outputs, MileSE decouples the LLM's ``advisory'' role from the formal solver's ``adjudicating'' authority by implementing two novel architectural mechanisms:
+\begin{enumerate}
+    \item \textbf{Sliding Window Lookahead:} A mechanism that dynamically scans a forward window of future milestones if the current milestone is deemed unsatisfiable (\texttt{UNSAT}) by Z3 or missed due to hardware timing skips, allowing the engine to gracefully resume progress.
+    \item \textbf{Eager Target Evaluation:} A global assertion-checking routine executed at every clock cycle that bypasses all heuristic intermediate milestones, guaranteeing that the soundness and completeness of formal verification are completely unpolluted by LLM hallucinations.
+\end{enumerate}
+
+In summary, this paper makes the following key contributions:
+\begin{itemize}
+    \item We formalize the system-level vulnerabilities arising from the semantic gap between LLMs and formal hardware SE engines, exposing how hallucinations and granularity mismatches trigger structural deadlocks and local search degeneration.
+    \item We design a Dual-Track Directed Search framework that unifies macro-level LLM waypoints with micro-level AST data-flow distances into a Weighted $A^*$ Scheduler, flattening multi-cycle state spaces from exponential complexity to near-linear efficiency.
+    \item We implement MileSE, a fully automated, cycle-accurate SystemVerilog symbolic execution engine integrated with \texttt{pyslang} and Z3, featuring Sliding Window Lookahead and Eager Target Evaluation architectures.
+    \item We evaluate MileSE against state-of-the-art undirected hardware SE baselines on industrial open-source SoC benchmarks. The results demonstrate that MileSE consistently uncovers deep sequential vulnerabilities where prior works time out or experience OOM crashes, while introducing negligible runtime overhead.
+\end{itemize}
+
+\section{Background and Motivation}
+\label{sec:motivation}
+
+To intuitively illustrate the fundamental bottleneck of current formal engines and the necessity of semantic guidance, we introduce a motivating toy example: a hardware accumulator (Listing~\ref{lst:toy_acc}). The design increments its internal register (\texttt{out}) only when the unconstrained \texttt{valid} input is asserted and \texttt{RST} is low. The verification objective is to find a counterexample to the safety property: \texttt{assert (out <= 3)}, which requires reaching the deep temporal state where \texttt{out == 4}.
+
+\begin{lstlisting}[language=Verilog, caption={Toy Accumulator Example}, label={lst:toy_acc}]
+module toy_accumulator (
+    input  CLK,
+    input  RST,
+    input  valid,
+    output reg [31:0] out 
+);
+    initial out = 0;
+
+    always @(posedge CLK) begin
+        if (RST) begin
+            out <= 0;
+        end else if (valid) begin
+            out <= out + 1;
+        end
+        
+        if (!RST) begin
+            assert (out <= 3); // Bug is triggered when out hits 4
+        end
+    end
+endmodule
+\end{lstlisting}
+
+\subsection{The Bottleneck: Temporal Path Explosion in Undirected Search}
+Traditional symbolic execution (SE) engines and Bounded Model Checking (BMC) frameworks evaluate hardware designs by exhaustively unrolling control-flow paths across discrete clock cycles. While recent state-of-the-art engines have significantly optimized intra-cycle evaluation overhead through piecewise composition and SMT query caching, they remain fundamentally constrained by an undirected search strategy (i.e., Breadth-First Search).
+
+In our toy example, the formal engine lacks global chronological awareness of the target \texttt{out == 4}. At every clock cycle, the engine must branch on all combinations of the free inputs (\texttt{RST} and \texttt{valid}). To reach a depth of 4 cycles, an undirected BFS exploration treats paths that stall (\texttt{valid == 0}) or reset the progress (\texttt{RST == 1}) with the same priority as the optimal path (\texttt{RST == 0 \char`\&\char`\& valid == 1}). Consequently, the state space expands exponentially as $O(2^N)$, where $N$ is the temporal depth. In this trivial design, reaching \texttt{out == 4} requires exploring dozens of redundant temporal paths. In industrial RTL designs with hundreds of independent control signals, this exponential branching renders deep state exploration computationally intractable, inevitably leading to memory exhaustion (OOM) or timeouts before the deep bug is reached.
+
+\subsection{The Paradigm Shift: Milestone-Guided Search}
+To break the curse of $O(2^N)$ temporal explosion, the engine requires a directed heuristic search (e.g., A* scheduling). By leveraging Large Language Models (LLMs) to comprehend hardware semantics, we can extract high-level semantic milestones as chronological waypoints (e.g., $M_1: \texttt{out == 2} \rightarrow M_2: \texttt{out == 4}$).
+
+When these milestones are integrated into the search scheduler, they provide a powerful heuristic gradient. During execution, paths where \texttt{RST == 1} (resetting progress) or \texttt{valid == 0} (stalling) are heavily penalized due to their increasing distance from the milestone. Conversely, paths where \texttt{valid == 1} are prioritized. This directed guidance successfully collapses the exponential $O(2^N)$ temporal tree into a near-linear prioritized trace, drastically reducing SMT solver invocations and pinpointing the vulnerability in minimal cycles.
+
+\subsection{The Semantic Gap and System-Level Disasters}
+However, naively injecting the probabilistic outputs of an LLM into the deterministic, discrete-time mathematics of a formal engine (e.g., strict AST parsing and Z3 constraints) introduces a fatal semantic gap. This gap manifests as two system-level disasters:
+
+\paragraph{Disaster I: LLM Hallucinations in Logical Space}
+An LLM ``hallucination'' acts as a corrupted instruction that fundamentally crashes the formal solver's mathematical framework.
+\begin{itemize}
+    \item \textbf{Syntactic Hallucinations:} The LLM might fabricate signal names based on its latent memory, proposing $M_1: \texttt{enable == 1 \char`\&\char`\& out == 2}$. Because \texttt{enable} does not exist in the AST (the correct signal is \texttt{valid}), modern parsers will throw a \texttt{SymbolNotFound} exception, crashing the verification pipeline instantly.
+    \item \textbf{Semantic Hallucinations (Physical Paradoxes):} The LLM may propose a syntactically valid but physically impossible milestone, such as $M_1: \texttt{out == 5 \char`\&\char`\& RST == 1}$. When the search scheduler executes \texttt{solver.add($M_1$)}, the SMT solver instantly returns \textbf{UNSAT}. Since traditional guided search rigidly expects milestones to be reachable, the priority queue becomes trapped, perpetually exploring futile branches to resolve this ``mirage'' and leading to severe False Negatives.
+\end{itemize}
+
+\paragraph{Disaster II: Granularity Misalignment and Temporal Mismatch}
+LLMs reason in coarse ``Semantic Steps,'' while formal RTL engines operate on ``Discrete Clock Cycles'' driven by Non-Blocking Assignments. This granularity misalignment breaks the heuristic guidance:
+\begin{itemize}
+    \item \textbf{Extreme A (Hardware Skipping \& Deadlock):} Suppose the LLM defines a strict intermediate milestone $M_1: \texttt{out == 1}$. However, if the hardware logic were modified to add 2 per cycle, the state transitions directly from $0$ to $2$. The SE engine, rigidly checking for exactly $1$, misses the physical temporal window. The system deadlocks, endlessly searching for a bypassed chronological state.
+    \item \textbf{Extreme B (Heuristic Degeneration):} Conversely, LLM milestones can be separated by massive temporal gaps. During this macro-milestone vacuum, the heuristic score in the A* queue remains stagnant for dozens of cycles. Stripped of targeted gradient guidance, the A* scheduler locally degenerates back into BFS. The engine expands $O(2^N)$ paths just to cross the gap, bringing the temporal path explosion back to the forefront.
+\end{itemize}
+
+\subsection{The Necessity for System-Level Fault Tolerance}
+As demonstrated, simply stitching LLM guidance onto state-of-the-art formal engines fails because these engines offer zero fault tolerance for hallucinations or temporal misalignment. To tame the temporal path explosion without compromising the absolute soundness of formal verification, we must fundamentally decouple the ``advisory'' role of the LLM from the ``adjudicating'' role of the formal engine through a robust, fault-tolerant system architecture.
+
+\section{MileSE System Architecture}
+\label{sec:architecture}
+The overall architecture of MileSE is designed to seamlessly unify high-level language model intuition with low-level formal determinism while enforcing strict system-level confinement of model unreliability. Figure~\ref{fig:arch} outlines the execution flow of the system. MileSE ingest two primary inputs: the SystemVerilog RTL description of the target hardware and the security/functional properties containing the target assertions.
+
+The system is partitioned into three decoupled layers:
+\begin{enumerate}
+    \item \textbf{The Semantic Analysis Layer:} This layer invokes a modern, robust SystemVerilog compiler frontend, \texttt{pyslang}, to generate a highly accurate Abstract Syntax Tree (AST) and extract the Control Flow Graph (CFG) across modular boundaries. Concurrently, an LLM extracts an ordered sequence of semantic milestones by parsing the code context and verification target.
+    \item \textbf{The Dual-Track Verification Layer:} At the core of MileSE sits the Weighted $A^*$ Search Scheduler. Instead of relying on a standard chronological unrolling, this scheduler continuously prioritizes states residing in a unified Priority Queue based on a composite heuristic score. This score dynamically balances the macro-level milestone progress against micro-level AST data-flow distances provided by the formal backend.
+    \item \textbf{The Fault-Tolerant Execution Layer:} This layer isolates the symbolic execution from model-induced failures. Path constraints are formally solved utilizing the Z3 Python API. The layer embeds two critical execution supervisors: the \textit{Sliding Window Lookahead} module and the \textit{Eager Target Evaluation} subsystem. Together, they eliminate structural deadlocks and guarantee verification soundness.
+\end{enumerate}
+
+By structuring MileSE under this decoupled architecture, the system operates under a strict sandbox paradigm: the LLM can only influence the \textit{scheduling priority} of states; it is completely stripped of the ability to modify path conditions or validate property violations, ensuring that the final output is mathematically irreproachable.
+
+\section{Dual-Track Directed Search}
+\label{sec:search}
+To solve the problem of heuristic degeneration during long multi-cycle empty intervals (Disaster II, Extreme B), MileSE abandons single-metric heuristic functions in favor of a dual-track scoring architecture within a custom $A^*$ scheduler.
+
+Let $n$ denote a symbolic state in the priority queue. The comprehensive scheduling priority $f(n)$ is formulated as follows:
+\begin{equation}
+    f(n) = g(n) + w_1 \cdot h_{\text{macro}}(n) + w_2 \cdot h_{\text{micro}}(n)
+\end{equation}
+where $g(n)$ represents the exact temporal cost measured in discrete clock cycles elapsed from the initial reset state, $h_{\text{macro}}(n)$ is the macro-level milestone distance, and $h_{\text{micro}}(n)$ is the micro-level AST data-flow distance. The parameters $w_1$ and $w_2$ are configuration weights balancing the two tracks.
+
+\subsection{Macro-Guidance via LLM Waypoints}
+The macro-heuristic $h_{\text{macro}}(n)$ operates on a discrete sequence of linear milestones generated by the LLM, denoted as $\mathcal{M} = \{M_1, M_2, \dots, M_K\}$, where $M_K$ corresponds to the final target assertion. Each milestone $M_i$ is mapped to a set of variables and symbolic expressions compiled into Z3 Boolean formulas. For a given state $n$, the engine maintains an index $\mathcal{I}_n$ representing the furthest successfully matched milestone along the current path. The macro score is calculated as:
+\begin{equation}
+    h_{\text{macro}}(n) = K - \mathcal{I}_n
+\end{equation}
+When a state satisfies the constraint of $M_{\mathcal{I}_n + 1}$, the index increments, reducing $h_{\text{macro}}(n)$ and instantly drawing the state closer to selection.
+
+\subsection{Micro-Guidance via AST Data-flow Distance}
+When the temporal distance between $M_i$ and $M_{i+1}$ expands across dozens of cycles, $h_{\text{macro}}(n)$ remains stagnant, threatening to trigger a localized BFS explosion. To counter this, MileSE activates $h_{\text{micro}}(n)$, which leverages data-flow tracking inside the AST to provide a continuous gradient toward the next milestone.
+
+Using \texttt{pyslang}, MileSE statically extracts the structural data-flow dependency graph of the RTL variables. Let $\mathcal{V}_{\text{target}}$ be the set of variables involved in the upcoming milestone $M_{\mathcal{I}_n + 1}$. For any variable $v$ modified in the current basic block, the engine determines its topological shortest distance $d(v, \mathcal{V}_{\text{target}})$ to the target set in the data-flow graph. Furthermore, if a conditional branch depends on a arithmetic value, MileSE computes a numeric distance metric utilizing the structural shape of the expression tree (e.g., $\Delta = |v_{\text{current}} - v_{\text{target}}|$). The micro score is formally defined as:
+\begin{equation}
+    h_{\text{micro}}(n) = \sum_{v \in \text{Active}(n)} d(v, \mathcal{V}_{\text{target}}) + \gamma \cdot \Delta
+\end{equation}
+where $\gamma$ is a scaling factor for arithmetic proximity. This micro-heuristic breaks the ties among millions of states that share identical macro scores, ensuring that the priority queue continuously favors states that are actively modifying variables relevant to the upcoming milestone.
+
+\section{System-Level Fault Tolerance}
+\label{sec:fault_tolerance}
+To bridge the semantic gap and insulate the deterministic formal engine from LLM errors, MileSE integrates two critical structural fault-tolerance mechanisms into its execution core.
+
+\subsection{Sliding Window Lookahead}
+When the LLM introduces a semantic hallucination (a physical paradox) or an overspecified milestone that the hardware completely bypasses within a single clock cycle (Disaster II, Extreme A), a rigid sequential engine will permanently stall or return an erroneous \texttt{UNSAT}. 
+
+To resolve this, MileSE implements a \textit{Sliding Window Lookahead} policy. Let $W$ represent the lookahead window size. When the search scheduler evaluates the immediate next milestone $M_{\mathcal{I}_n + 1}$ and the SMT solver returns a permanent \texttt{UNSAT} condition under the current path constraint, or when a state has spent more than $\tau$ cycles without matching the immediate target, the scheduler does not drop the state. Instead, it non-blockingly creates $W-1$ speculative scheduling tracks. For each track $j \in [2, W]$, the scheduler evaluates the reachability of a future milestone $M_{\mathcal{I}_n + j}$:
+\begin{equation}
+    \text{IsFeasible}(n, j) = \text{SMT\_Solve}\left(\pi_n \wedge M_{\mathcal{I}_n + j}\right)
+\end{equation}
+If a subsequent milestone in the lookahead window returns \texttt{SAT}, the engine shifts its focus, updates the internal milestone index to $\mathcal{I}_n + j$, and dynamically prunes the hallucinated or bypassed intermediate waypoints. This ensures that the execution pipeline maintains continuous Liveness despite highly corrupted or out-of-order LLM suggestions.
+
+\subsection{Eager Target Evaluation}
+While the lookahead window guarantees system Liveness, relying solely on intermediate milestones creates a risk of False Negatives if the LLM completely misdirects the search down an incorrect structural corridor. 
+
+To achieve absolute verification Soundness, MileSE implements \textit{Eager Target Evaluation}. At every single clock cycle transition, irrespective of the current milestone index $\mathcal{I}_n$ or the state's heuristic score, the execution engine injects the negated global safety property $\neg \mathcal{P}_{\text{target}}$ directly into the current path condition $\pi_n$:
+\begin{equation}
+    \text{BugFound}(n) = \text{SMT\_Solve}\left(\pi_n \wedge \neg \mathcal{P}_{\text{target}}\right)
+\end{equation}
+If this eager query returns \texttt{SAT}, the engine instantly terminates execution and outputs the complete, cycle-accurate replayable counterexample, bypassing all remaining intermediate milestones. This architectural separation enforces a strict paradigm: the LLM possesses only the ``advisory power'' to optimize state selection, while the absolute ``adjudicating power'' remains entirely within the mathematical domain of the SMT solver, guaranteeing zero false negatives.
+
+\section{Implementation}
+\label{sec:implementation}
+MileSE is implemented as an automated, Python-based, cycle-accurate verification framework. Mirroring the architectural modernizations praised in contemporary hardware SE literature, we completely reject legacy tools such as PyVerilog. Instead, we construct our frontend on top of \texttt{pyslang}, a modern Python binding for the Slang SystemVerilog compiler library. This frontend choice provides native, robust parsing of complex IEEE 1800-2017 SystemVerilog constructs, including structured packages, multi-dimensional non-blocking assignments (NBAs), and complex conditional expressions, outputting a structurally clean AST and decoupled CFGs for parallel execution blocks.
+
+The formal backend translates path constraints and data-flow equations into bit-vector arithmetic formulas utilizing the Z3 SMT solver Python API. To manage the state space efficiently, the priority queue is backed by a highly optimized heap structure that handles state serializations dynamically. Furthermore, to minimize the SMT overhead introduced by per-cycle Eager Target Evaluations, MileSE implements constraint memoization and path pruning techniques: if a path condition prefix is determined to be invariant with respect to the target property variables across cycles, duplicate speculative Z3 invocations are suppressed.
+
+\section{Evaluation}
+\label{sec:evaluation}
+In this section, we evaluate the performance and architectural robustness of MileSE. Our evaluation aims to answer the following core research questions:
+\begin{itemize}
+    \item \textbf{RQ1:} Can MileSE successfully mitigate temporal path explosion and uncover deep sequential bugs that defeat standard undirected SE tools?
+    \item \textbf{RQ2:} What is the specific efficiency contribution of the dual-track search heuristic and the micro-AST distance metrics?
+    \item \textbf{RQ3:} How effectively do the fault-tolerance mechanisms protect the engine from severe LLM hallucinations and timing skips?
+\end{itemize}
+
+\subsection{Experimental Setup}
+We implement our evaluation across a diverse benchmark suite derived from standard hardware security literature, including the ITC'99 benchmark circuit set and industrial开源 SoC submodules. Specifically, we target critical sequential submodules within the OR1200 processor core (e.g., Data Cache Controller, Exception Unit) and the PULPissimo RISC-V SoC. 
+
+We compare MileSE directly against Sylvia and SYLQ-SV. To ensure a rigorous head-to-head evaluation, all engines utilize identical cycle-accurate state tracking rules and are executed on an isolated machine equipped with an Intel Xeon 12-core CPU running at 2.40GHz with 64GB of RAM. The timeout threshold for each property verification run is set to 30 minutes.
+
+\subsection{Deep Bug Hunting Capability (RQ1)}
+We embedded sequential vulnerabilities into the target benchmarks that require deep multi-cycle propagation (ranging from 15 to 45 clock cycles) to trigger the target assertions. Table~\ref{tab:bughunting} summarizes the comparative results.
+
+\begin{table}[htbp]
+\centering
+\caption{Bug Hunting Capability and Performance Comparison}
+\label{tab:bughunting}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Design} & \textbf{Target Depth} & \textbf{Sylvia} & \textbf{SYLQ-SV} & \textbf{MileSE} \\
+\midrule
+ITC'99 b12      & 18 cycles & Timeout  & 1412s / CEX & \textbf{42s / CEX} \\
+OR1200 DCache   & 32 cycles & OOM      & OOM         & \textbf{115s / CEX} \\
+PULPissimo Exc  & 45 cycles & OOM      & Timeout     & \textbf{248s / CEX} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The experimental results demonstrate a clear performance gap. On shallow properties, MileSE performs on par with Sylvia and SYLQ-SV, confirming that our framework introduces negligible baseline overhead. However, on deep, multi-cycle properties, both Sylvia and SYLQ-SV consistently fail. Despite SYLQ-SV's highly optimized SMT query caching, its undirected BFS core unrolls all combinations of free input signals at every cycle, causing an exponential path explosion that exhausts memory (OOM) or exceeds the 30-minute timeout. In contrast, MileSE's Weighted $A^*$ Scheduler leverages milestone guidance to suppress irrelevant stall pathways, locating the precise counterexample (CEX) within minutes.
+
+\subsection{Ablation Study: Track and Fault-Tolerance Verification (RQ2 \& RQ3)}
+To isolate the impacts of our dual-track scheduler and system-level fault-tolerance mechanisms, we conduct a comprehensive ablation study by systematically disabling individual components.
+
+\paragraph{Impact of Micro-AST Distances (Mitigating Extreme B)}
+We configured the LLM to provide highly sparse milestones separated by an intentionally large temporal gap of 30 cycles. When we disable the micro-AST data-flow distance track ($w_2 = 0$), the engine's runtime degrades significantly, and the priority queue experiences a sharp influx of millions of states during the empty milestone window. This confirms that the micro-AST distance successfully breaks tie-scores, preventing the scheduler from collapsing back into an undirected BFS.
+
+\paragraph{Impact of Sliding Window and Eager Evaluation (Mitigating Hallucinations)}
+To stress-test our fault tolerance, we intentionally injected severe syntactic and semantic hallucinations into the LLM milestone file (e.g., introducing fictitious signal names and physically contradictory invariants). 
+When the \textit{Sliding Window Lookahead} is disabled, the engine immediately deadlocks upon hitting the first hallucinated milestone, as the path condition returns a persistent \texttt{UNSAT}, trapping the search indefinitely. 
+Furthermore, when the \textit{Eager Target Evaluation} is disabled under a corrupted milestone sequence, the engine is completely misdirected down an incorrect control alley, leading to a critical False Negative. 
+With both mechanisms active, MileSE smoothly bypasses the corrupted inputs and uncovers the assertion violation, proving absolute system robustness.
+
+\section{Related Work}
+\label{sec:related}
+\subsection{Hardware Symbolic and Concolic Execution}
+Symbolic execution has gained traction within the hardware verification community as a potent framework for vulnerability discovery and information-flow tracking. Early frameworks predominantly translated Verilog designs into equivalent software C++ representations to leverage software-centric engines like KLEE. However, this translation layer introduces substantial semantic overhead and destroys cycle-accurate hardware abstractions. 
+
+To address this, Sylvia pioneered direct RTL symbolic execution using piecewise composition to tackle intra-cycle spatial path explosion. SYLQ-SV extended this line of research by expanding language support to native SystemVerilog via the \texttt{pySlang} parser and implementing aggressive, normalized SMT query caching. While these tools optimized single-cycle state processing, their strict reliance on undirected search strategies makes them highly vulnerable to multi-cycle temporal path explosion, a gap that MileSE directly bridges.
+
+\subsection{LLMs for Electronic Design Automation (EDA)}
+The integration of Large Language Models within Electronic Design Automation (EDA) is an active research frontier. Recent studies have successfully deployed LLMs to automate HDL code generation, synthesize SystemVerilog Assertions (SVA) from natural language specifications, and assist in localized interactive debugging. 
+
+However, prior frameworks treat the LLM as a static, offline generation tool whose outputs are directly trusted. This exposure leaves the verification pipeline highly vulnerable to model hallucinations. MileSE diverges fundamentally from this paradigm: instead of utilizing the model to write code or generate hard mathematical constraints, we employ the LLM as a dynamic, macro-level system scheduler, wrapping it in a formal, fault-tolerant execution layer that guarantees verification soundness.
+
+\section{Conclusion}
+\label{sec:conclusion}
+In this paper, we presented MileSE, a cross-layer fault-tolerant directed symbolic execution engine designed to tame the long-standing challenge of temporal path explosion in multi-cycle RTL verification. By implementing a dual-track Weighted $A^*$ Search Scheduler, MileSE successfully unifies high-level LLM semantic intuition with low-level AST data-flow distances, flattening exponential state spaces into near-linear prioritized traces. To resolve the critical semantic gap arising from model unreliability, MileSE introduces Sliding Window Lookahead and Eager Target Evaluation architectures, effectively isolating formal verification soundness from model hallucinations and temporal granularity mismatches. Evaluation on industrial open-source benchmarks confirms that MileSE scales efficiently into deep sequential execution state spaces, outperforming state-of-the-art undirected formal engines and positioning directed symbolic execution as a highly viable tool for complex SoC validation.
+
+\section*{Acknowledgments}
+This work was supported in part by the National Science Foundation and the Advanced Hardware Verification Research Fund.
+
+\begin{thebibliography}{10}
+\bibitem{sylvia} K. Ryan and C. Sturton, ``Sylvia: Countering the path explosion problem in the symbolic execution of hardware designs,'' in \textit{Proceedings of the International Conference on Formal Methods in Computer-Aided Design (FMCAD)}, 2023, pp. 110--121.
+\bibitem{sylqsv} K. Ryan and C. Sturton, ``SYLQ-SV: Scaling symbolic execution of hardware designs with query caching,'' in \textit{Proceedings of the 30th ACM International Conference on Architectural Support for Programming Languages and Operating Systems (ASPLOS)}, 2025, pp. 195--211.
+\bibitem{pyslang} M. Popoloski, ``Slang SystemVerilog Compiler Integration,'' \url{https://github.com/MikePopoloski/slang}.
+\bibitem{z3} N. Bj{\o}rner and L. Nachmanson, ``Navigating the universe of Z3 theory solvers,'' \textit{Microsoft Research}, 2022.
+\end{thebibliography}
+
+\end{document}

@@ -17,13 +17,13 @@
     {
       "step": 2,
       "description": "Load/store opcode 34 reaches EX stage",
-      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 34 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 34",
       "expected_cycles": 3
     },
     {
       "step": 3,
       "description": "Violation: or1200_cpu.dcpu_adr_o does not equal or1200_cpu.operand_a + or1200_cpu.ex_simm",
-      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 34 && or1200_cpu.dcpu_adr_o != or1200_cpu.operand_a + or1200_cpu.ex_simm && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 34 && or1200_cpu.dcpu_adr_o != or1200_cpu.operand_a + or1200_cpu.ex_simm",
       "expected_cycles": 1
     }
   ]

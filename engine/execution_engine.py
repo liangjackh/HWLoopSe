@@ -16,8 +16,8 @@ import gc
 from itertools import product
 import logging
 from helpers.utils import to_binary, init_symbol
-import sys
 import time
+import resource
 from copy import deepcopy
 import pyslang as ps
 from helpers.slang_helpers import get_module_name, init_state
@@ -84,6 +84,8 @@ class ExecutionEngine:
         self.llm_provider = "auto"
         self.llm_mock = False
         self.llm_base_url = None
+        self.enable_eager_target_eval = True
+        self.enable_sliding_window = True
         self._driver = None
         self._compilation = None
         self._visitor = None
@@ -122,6 +124,9 @@ class ExecutionEngine:
         else:
             driver.sourceLoader.addFiles(file_path)
 
+        if config.top_module:
+            driver.parseCommandLine(f"--top={config.top_module} --ignore-unknown-modules")
+
         driver.processOptions()
         driver.parseAllSources()
 
@@ -138,7 +143,30 @@ class ExecutionEngine:
             diag_engine.issue(d)
 
         report = client.getString()
-        has_errors = any(d.isError() for d in diags)
+
+        def _in_top_hierarchy(diag, top_module):
+            """Return True only if the diag has a symbol whose path is under top_module."""
+            sym = diag.symbol
+            if sym is None:
+                return False
+            try:
+                path = sym.hierarchicalPath
+                return path.startswith(top_module + ".") or path == top_module
+            except Exception:
+                return False
+
+        # DiagCodes that are overly strict in PySlang but legal SV (e.g. '0 to packed struct array).
+        _BENIGN_CODES = {"BadAssignment"}
+
+        if config.top_module:
+            has_errors = any(
+                d.isError()
+                and _in_top_hierarchy(d, config.top_module)
+                and str(d.code).split("(")[-1].rstrip(")") not in _BENIGN_CODES
+                for d in diags
+            )
+        else:
+            has_errors = any(d.isError() for d in diags)
 
         if report:
             print("\n" + "=" * 40)
@@ -291,6 +319,8 @@ class ExecutionEngine:
         self.llm_provider = config.llm_provider
         self.llm_mock = config.llm_mock
         self.llm_base_url = config.llm_base_url
+        self.enable_eager_target_eval = config.enable_eager_target_eval
+        self.enable_sliding_window = config.enable_sliding_window
 
         if config.debug:
             from helpers.debug import set_debug
@@ -324,8 +354,7 @@ class ExecutionEngine:
             config: Engine configuration
         """
         start_time = time.process_time()
-
-        # Configure engine from config
+        self._llm_time = 0.0  # will be set during execute_sv if LLM is called
         self._configure_from_config(config)
 
         # Step 1: Compile design
@@ -346,9 +375,15 @@ class ExecutionEngine:
         self.execute_sv(visitor, modules, None, config.num_cycles, driver, compilation)
 
         end_time = time.process_time()
+        llm_time    = self._llm_time
+        search_time = (end_time - explore_time) - llm_time
+        peak_mem_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         print(f"Execution time {end_time - explore_time}")
+        print(f"LLM time {llm_time:.3f}")
+        print(f"Search time {search_time:.3f}")
         print(f"Frontend time {explore_time - start_time}")
         print(f"Total time {end_time - start_time}")
+        print(f"Peak memory {peak_mem_kb} KB")
         print(f"SMT queries {smt_stats.query_count}")
         print(f"SMT solver time {smt_stats.total_time:.4f}s")
 
@@ -1038,7 +1073,9 @@ class ExecutionEngine:
 
             if all_milestones:
                 milestone_manager = MilestoneManager(all_milestones)
-                self.strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles))
+                self.strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles),
+                    enable_eager_target_eval=self.enable_eager_target_eval,
+                    enable_sliding_window=self.enable_sliding_window)
                 print(f"[ExecutionEngine] Loaded {len(all_milestones)} milestones from {self.milestone_file}")
             else:
                 print("[ExecutionEngine] No valid milestones in file, using existing strategy")
@@ -1092,6 +1129,7 @@ class ExecutionEngine:
                     print(f"[ExecutionEngine] Found {len(all_signals)} signals")
 
                     # Generate milestones using LLM
+                    _llm_t0 = time.process_time()
                     planner = LLMPlanner(
                         api_key=self.llm_api_key,
                         provider=self.llm_provider,
@@ -1099,6 +1137,9 @@ class ExecutionEngine:
                         base_url=self.llm_base_url
                     )
                     milestone_dicts = planner.generate_plan(context, primary_target.target_expr, all_signals, num_cycles=int(num_cycles))
+                    _llm_t1 = time.process_time()
+                    self._llm_time = _llm_t1 - _llm_t0
+                    print(f"[ExecutionEngine] LLM milestone generation time {self._llm_time:.3f}s")
                     print(f"[ExecutionEngine] Generated {len(milestone_dicts)} milestones")
 
                     # Convert to Milestone objects
@@ -1150,7 +1191,9 @@ class ExecutionEngine:
                             print(f"[ExecutionEngine] Updated directed strategy with {len(all_milestones)} milestones")
                         else:
                             # Create a new directed strategy with milestones
-                            self.strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles))
+                            self.strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles),
+                                enable_eager_target_eval=self.enable_eager_target_eval,
+                                enable_sliding_window=self.enable_sliding_window)
                             print(f"[ExecutionEngine] Created directed strategy with {len(all_milestones)} milestones")
                     else:
                         print("[ExecutionEngine] No valid milestones generated, using blind strategy")

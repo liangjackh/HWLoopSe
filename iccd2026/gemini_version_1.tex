@@ -1,0 +1,41 @@
+\section{MileSE System Architecture}
+\label{sec:architecture}
+The MileSE architecture is designed to bridge the semantic gap between high-level language model intuition and low-level formal determinism, while enforcing strict system-level confinement of LLM unreliability. The framework takes two primary inputs: the SystemVerilog RTL design and the target assertions. As shown in the overall workflow, MileSE is partitioned into three tightly decoupled layers.
+
+\subsection{Frontend Compilation and COI Pruning}
+Unlike legacy engines that rely on intermediate C++ translations, MileSE processes native IEEE 1800-2017 SystemVerilog directly. Utilizing the \texttt{pyslang} compiler frontend, MileSE extracts the abstract syntax tree (AST) and cycle-accurate control-flow graphs (CFGs) for all procedural blocks. To minimize the structural state space before dynamic exploration begins, MileSE performs \textit{Cone of Influence (COI) Pruning}. Using the target assertions and milestone variables as seeds, the engine statically analyzes cross-module data dependencies, pruning irrelevant submodules and combinational networks from the symbolic execution context.
+
+\subsection{Milestone-Guided Execution Core}
+The execution core simulates hardware behavior cycle-by-cycle, maintaining a per-instance symbolic store and handling non-blocking assignments (NBAs). Instead of executing paths blindly, the core delegates path scheduling to a Weighted $A^*$ Priority Queue. The LLM acts solely as a static macro-planner, decomposing the deep multi-cycle target into a sequence of intermediate conditions (milestones). The formal engine ranks states based on their progress toward these milestones, ensuring that the exponential multi-cycle state space is flattened into a highly directed, near-linear exploration trace.
+
+\section{Dual-Track Directed Search}
+\label{sec:search}
+To prevent the search engine from degenerating into Breadth-First Search (BFS) during long multi-cycle intervals between milestones, MileSE introduces a Dual-Track Scoring strategy. Let $n$ denote a symbolic state (WorkItem) in the priority queue. Its comprehensive scheduling priority $f(n)$ is formulated as:
+\begin{equation}
+    f(n) = \alpha \cdot R(n) + C(n) + \min(D(n), D_{\max})
+\end{equation}
+where lower scores indicate higher execution priority.
+
+\subsubsection{Macro-Guidance Track ($R$ and $C$)}
+$R(n)$ represents the number of remaining LLM milestones that state $n$ must achieve, while $C(n)$ denotes the elapsed clock cycles. The constant $\alpha$ (empirically set to $10$) heavily biases the queue toward states that have successfully satisfied more milestones. Within states sharing the same milestone progress, $C(n)$ acts as a tie-breaker, naturally favoring shorter temporal paths to reach the same functional state.
+
+\subsubsection{Micro-Guidance Track ($D$)}
+$D(n)$ provides a microscopic data-flow distance from the current symbolic state to the immediate next milestone. When $R(n)$ remains stagnant over multiple cycles, $D(n)$ breaks the tie by analyzing the AST. MileSE computes the numeric arithmetic proximity (e.g., $\Delta = |v_{\text{current}} - v_{\text{target}}|$) using concrete evaluations of the Z3 solver's simplified models. This lightweight distance acts as a continuous localized gradient.
+
+\subsubsection{Lazy Forking and Preferred-Path Execution}
+To translate this priority into intra-cycle execution efficiency, MileSE implements \textit{Lazy Forking}. When an AST branch is encountered, instead of eagerly computing the Cartesian product of all paths—which leads to instantaneous memory explosion—the engine evaluates the "preferred path" dictated by the micro-guidance. Alternative feasible sibling paths are encapsulated as lightweight state snapshots and pushed back into the priority queue. This ensures that the engine only pays the SMT solving cost for branches it actively decides to explore.
+
+\section{Fault-Tolerant Formal Verification}
+\label{sec:fault_tolerance}
+A naive integration of LLMs causes formal engines to deadlock when milestones contain hallucinated signals or specify hardware states that are temporally skipped. MileSE secures absolute verification soundness and liveness through three architectural mechanisms.
+
+\subsection{Observational Milestone Checking}
+Milestones in MileSE are treated as \textit{observational hints}, not proof obligations. When checking if a state satisfies a milestone $M_i$, the execution manager issues speculative Z3 queries using context scopes (\texttt{push}/\texttt{pop}). If the milestone is unsatisfiable (\texttt{UNSAT}) under the current path condition, or if the milestone contains nonexistent signal identifiers, the constraint is discarded. The milestone never permanently pollutes the strict symbolic path condition.
+
+\subsection{Sliding Window Lookahead and Bounded Depth}
+To counter temporal mismatch (e.g., the hardware state transitions from $0$ to $2$, bypassing an LLM milestone of exactly $1$), MileSE employs a \textit{Sliding Window Lookahead}. If the immediate milestone $M_{i}$ is unresolvable or bypassed, the engine non-blockingly evaluates $M_{i+1}$. If the future milestone is \texttt{SAT}, the engine shifts its focus and drops the hallucinated intermediate waypoint.
+
+Furthermore, MileSE bounds local exploration to prevent the engine from stalling in futile branches. Using the LLM-provided \texttt{expected\_cycles} metric $k$ for each milestone, the engine applies soft pruning: if a state fails to make milestone progress after $k + \text{margin}$ cycles, the search path is deprioritized or pruned, effectively capping the temporal depth of hallucination recovery.
+
+\subsection{Eager Target Evaluation}
+While intermediate milestones guide the heuristic search, they cannot be trusted to validate the final vulnerability. To guarantee zero false negatives, MileSE implements \textit{Eager Target Evaluation}. At every clock cycle transition, regardless of the milestone progress, the engine speculatively injects the negated global assertion condition ($\neg \mathcal{P}_{\text{target}}$) into the solver. If this query returns \texttt{SAT}, MileSE instantly terminates the search and reconstructs a mathematically proven, cycle-accurate counterexample trace. This structural separation isolates the LLM's "advisory" scheduling role from the SMT solver's "adjudicating" authority.

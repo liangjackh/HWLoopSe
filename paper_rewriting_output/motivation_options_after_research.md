@@ -1,0 +1,9 @@
+| Option | One-Sentence Motivation | Core Innovation | Why It Is Not Overbroad | Required Evidence | Best-Fit Paper Arc |
+|---|---|---|---|---|---|
+| A | Existing RTL symbolic execution already reduces inter-block recomputation, but still wastes effort on redundant branch combinations inside a single combinational always block. | Dataflow-guided pruning of semantically equivalent intra-block paths. | It claims a narrow post-Sylvia gap instead of general symbolic-execution scalability. | Motivating example, dataflow abstraction, pruning algorithm, and Sylvia comparison on three designs. | Bottleneck -> motivating example -> pruning method -> focused evaluation. |
+| B | Hardware symbolic execution needs a way to collapse branch histories that differ syntactically but not semantically at the block output. | A decision-influence summary that detects when branch differences cannot affect the final symbolic state. | It centers on state-equivalence-style pruning rather than all path explosion. | Influence summaries, branch-history bookkeeping, and benchmark reductions in paths/query/runtime. | Formal intuition -> summary computation -> pruning rule -> measured effect. |
+| C | Conference reviewers need a sharper complement to Sylvia: not another search heuristic, but a structural pruning layer for combinational RTL. | Complementary intra-block pruning on top of Sylvia’s inter-block decomposition. | It is explicitly positioned as complementary, not replacing prior RTL symbolic execution. | Sylvia contrast, implementation integration, and benchmark deltas over the baseline. | Prior-work gap -> complementary design -> implementation -> benchmark comparison. |
+
+## Recommendation
+
+Option A is the safest controlling motivation. It aligns with the draft's current evidence, the local SOTA map, and the conference expectation for one tightly scoped contribution.

@@ -1,0 +1,37 @@
+# Original Logic Map
+
+Rewrite target: `iccd2026/IEEE-conference-template-062824.tex`.
+
+Authoritative motivation for this pass: `paper_rewriting_output/confirmed_motivation.md`, confirmed by the user on 2026-05-29. The local config and some inherited style artifacts still contain dataflow-pruning language, so this map treats the confirmed MileSE motivation and the user-specified LaTeX file as controlling.
+
+| Original Unit | Current Text Role | Evidence Used | Motivation Link | Problem | Keep / Move / Rewrite / Delete |
+|---|---|---|---|---|---|
+| Title | Names MileSE and multi-cycle RTL verification. | Draft title. | Directly names milestone-guided search for multi-cycle RTL verification. | Strong enough; no need to retitle without experimental numbers. | Keep |
+| Abstract P1 | Establishes RTL symbolic execution and temporal path explosion. | Draft problem framing; confirmed motivation. | Matches the red thread: temporally irrelevant branches waste search effort. | Slightly broad and two-paragraph abstract spends too much space on generic setup. | Rewrite |
+| Abstract P2 | States MileSE components and implementation. | Draft implementation details; changelog and summary notes. | Links milestones to prioritization while preserving solver authority. | Reads like a design-status note and ends with "current draft," which weakens conference tone. | Rewrite |
+| Keywords | Lists symbolic execution, RTL, security, directed search, LLMs. | Draft keywords. | Covers the topic. | "Large Language Models" is secondary; still acceptable because milestones may be LLM-generated. | Keep |
+| Introduction P1 | Frames hardware-security importance. | General RTL/security framing. | Sets field problem. | Too generic for page-constrained conference opening; should move faster to multi-cycle search. | Rewrite |
+| Introduction P2 | Explains symbolic execution and path explosion. | Draft; Sylvia/citation bank C01 as nearby lineage. | Narrows to temporal path explosion after intra-cycle optimizations. | Good core logic but wordy; should distinguish spatial/intra-cycle and temporal/multi-cycle bottlenecks earlier. | Rewrite |
+| Introduction P3 | Introduces milestones as weak progress hints. | Confirmed motivation; summary milestone methodology. | Main design response. | Needs sharper solver-driven guarantee and less emphasis on the LLM as authority. | Rewrite |
+| Introduction P4 | Lists milestone failure modes. | Changelog, summary, local implementation notes. | Justifies parsing, recovery, and bounded local depth. | Good content; should be integrated as why the system contribution is not only "ask an LLM." | Rewrite |
+| Contribution list | Four bullets: observation, search scheme, prototype, draft refinement. | Draft implementation details. | Should summarize paper claims. | Fourth bullet is meta-writing, not a research contribution. | Rewrite/Delete meta bullet |
+| Background: RTL symbolic execution | Defines symbolic state, RTL assignments, cycle execution. | Draft semantic explanation. | Gives reader the formal substrate for solver-driven milestone checks. | Mostly useful; should be tighter and tied to later queue semantics. | Rewrite |
+| Background: toy accumulator | Motivating example for temporal branching. | Listing in draft. | Concrete evidence for temporally irrelevant reset/stall branches. | Good section-level move; strengthen explanation around valid/reset choices and assertion latency. | Keep with rewrite |
+| Background: prior intra-cycle work | Contrasts intra-cycle optimizations with cycle-to-cycle search. | Citation bank C01/C08. | Supports the specific gap. | Needs less generic wording and clearer "not solved by structural RTL optimizations" claim. | Rewrite |
+| Why milestones help | Defines milestones as progress notion. | Summary methodology; confirmed motivation. | Design response. | Good but should clarify observational checking and scheduling-only semantics. | Rewrite |
+| What can go wrong | Lists unresolved signals, infeasible milestones, sparse milestones, frontend limitations. | Changelog, BUGFIX notes, summary lessons. | Explains enabling mechanisms. | Strong evidence basis; should be more conference-like and less narrative. | Rewrite |
+| System Overview | Describes frontend, symbolic store, COI, milestone input. | Changelog; summary; draft. | Establishes implementation substrate. | Good but too implementation-list heavy; needs clearer architecture roles. | Rewrite |
+| Worklist Organization | Priority queue and lazy work items. | Draft strategy description. | Central search mechanism. | Good technical core. | Rewrite for precision |
+| Priority Function | Gives score formula and term explanations. | Draft equation. | Encodes milestone progress plus temporal and distance tie-breakers. | Formula should define completed vs remaining consistently and avoid implying a theorem. | Rewrite |
+| Preferred-Path Execution and Lazy Forking | Describes preferred CFG path and bounded sibling items. | Draft; local development notes. | Reduces queue growth while staying solver-driven. | Useful but should avoid anecdotal "development logs" phrasing in final paper. | Rewrite |
+| Milestone Checking and Recovery | Explains push/pop checking and sliding-window recovery. | Summary and changelog. | Essential to solver authority and imperfect milestones. | Strong; make it the correctness-boundary paragraph. | Rewrite |
+| Bounded Local Exploration | Defines expected_cycles local depth. | Summary methodology. | Practical pruning around milestones. | Good; clearly mark heuristic not proof. | Keep with rewrite |
+| Violation Reporting | Discusses solver-driven assertions and early spurious violations. | Draft implementation status. | Protects formal authority. | Wording "less elegant" is too informal and weakens paper. | Rewrite |
+| RTL Semantics: frontend | PySlang, instances, shared CFGs. | Changelog and BUGFIX notes. | Implementation credibility. | Useful evidence; compress to what matters for milestone accuracy. | Rewrite |
+| RTL Semantics: state updates | Store, NBA, inputs, semantic fixes. | Changelog and BUGFIX notes. | Shows milestones are checked against live RTL state. | Strong but list-heavy. | Rewrite |
+| Combinational reevaluation and ports | Reevaluates affected combinational logic and port propagation. | Draft implementation notes. | Supports reliable milestone scoring. | Good; emphasize stale-signal problem. | Rewrite |
+| COI pruning | Seeded by assertions and milestones. | Changelog and verification guide. | Auxiliary search-space reduction. | Needs careful scope: optional optimization, not central contribution. | Rewrite |
+| Evaluation Plan and Current Status | Says experiments are being consolidated and lists questions. | Summary, PAPER_VERIFICATION_GUIDE, draft. | Evidence section placeholder. | Honest but too provisional; should become an evaluation methodology section with author-verification placeholders, not a draft-status apology. | Rewrite |
+| Related Work | Contrasts RTL symbolic execution and LLM verification. | Citation bank C01-C06, C13-C15. | Positions MileSE. | Too short and citation-free; no `.bib` is present, so strengthen contrast without adding unresolved `\cite`. | Rewrite |
+| Conclusion | Restates idea and implementation details. | Draft. | Closes red thread. | Includes "This draft"; should close as a paper contribution and preserve limitations. | Rewrite |
+| Acknowledgment | Placeholder text. | Draft. | Non-technical. | Leave placeholder unless submission policy changes. | Keep |

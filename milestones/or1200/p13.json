@@ -17,13 +17,13 @@
     {
       "step": 2,
       "description": "Type-2 instruction reaches EX stage",
-      "condition": "((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 2 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 2",
       "expected_cycles": 3
     },
     {
       "step": 3,
       "description": "Violation: epcr changed while type-2 insn in EX",
-      "condition": "((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 2 && or1200_cpu.epcr != or1200_cpu.prev_epcr && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hC0000000) >> 30) == 2 && or1200_cpu.epcr != or1200_cpu.prev_epcr",
       "expected_cycles": 1
     }
   ]

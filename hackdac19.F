@@ -13,6 +13,7 @@ designs/benchmarks/hackatdac19/design/src/util/sram.sv
 designs/benchmarks/hackatdac19/design/src/util/axi_slave_connect_rev.sv
 designs/benchmarks/hackatdac19/design/src/common_cells/src/fifo_v2.sv
 designs/benchmarks/hackatdac19/design/src/common_cells/src/fifo_v3.sv
+designs/benchmarks/hackatdac19/design/src/common_cells/src/lzc.sv
 designs/benchmarks/hackatdac19/design/src/common_cells/src/rrarbiter.sv
 designs/benchmarks/hackatdac19/design/src/common_cells/src/rstgen_bypass.sv
 designs/benchmarks/hackatdac19/design/src/common_cells/src/sync_wedge.sv

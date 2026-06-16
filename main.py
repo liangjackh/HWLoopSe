@@ -92,6 +92,10 @@ def create_option_parser() -> OptionParser:
                       default=False, help="Use mock LLM responses for testing")
     parser.add_option("--coi", action="store_true", dest="coi",
                       default=False, help="Enable Cone of Influence pruning to reduce explored paths")
+    parser.add_option("--no-eager-target-eval", action="store_true", dest="no_eager_target_eval",
+                      default=False, help="Disable eager final-milestone pre-check (ablation)")
+    parser.add_option("--no-sliding-window", action="store_true", dest="no_sliding_window",
+                      default=False, help="Disable sliding-window lookahead milestone skip (ablation)")
     return parser
 
 

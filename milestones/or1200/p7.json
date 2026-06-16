@@ -17,13 +17,13 @@
     {
       "step": 2,
       "description": "Opcode-1 instruction reaches EX stage",
-      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 1 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 1",
       "expected_cycles": 3
     },
     {
       "step": 3,
       "description": "Violation: or1200_cpu.rf_addrw != 9 while opcode-1 in EX",
-      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 1 && or1200_cpu.rf_addrw != 9 && or1200_cpu.rst == 0",
+      "condition": "((or1200_cpu.ex_insn & 32'hFC000000) >> 26) == 1 && or1200_cpu.rf_addrw != 9",
       "expected_cycles": 1
     }
   ]

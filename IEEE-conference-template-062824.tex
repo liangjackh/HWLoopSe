@@ -1,0 +1,228 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage[T1]{fontenc}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\lstset{
+    language=Verilog,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!40!black},
+    stringstyle=\color{red!70!black},
+    showstringspaces=false,
+    frame=single,
+    breaklines=true,
+    columns=fullflexible
+}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{MileSE: Milestone-Guided Symbolic Execution for Multi-Cycle RTL Verification}
+
+\IEEEspecialpapernotice{\vspace{-2em}}
+\author{
+Jiahui Liang$^{1,2}$, Qiusong Yang$^{1,2*}$, Yiwei Ci$^{1,2}$ \\
+$^{1}$Institute of Software, Chinese Academy of Sciences, Beijing, China \\
+$^{2}$University of Chinese Academy of Sciences, Beijing, China \\
+*Corresponding Author: qiusong@iscas.ac.cn
+}
+\IEEEaftertitletext{}
+
+\maketitle
+
+\begin{abstract}
+RTL symbolic execution can expose deep hardware bugs because it reasons over feasible control and data paths rather than over a fixed simulation trace. Its remaining bottleneck is often temporal rather than purely structural: after each clock step, many feasible states are legal continuations, but only a small subset moves toward the sequential trigger of the target property. This paper presents MileSE, a milestone-guided symbolic execution framework for multi-cycle RTL verification. MileSE uses property- or planner-derived milestones as scheduling hints in a priority queue, combining milestone progress with a lightweight distance estimate from the current symbolic state. Feasibility, milestone satisfiability, and assertion violations remain solver-driven; milestones do not replace path constraints or validate bugs. To make this guidance usable on imperfect milestone plans and real SystemVerilog designs, MileSE includes compound-condition parsing, bounded local-depth pruning from expected cycle counts, conservative sliding-window recovery, shared CFG construction, and targeted recomputation of derived combinational logic on a PySlang and Z3 based prototype. The current paper focuses on the design and implementation of this solver-owned prioritization strategy and defines the evaluation needed to quantify its effect on deep sequential properties.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Symbolic Execution, RTL Verification, Hardware Security, Directed Search, Large Language Models
+\end{IEEEkeywords}
+
+\section{Introduction}
+\label{sec:intro}
+Security-critical RTL increasingly resides in control-heavy components: privilege logic, debug modules, cache and interconnect controllers, bus fabrics, and SoC-level state machines. Bugs in these blocks are rarely isolated to a single combinational decision. They often require a sequence of resets, handshakes, state transitions, or counter updates before an assertion becomes vulnerable.
+
+Symbolic execution is a natural fit for this setting because it keeps inputs symbolic and asks an SMT solver which paths and violations are feasible. Recent RTL-oriented engines have already shown that hardware structure can reduce redundant work inside one cycle, for example by separating independent procedural blocks or by reusing equivalent solver queries. These optimizations are important, but they leave a different question open: after cycle $t$, which feasible states should be advanced to cycle $t+1$? For deep properties, an undirected policy can spend most of its budget on temporally irrelevant branches such as reset re-entry, stalls, or legal control paths that never approach the violation.
+
+MileSE addresses this multi-cycle search problem with milestone-guided prioritization. A milestone is an intermediate condition such as ``reset released,'' ``controller reaches decode,'' or ``grant signal asserted.'' It is weaker than the final bug condition but more informative than blind breadth-first expansion. MileSE uses milestones only to rank work items. The symbolic executor still owns RTL execution, path feasibility, milestone satisfiability checks, and assertion reporting.
+
+This boundary is essential because milestone plans are imperfect. A milestone may use an unresolved signal name, skip a required RTL state, be satisfiable in isolation but inconsistent with the current path condition, or refer to a derived signal that is stale because the frontend failed to model a SystemVerilog construct. A practical system therefore needs more than a priority queue: it needs robust condition parsing, conservative recovery, cycle-aware budgets, and enough RTL semantic coverage that milestone progress reflects real design behavior.
+
+This paper makes the following contributions:
+\begin{itemize}
+    \item We isolate temporal path explosion as a bottleneck for deep RTL symbolic execution that remains after intra-cycle structural optimizations.
+    \item We design a milestone-guided search policy in which milestones influence scheduling but solver checks remain the authority for feasibility and violations.
+    \item We implement MileSE in a PySlang- and Z3-based prototype with compound milestone parsing, bounded local-depth pruning, conservative milestone recovery, shared CFG construction, and targeted combinational reevaluation.
+    \item We define an evaluation plan for measuring directed search against blind search and directed search with cone-of-influence pruning on deep sequential RTL properties, while avoiding claims not yet backed by final experiment logs.
+\end{itemize}
+
+\section{Background and Motivation}
+\label{sec:background}
+
+\subsection{RTL Symbolic Execution}
+An RTL symbolic executor maintains states of the form $(stmt,\sigma,\pi)$, where $stmt$ is the next statement, $\sigma$ maps RTL objects to symbolic expressions, and $\pi$ is the path condition. When a conditional branch is encountered, the executor forks states and extends $\pi$ with the branch predicate or its negation. When an assertion can be violated under $\pi$, the solver returns a satisfying model that can serve as a counterexample.
+
+RTL execution adds cycle-level structure to this model. Blocking assignments update the current symbolic store immediately, while non-blocking assignments are buffered and committed at a clock boundary. Registers persist across cycles, primary inputs may be refreshed with fresh symbolic values, and combinational logic must be reevaluated after state changes. These semantics make direct RTL symbolic execution expressive, but they also create repeated frontier-selection decisions across cycles.
+
+The search problem studied here is therefore not only whether one branch inside an always block is feasible. It is whether a feasible state at the end of a cycle deserves further exploration before many other feasible states. This distinction matters for long-trigger properties, where most legal continuations do not make progress toward the vulnerable state.
+
+\subsection{Why Multi-Cycle Search Remains Hard}
+Listing~\ref{lst:toy_acc} illustrates the issue. The assertion violation requires several cycles after reset is deasserted and the enable-like input remains active. A blind executor must still explore alternatives where reset is asserted again or where the counter stalls. These alternatives are semantically legal, but they do not move toward the violation.
+
+\begin{lstlisting}[caption={Toy accumulator used to illustrate temporal search difficulty.},label={lst:toy_acc}]
+module toy_accumulator (
+    input  CLK,
+    input  RST,
+    input  valid,
+    output reg [31:0] out
+);
+    initial out = 0;
+
+    always @(posedge CLK) begin
+        if (RST) begin
+            out <= 0;
+        end else if (valid) begin
+            out <= out + 1;
+        end
+
+        if (!RST) begin
+            assert (out <= 3);
+        end
+    end
+endmodule
+\end{lstlisting}
+
+For this example, useful progress is easy to describe: reset should be released and the counter should increase. In larger RTL, the same pattern appears as an FSM state, a transaction phase, a counter threshold, or an assertion antecedent. Structural RTL optimizations can reduce redundant work within one cycle, but they do not by themselves identify which cycle-to-cycle frontier is most relevant to the target property.
+
+\subsection{Why Milestones Help}
+Milestones provide a weak notion of temporal progress. They are not proof obligations and are not injected permanently into the path condition. Instead, MileSE checks whether the current path condition can satisfy the next milestone. If so, the state receives a better queue score and is explored earlier.
+
+This design makes the search directed without changing the formal semantics of the underlying executor. A state that does not currently satisfy a milestone may still remain feasible and may still be explored later. Conversely, satisfying a milestone does not prove that a bug exists. It only says that the state has reached a useful waypoint on the path to the target property.
+
+\subsection{What Can Go Wrong}
+Naive milestone guidance is brittle. First, generated milestones may name signals differently from the elaborated design hierarchy. Second, a condition can be syntactically valid and satisfiable in isolation but inconsistent with the current symbolic path. Third, sparse milestones can leave long stretches with little ranking signal. Fourth, frontend limitations can make a good milestone appear unreachable, for example when generated instances, dynamic bit-selects, blocking assignments, or concatenation-based continuous assignments are not modeled correctly.
+
+These failure modes shape the MileSE design. The engine must parse compound conditions, validate or recover from bad milestones, limit unproductive local search, and keep derived RTL values fresh before scoring a work item. The milestone mechanism is therefore a solver-guided scheduling layer built on top of direct RTL execution, not a replacement for formal checking.
+
+\section{System Overview}
+\label{sec:overview}
+MileSE combines a PySlang frontend, a Z3 backend, and a pluggable exploration strategy. The frontend elaborates SystemVerilog, discovers top-level and generated subinstances, extracts procedural blocks, and builds control-flow graphs. Instances sharing the same module definition share CFG structure, while symbolic stores remain per instance.
+
+The execution core maintains the symbolic store, pending non-blocking updates, path conditions, and assertion checks. At each cycle, it commits pending sequential updates, introduces fresh symbolic inputs where needed, propagates port values, and reevaluates affected combinational logic. Optional cone-of-influence pruning can reduce the module and CFG set using assertion targets and milestone expressions as seeds.
+
+The milestone manager accepts milestone files or automatically generated plans. Conditions are parsed into internal trees that support conjunction, disjunction, negation, comparison operators, arithmetic expressions, and hierarchical paths. Each milestone can also include an \texttt{expected\_cycles} field that gives the search strategy a local budget between waypoints.
+
+The exploration strategy consumes the symbolic executor through a priority queue. Milestones affect only the priority of work items. The solver is still called to check path feasibility, milestone satisfiability, and assertion violations.
+
+\section{Milestone-Directed Search}
+\label{sec:method}
+
+\subsection{Worklist Organization}
+MileSE represents each pending search state as a work item. A work item stores the current cycle, the number of completed milestones, the symbolic state, the current path condition, and enough execution context to resume partially explored CFG choices. This representation lets the engine revisit promising alternatives without eagerly materializing every branch combination for a cycle.
+
+The queue provides a middle ground between blind breadth-first search and local depth-first execution. Breadth-first expansion treats all feasible temporal continuations equally. Local depth-first execution can follow one promising sequence but lose useful alternatives. MileSE executes promising states first while keeping bounded sibling choices available for later exploration.
+
+\subsection{Priority Function}
+The current priority score is
+\begin{equation}
+f(n) = 10 \cdot R(n) + C(n) + \min(D(n), 9),
+\end{equation}
+where $R(n)$ is the number of milestones remaining, $C(n)$ is the current cycle, and $D(n)$ is a lightweight distance estimate to the next milestone. Lower scores have higher priority.
+
+The milestone term dominates the order, so a state that has completed more waypoints is generally explored before a state that remains far from the target. The cycle term prefers shorter continuations within the same milestone tier. The capped distance term refines ties without overwhelming milestone progress.
+
+Distance is computed from the current symbolic state when a concrete or model-probed value can be obtained. For conjunctions, MileSE accumulates sub-condition distances; for disjunctions, it keeps the minimum. Equality, inequality, and range predicates are handled separately. This gives the queue a small local gradient even before the next milestone is fully satisfied.
+
+\subsection{Preferred-Path Execution and Lazy Forking}
+Within a cycle, MileSE orders CFGs and selects a preferred path using milestone-relevant signals and simple structural cues. The preferred path is executed first. If a branching CFG has other feasible choices, the engine enqueues a bounded number of sibling work items from the pre-branch snapshot rather than enumerating the full product immediately.
+
+Lazy forking is a search-control mechanism, not a proof rule. Alternative feasible branches are delayed, not declared impossible. This is important for large control blocks where eager Cartesian expansion can fill the queue with legal but low-priority states before the executor has tested the most relevant temporal direction.
+
+\subsection{Milestone Checking and Recovery}
+Milestones are checked observationally. MileSE uses solver \texttt{push}/\texttt{pop} calls to ask whether the current path condition can satisfy the next milestone. If the query succeeds, the completed-milestone count advances. If it fails, the milestone condition is not permanently added to the path condition.
+
+Recovery is intentionally conservative. If a milestone cannot be built because its signals do not resolve in the symbolic store, MileSE treats it as a likely hallucinated or mismatched waypoint and can skip it. If a nearby future milestone is satisfiable while the current one is not, a small sliding window can advance progress to the later milestone. The lookahead is kept small so recovery does not convert a bad plan into unrestricted milestone skipping.
+
+\subsection{Bounded Local Exploration}
+Each milestone may include an \texttt{expected\_cycles} estimate. MileSE uses this field as a local exploration budget:
+\begin{equation}
+\textit{local\_depth}(n) = c(n) - c_{\text{last\_milestone}}(n),
+\end{equation}
+where $c(n)$ is the current cycle and $c_{\text{last\_milestone}}(n)$ is the cycle at which the most recent milestone was reached. A work item can be softly pruned when
+\[
+\textit{local\_depth}(n) > k + m,
+\]
+where $k$ is the milestone-specific expected cycle count and $m$ is a fixed safety margin.
+
+This rule limits effort spent on states that have not made milestone progress for too long. It is not used to prove unreachability. Final soundness claims must therefore be stated in terms of solver-validated paths that the search actually explores, not in terms of globally exhaustive coverage after heuristic pruning.
+
+\subsection{Violation Reporting}
+Assertion checking remains solver-driven. When an assertion is encountered, MileSE asks whether the current path condition can violate it. Milestones can affect when a state is explored, but they do not decide whether an assertion is feasible.
+
+The implementation also separates early initialization artifacts from deferred violations observed along milestone-progressing search. This reporting policy is a practical guard against trivial cycle-0 counterexamples caused by intentionally broad initial states. It does not change the underlying feasibility check; it changes when the engine reports or releases a candidate violation.
+
+\section{RTL Semantics and Implementation Details}
+\label{sec:implementation}
+
+\subsection{Frontend and CFG Construction}
+MileSE uses PySlang to compile and inspect SystemVerilog designs. The frontend traverses elaborated instances rather than relying only on source syntax, which is necessary for generated blocks and hierarchical designs. Procedural blocks are converted into CFGs, and CFGs are cached per module definition so replicated instances reuse structure while preserving independent symbolic stores.
+
+Correct path construction matters for milestone guidance. For example, an \texttt{if} statement without an \texttt{else} branch still has a false path that skips the body. Missing that path changes the feasible frontier and can make a milestone appear more or less reachable than it really is. MileSE therefore treats frontend coverage as part of the verification method rather than as incidental parsing support.
+
+\subsection{Symbolic State Updates}
+The symbolic store is maintained per instance. Blocking assignments update the active store, non-blocking assignments are buffered until the next clock boundary, and primary inputs can be refreshed with fresh symbols at each cycle. This cycle-aware state model is required because milestones are checked against the live symbolic store, not against a syntactic trace.
+
+Several SystemVerilog features are especially relevant to milestone progress: increment and decrement operations, dynamic bit-selects, concatenations, generated instances, and semantic assignment nodes produced by the frontend. If these features are mishandled, the directed search may stall for an implementation reason rather than because the milestone sequence is poor.
+
+\subsection{Combinational Reevaluation and Port Propagation}
+Many useful milestones refer to combinational wires or outputs derived from recently updated registers. MileSE therefore reevaluates affected combinational logic after state updates and propagates values across module ports through precomputed wire groups. Targeted reevaluation and module-level caching avoid recomputing the entire combinational network after every small update.
+
+This mechanism keeps milestone scoring aligned with the current RTL state. Without it, a work item might be ranked using stale derived values, defeating the purpose of a distance heuristic based on the symbolic store.
+
+\subsection{Cone-of-Influence Pruning}
+MileSE can run cone-of-influence pruning before search. Seeds are extracted from assertion targets, final violation expressions, and intermediate milestone conditions. Relevant instances and CFGs are kept, while unrelated logic can be omitted from the search state.
+
+COI pruning is optional and complementary to milestone scheduling. It reduces the amount of RTL the executor must carry, while milestones decide which feasible temporal frontier to prioritize. The two mechanisms interact because poor signal resolution can harm both COI seed quality and milestone checking.
+
+\section{Evaluation Plan and Current Status}
+\label{sec:evaluation}
+The final experimental section should test one central question: does milestone-guided scheduling reduce wasted temporal exploration on deep sequential RTL properties while preserving solver-validated bug reports? The current implementation has been prepared for experiments on HACK@DAC-style hardware-security properties and OR1200-derived assertion suites, but final quantitative tables should be inserted only after author verification.
+
+The planned baselines are:
+\begin{itemize}
+    \item blind symbolic execution, using the same frontend and solver backend without milestone prioritization;
+    \item milestone-directed search without cone-of-influence pruning;
+    \item milestone-directed search with cone-of-influence pruning.
+\end{itemize}
+
+The primary metrics should be total runtime, time to first violation, number of explored paths or work items, number of simulated cycles, milestones generated, milestones reached, and final solver-validated violations. For COI experiments, the paper should also report the number of retained signals or modules after pruning. All numerical values in the final version should be traced to logs or tables, not to expected-result sketches. [AUTHOR VERIFY: insert final results table here.]
+
+A useful ablation should isolate the mechanisms that make milestone guidance practical: compound-condition parsing, sliding-window recovery, expected-cycle local budgets, lazy forking, targeted combinational reevaluation, and COI pruning. The most important robustness cases are unresolved hierarchical names, sparse milestone plans, unrealistic cycle estimates, and properties whose violating condition is mostly combinational rather than sequential.
+
+Until final logs are consolidated, the paper should make only design and methodology claims in this section. It can state what MileSE is intended to measure and how the comparison should be run, but it should not claim a speedup or timeout reduction without the corresponding experiment artifact.
+
+\section{Related Work}
+\label{sec:related}
+RTL symbolic execution research has attacked path explosion by exploiting hardware structure. Structural decomposition, shared processing of independent procedural blocks, and solver-query reuse reduce redundant work inside or across cycle-level RTL components. MileSE is complementary to that line of work. It assumes such reductions are useful, but focuses on the remaining temporal question of which feasible post-cycle states deserve priority.
+
+Directed symbolic execution and concolic testing use targets, program context, or path information to reach interesting behaviors faster. MileSE follows the same broad intuition but applies it to direct RTL execution and treats milestones as solver-checked observations over the current symbolic store. The method is not semantic pruning of all irrelevant states; it is priority scheduling with conservative local pruning.
+
+Recent LLM-assisted verification and symbolic-execution systems show that language models can generate tests, guide paths, or provide high-level decomposition. MileSE uses this capability narrowly. A model may propose milestone conditions, but the formal engine parses them, checks whether signals resolve, asks the solver whether they are feasible, and validates assertion violations. This separation is the main distinction between MileSE and approaches where the generated text or test itself carries more of the verification burden.
+
+\section{Conclusion}
+\label{sec:conclusion}
+MileSE addresses a temporal bottleneck in multi-cycle RTL symbolic execution: many feasible states are legal, but few move toward a deep target property. The framework uses milestones to prioritize the search queue while leaving feasibility and violation checks under solver control. Its implementation combines compound milestone parsing, bounded local exploration, conservative recovery, cycle-aware RTL semantics, targeted combinational reevaluation, and optional COI pruning. The next step is to complete the planned quantitative evaluation so the paper can report how much this solver-owned guidance reduces wasted exploration on representative sequential RTL properties.
+
+\section*{Acknowledgment}
+Acknowledgment text will be finalized in the camera-ready version.
+
+\end{document}

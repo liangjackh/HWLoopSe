@@ -22,6 +22,8 @@ class EngineConfig:
         llm_mock: Use mock LLM responses for testing
         explore_time: Time limit for exploration in seconds (None = no limit)
         coi: Enable Cone of Influence pruning
+        enable_eager_target_eval: Enable eager final-milestone pre-check (default True)
+        enable_sliding_window: Enable sliding-window lookahead milestone skip (default True)
     """
     num_cycles: int = 1
     include_paths: List[str] = field(default_factory=list)
@@ -38,6 +40,8 @@ class EngineConfig:
     llm_mock: bool = False
     explore_time: Optional[int] = None
     coi: bool = False
+    enable_eager_target_eval: bool = True
+    enable_sliding_window: bool = True
 
     @classmethod
     def from_options(cls, options, num_cycles: int) -> "EngineConfig":
@@ -66,4 +70,6 @@ class EngineConfig:
             llm_mock=options.mock or False,
             explore_time=int(options.explore_time) if options.explore_time else None,
             coi=options.coi or False,
+            enable_eager_target_eval=not getattr(options, 'no_eager_target_eval', False),
+            enable_sliding_window=not getattr(options, 'no_sliding_window', False),
         )

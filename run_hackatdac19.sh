@@ -1,10 +1,29 @@
 #!/bin/bash
+# Usage: ./run_hackatdac19.sh [--no-eager] [--no-sliding] [--both-off]
+#   --no-eager    : disable eager target evaluation
+#   --no-sliding  : disable sliding-window lookahead
+#   --both-off    : disable both (baseline)
+#   (default)     : both optimizations enabled
+
+EXTRA_FLAGS=""
+ABLATION_TAG="full"
+
+for arg in "$@"; do
+    case "$arg" in
+        --no-eager)   EXTRA_FLAGS="$EXTRA_FLAGS --no-eager-target-eval"; ABLATION_TAG="no_eager" ;;
+        --no-sliding) EXTRA_FLAGS="$EXTRA_FLAGS --no-sliding-window";    ABLATION_TAG="no_sliding" ;;
+        --both-off)   EXTRA_FLAGS="$EXTRA_FLAGS --no-eager-target-eval --no-sliding-window"; ABLATION_TAG="baseline" ;;
+        *) echo "Unknown option: $arg"; exit 1 ;;
+    esac
+done
 
 MILESTONE_DIR="milestones/hackatdac19"
-LOG_DIR="logs/hackatdac19"
+LOG_DIR="logs/hackatdac19/${ABLATION_TAG}"
 PROPERTIES_SV="designs/benchmarks/hackatdac19/properties.sv"
 TIMEOUT_SEC=300  # 5 minutes
 TIMED_OUT_FILES=()
+
+echo "=== Ablation: ${ABLATION_TAG} (extra flags: ${EXTRA_FLAGS:-none}) ==="
 
 # Python helper: comment out all property blocks except the target one.
 # Usage: python3 -c "..." <properties.sv> <target_name>
@@ -79,6 +98,8 @@ restore_properties() {
 # Always restore on exit (Ctrl-C, error, etc.)
 trap restore_properties EXIT
 
+mkdir -p "$LOG_DIR"
+
 for milestone_file in "$MILESTONE_DIR"/*.json; do
     prefix=$(basename "$milestone_file" .json)
     log_file="$LOG_DIR/${prefix}.log"
@@ -88,12 +109,14 @@ for milestone_file in "$MILESTONE_DIR"/*.json; do
     # Isolate this property in properties.sv
     isolate_property "$prefix"
 
-    timeout "$TIMEOUT_SEC" python3 -m main 30 hackdac19.F --sv \
+    /usr/bin/time -v \
+        timeout "$TIMEOUT_SEC" python3 -m main 30 hackdac19.F --sv \
         --auto-plan \
         --milestone-file "$milestone_file" \
         --coi \
         --strategy directed \
         -t formal_top \
+        $EXTRA_FLAGS \
         > "$log_file" 2>&1
 
     exit_code=$?

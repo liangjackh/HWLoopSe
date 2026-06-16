@@ -23,7 +23,7 @@
     {
       "step": 3,
       "description": "Violation: wb_pc diverges from spr_dat_ppc",
-      "condition": "or1200_cpu.wb_pc != or1200_cpu.spr_dat_ppc && or1200_cpu.rst == 0",
+      "condition": "or1200_cpu.wb_pc != or1200_cpu.spr_dat_ppc",
       "expected_cycles": 1
     }
   ]

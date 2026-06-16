@@ -17,13 +17,13 @@
     {
       "step": 2,
       "description": "Register file write enable asserted",
-      "condition": "or1200_cpu.rfwb_op == 1 && or1200_cpu.rst == 0",
+      "condition": "or1200_cpu.rfwb_op == 1",
       "expected_cycles": 4
     },
     {
       "step": 3,
       "description": "Violation: write to r0 (addrw==0) with non-zero data",
-      "condition": "or1200_cpu.rfwb_op == 1 && or1200_cpu.rf_addrw == 0 && or1200_cpu.rf_dataw != 0 && or1200_cpu.rst == 0",
+      "condition": "or1200_cpu.rfwb_op == 1 && or1200_cpu.rf_addrw == 0 && or1200_cpu.rf_dataw != 0",
       "expected_cycles": 1
     }
   ]

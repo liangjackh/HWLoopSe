@@ -315,7 +315,8 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
     at branch points and prioritizing paths that make progress toward milestones.
     """
 
-    def __init__(self, milestone_manager: 'MilestoneManager', max_cycles: int = 100, max_paths: int = 500000, bmc_margin: int = 5):
+    def __init__(self, milestone_manager: 'MilestoneManager', max_cycles: int = 100, max_paths: int = 500000, bmc_margin: int = 5,
+                 enable_eager_target_eval: bool = True, enable_sliding_window: bool = True):
         """
         Initialize the directed strategy.
 
@@ -325,11 +326,15 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             max_paths: Maximum number of paths to explore before giving up
             bmc_margin: Extra cycles added to each milestone's expected_cycles
                         to form the BMC verification bound (default: 5)
+            enable_eager_target_eval: Enable eager final-milestone pre-check
+            enable_sliding_window: Enable sliding-window lookahead milestone skip
         """
         self.milestone_manager = milestone_manager
         self.max_cycles = max_cycles
         self.max_paths = max_paths
         self.bmc_margin = bmc_margin
+        self.enable_eager_target_eval = enable_eager_target_eval
+        self.enable_sliding_window = enable_sliding_window
         self.paths_explored = 0
         # Suppression tracking: deferred violation and stagnation detection
         self._deferred_violation = None   # (assertions, state)
@@ -1467,20 +1472,24 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 if hasattr(manager, 'violated_assertions'):
                     manager.violated_assertions = []
 
-        if current_progress >= total_milestones - 1 and self.milestone_manager.check_final_milestone(state):
+        if current_progress >= total_milestones - 1 and self.enable_eager_target_eval and self.milestone_manager.check_final_milestone(state):
             print(
                 f"  [Preemption] Final milestone SAT after reset progress "
                 f"{current_progress}/{total_milestones}; reporting VIOLATION"
             )
             return "VIOLATION", current_progress
 
-        current_progress, skipped_idx = self.milestone_manager.advance_with_sliding_window(
-            state,
-            current_progress,
-            window_size=1,
-        )
-        if skipped_idx is not None:
-            print(f"  [Sliding Window] Skipped hallucinated milestone {skipped_idx} -> advanced to {current_progress}")
+        if self.enable_sliding_window:
+            current_progress, skipped_idx = self.milestone_manager.advance_with_sliding_window(
+                state,
+                current_progress,
+                window_size=1,
+            )
+            if skipped_idx is not None:
+                print(f"  [Sliding Window] Skipped hallucinated milestone {skipped_idx} -> advanced to {current_progress}")
+        else:
+            skipped_idx = None
+            _, current_progress = self.milestone_manager.check_and_lock_stateless(state, current_progress)
 
         # Update stagnation counter: reset if milestone advanced, increment otherwise
         if current_progress > item.milestones_completed:
