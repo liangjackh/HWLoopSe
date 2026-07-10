@@ -19,10 +19,15 @@ class SMTStats:
 
     def timed_check(self, solver):
         """Call solver.check(), record count and elapsed time."""
+        assertions = list(solver.assertions())
+        print(f"[Z3-QUERY #{self.query_count}] {len(assertions)} assertion(s):")
+        for i, a in enumerate(assertions):
+            print(f"  [{i}] {a}")
         t0 = _time.perf_counter()
         result = solver.check()
         self.total_time += _time.perf_counter() - t0
         self.query_count += 1
+        print(f"[Z3-RESULT #{self.query_count - 1}] {result}")
         return result
 
 smt_stats = SMTStats()   # module-level singleton

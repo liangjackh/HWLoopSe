@@ -39,7 +39,8 @@ class ExplorationStrategy(ABC):
         num_cycles: int,
         comb_by_module: Optional[Dict[str, List[Any]]] = None,
         wire_groups: Optional[List[Any]] = None,
-        primary_input_flags: Optional[List[bool]] = None
+        primary_input_flags: Optional[List[bool]] = None,
+        wire_group_widths: Optional[List[int]] = None
     ) -> None:
         """
         Execute the exploration strategy.
@@ -79,7 +80,8 @@ class BlindSearchStrategy(ExplorationStrategy):
         num_cycles: int,
         comb_by_module: Optional[Dict[str, List[Any]]] = None,
         wire_groups: Optional[List[Any]] = None,
-        primary_input_flags: Optional[List[bool]] = None
+        primary_input_flags: Optional[List[bool]] = None,
+        wire_group_widths: Optional[List[int]] = None
     ) -> None:
         """Execute blind exhaustive search with memory optimization."""
 
@@ -254,8 +256,14 @@ class BlindSearchStrategy(ExplorationStrategy):
 
             for module in state.store:
                 for signal in state.store[module]:
+                    # Match by symbol name: store values are Z3 exprs, the model
+                    # decls are keyed by name (str). Comparing a Z3 expr to a
+                    # string makes Z3 try to parse the string as a numeral and
+                    # raise a parser error, so compare string representations.
+                    store_val = state.store[module][signal]
+                    store_val_str = str(store_val)
                     for symbol in symbols_to_values:
-                        if state.store[module][signal] == symbol:
+                        if store_val_str == symbol:
                             counterexample[signal] = symbols_to_values[symbol]
 
             print(counterexample)
@@ -316,7 +324,9 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
     """
 
     def __init__(self, milestone_manager: 'MilestoneManager', max_cycles: int = 100, max_paths: int = 500000, bmc_margin: int = 5,
-                 enable_eager_target_eval: bool = True, enable_sliding_window: bool = True):
+                 enable_eager_target_eval: bool = True, enable_sliding_window: bool = True,
+                 enable_value_prediction: bool = False, dep_result=None,
+                 milestone_free: bool = False):
         """
         Initialize the directed strategy.
 
@@ -328,6 +338,13 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                         to form the BMC verification bound (default: 5)
             enable_eager_target_eval: Enable eager final-milestone pre-check
             enable_sliding_window: Enable sliding-window lookahead milestone skip
+            enable_value_prediction: Enable multi-cycle value prediction (§4.2)
+            dep_result: static dependency analysis result for value prediction
+            milestone_free: Run without any milestones — exploration is driven
+                purely by value prediction and assertion checking. Skips all
+                milestone gating (no ALL_MILESTONES early-exit, no sliding
+                window / final-milestone preemption) while still reporting real
+                assertion violations.
         """
         self.milestone_manager = milestone_manager
         self.max_cycles = max_cycles
@@ -335,6 +352,16 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         self.bmc_margin = bmc_margin
         self.enable_eager_target_eval = enable_eager_target_eval
         self.enable_sliding_window = enable_sliding_window
+        self.enable_value_prediction = enable_value_prediction
+        self.dep_result = dep_result
+        self.milestone_free = milestone_free
+        self._predictor = None            # ValuePredictor, built lazily in run()
+        # Predicted branch verdicts keyed by target cycle -> {(instance, src_offset): verdict}
+        self._vp_verdicts_by_cycle = {}
+        # Value-prediction telemetry (advisory-mode counters)
+        self._vp_stats = {'attempts': 0, 'branches_predicted': 0,
+                          'forced_true': 0, 'forced_false': 0, 'free': 0,
+                          'path_guided': 0, 'path_guide_hits': 0}
         self.paths_explored = 0
         # Suppression tracking: deferred violation and stagnation detection
         self._deferred_violation = None   # (assertions, state)
@@ -359,8 +386,19 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
     ) -> None:
         """Execute milestone-directed search with priority queue."""
 
-        print(f"[DirectedStrategy] Starting milestone-directed search")
-        print(f"[DirectedStrategy] Milestones: {self.milestone_manager.milestones}")
+        # Auto-detect milestone-free mode: value prediction enabled but no
+        # milestones supplied. Exploration is then driven by value prediction
+        # and assertion checking alone.
+        if not self.milestone_free and self.enable_value_prediction \
+                and len(self.milestone_manager.milestones) == 0:
+            self.milestone_free = True
+
+        if self.milestone_free:
+            print(f"[DirectedStrategy] Starting milestone-FREE search "
+                  f"(value-prediction driven, assertion checking)")
+        else:
+            print(f"[DirectedStrategy] Starting milestone-directed search")
+            print(f"[DirectedStrategy] Milestones: {self.milestone_manager.milestones}")
         num_cycles_int = int(num_cycles)
         print(f"[DirectedStrategy] Max cycles: {min(self.max_cycles, num_cycles_int)}, BMC margin: {self.bmc_margin}")
 
@@ -370,6 +408,19 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         self._primary_input_flags = primary_input_flags or []
         self._wire_group_widths = wire_group_widths or []
         self._active_instances = set(manager.names_list)
+
+        # Multi-cycle value predictor (thesis §4.2). Built once per run when
+        # enabled and a dependency analysis result was supplied.
+        if self.enable_value_prediction and self.dep_result is not None:
+            from engine.value_predictor import ValuePredictor
+            self._predictor = ValuePredictor(
+                self.dep_result, manager,
+                refresh_inputs_fn=self._refresh_primary_inputs)
+            print(f"[ValuePredict] enabled: {len(self.dep_result.all_branches)} "
+                  f"branches available for prediction")
+        elif self.enable_value_prediction:
+            print("[ValuePredict] requested but no dependency analysis available "
+                  "— running without prediction")
 
         # Build topologically sorted comb nodes (single-pass instead of 2-pass fixedpoint)
         self._sorted_comb_by_module = self._topo_sort_comb(cfgs_by_module, manager)
@@ -524,6 +575,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                     if deferred is not None:
                         saved_violations, _ = deferred
                         manager.violated_assertions = saved_violations
+                self._print_vp_summary()
                 self._handle_assertion_violation(engine, manager, item.state)
                 return
 
@@ -537,6 +589,7 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 if deferred is not None:
                     saved_violations, _ = deferred
                     manager.violated_assertions = saved_violations
+                self._print_vp_summary()
                 self._handle_assertion_violation(engine, manager, item.state)
                 return
 
@@ -545,6 +598,8 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=CONTINUE, milestones={current_progress}/{len(self.milestone_manager.milestones)}")
             elif result == "TIMEOUT":
                 print(f"[Path {self.paths_explored}] cycle={item.cycle}, result=TIMEOUT, milestones={current_progress}/{len(self.milestone_manager.milestones)}")
+
+        self._print_vp_summary()
 
         # Tier-3 fallback: if the worklist is exhausted (or path limit hit) and a
         # deferred violation was saved, report it as the best available result.
@@ -557,6 +612,13 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
             deferred_va, deferred_state = self._deferred_violation
             manager.violated_assertions = deferred_va
             self._handle_assertion_violation(engine, manager, deferred_state)
+            return
+
+        if self.milestone_free:
+            print(f"[DirectedStrategy] Milestone-free exploration complete — "
+                  f"no assertion violation found (UNSAT)")
+            print(f"[DirectedStrategy] Paths explored: {self.paths_explored}")
+            print(f"[DirectedStrategy] Branch points: {manager.branch_count}")
             return
 
         print(f"[DirectedStrategy] Search exhausted (UNSAT)")
@@ -681,6 +743,127 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         """Create an efficient shallow clone of the symbolic state."""
         return state.clone()
 
+    def _print_vp_summary(self):
+        """Print value-prediction telemetry at the end of a run (if enabled)."""
+        if self._predictor is None:
+            return
+        st = self._vp_stats
+        total_forced = st['forced_true'] + st['forced_false']
+        total_branch = st['branches_predicted']
+        pct = (100.0 * total_forced / total_branch) if total_branch else 0.0
+        print("[ValuePredict] ===== summary =====")
+        print(f"[ValuePredict] prediction attempts: {st['attempts']}")
+        print(f"[ValuePredict] branch predictions:  {total_branch}")
+        print(f"[ValuePredict]   forced_true:  {st['forced_true']}")
+        print(f"[ValuePredict]   forced_false: {st['forced_false']}")
+        print(f"[ValuePredict]   free:         {st['free']}")
+        print(f"[ValuePredict] forced (prunable) ratio: {pct:.1f}%")
+        print(f"[ValuePredict] path selections guided:   {st['path_guided']}")
+        print("[ValuePredict] ===================")
+
+    def _run_value_prediction(self, state: SymbolicState, next_cycle: int) -> Dict[int, str]:
+        """Advisory value prediction for cycle *next_cycle* (thesis §4.2).
+
+        Predicts each analyzable branch's next-cycle resolution
+        (forced-true / forced-false / free) from the current path condition and
+        the queued register values, and records telemetry. Returns the verdict
+        map so future path-selection logic can consume it. Purely observational:
+        it does not enqueue or prune anything.
+        """
+        from engine.value_predictor import FORCED_TRUE, FORCED_FALSE, FREE
+        try:
+            verdicts = self._predictor.classify_branches(state, next_cycle)
+            by_loc = self._predictor.classify_branches_by_location(state, next_cycle)
+        except Exception as e:
+            print(f"  [ValuePredict] prediction error at cycle {next_cycle}: {e}")
+            return {}
+
+        # Stash location-keyed verdicts so the next cycle's _preferred_path_idx
+        # can prefer paths consistent with forced branch directions. Keyed by
+        # target cycle; consumed and cleared when that cycle executes.
+        self._vp_verdicts_by_cycle[next_cycle] = by_loc
+
+        st = self._vp_stats
+        st['attempts'] += 1
+        st['branches_predicted'] += len(verdicts)
+        n_ft = n_ff = n_free = 0
+        for v in verdicts.values():
+            if v == FORCED_TRUE:
+                n_ft += 1
+            elif v == FORCED_FALSE:
+                n_ff += 1
+            else:
+                n_free += 1
+        st['forced_true'] += n_ft
+        st['forced_false'] += n_ff
+        st['free'] += n_free
+
+        if verdicts:
+            print(f"  [ValuePredict] cycle {next_cycle}: {len(verdicts)} branches "
+                  f"(forced_true={n_ft}, forced_false={n_ff}, free={n_free})")
+        return verdicts
+
+    def _vp_guided_path_idx(self, cfg, cycle: int, first_dirs):
+        """Return a path index whose first direction matches a forced prediction.
+
+        Consults verdicts predicted for *cycle* (keyed by (instance, src_offset)).
+        Returns None when no prediction applies, so the caller falls back to its
+        default heuristic. Never removes paths — only picks which one is
+        preferred.
+        """
+        from engine.value_predictor import FORCED_TRUE, FORCED_FALSE
+        verdicts = self._vp_verdicts_by_cycle.get(cycle)
+        if not verdicts:
+            return None
+
+        # Identify the first branch of this CFG by source offset. Block 0 ends
+        # with the first conditional statement (see CFG.partition).
+        offset = self._cfg_first_branch_offset(cfg)
+        if offset is None:
+            return None
+
+        instance = getattr(cfg, 'module_name', None)
+        verdict = verdicts.get((instance, offset))
+        if verdict is None:
+            # Fall back to matching by offset alone (definition vs instance name
+            # can differ); accept a unique match.
+            matches = [v for (inst, off), v in verdicts.items() if off == offset]
+            if len(matches) == 1:
+                verdict = matches[0]
+        if verdict not in (FORCED_TRUE, FORCED_FALSE):
+            return None
+
+        want_dir = 1 if verdict == FORCED_TRUE else 0
+        candidates = [i for i, d in enumerate(first_dirs) if d == want_dir]
+        if not candidates:
+            return None
+
+        self._vp_stats['path_guided'] += 1
+        # Rotate among matching paths across cycles for constraint diversity.
+        chosen = candidates[(cycle - 1) % len(candidates)]
+        return chosen
+
+    def _cfg_first_branch_offset(self, cfg):
+        """Source offset of the first conditional in *cfg* (block 0's tail)."""
+        blocks = getattr(cfg, 'basic_block_list', None)
+        if not blocks:
+            return None
+        block0 = blocks[0]
+        # The first conditional is the last non-None statement of block 0.
+        for stmt in reversed(block0):
+            if stmt is None:
+                continue
+            try:
+                import pyslang as ps
+                if isinstance(stmt, ps.ConditionalStatementSyntax) or \
+                   isinstance(stmt, ps.CaseStatementSyntax) or \
+                   stmt.__class__.__name__ == 'CaseArmMarker':
+                    from frontend.dep_analyzer import DependencyAnalyzer
+                    return DependencyAnalyzer._source_offset(stmt)
+            except Exception:
+                pass
+        return None
+
     def _preferred_path_idx(self, cfg, cycle: int) -> int:
         """Choose the preferred default path for a CFG at a given cycle.
 
@@ -702,6 +885,15 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
         for path in cfg.paths:
             directions = cfg.compute_direction(path)
             first_dirs.append(directions[0] if directions else None)
+
+        # Value-prediction guidance (thesis §4.2): if the first branch of this
+        # CFG was predicted FORCED at this cycle, prefer a path whose first
+        # direction matches the forced edge. This only reorders which path is
+        # the un-penalized "preferred" one — every path is still enqueued via
+        # lazy forking, so completeness is preserved.
+        guided = self._vp_guided_path_idx(cfg, cycle, first_dirs)
+        if guided is not None:
+            return guided
 
         dir_1_count = sum(1 for d in first_dirs if d == 1)
         dir_0_count = sum(1 for d in first_dirs if d == 0)
@@ -1462,7 +1654,24 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 _chk = _s.check()
                 _ndecls = len(_s.model().decls()) if _chk == _sat else -1
                 is_unconditional = (_chk == _sat and _ndecls == 0)
-            if current_progress > 0 or is_unconditional:
+
+            # Milestone-free mode: no milestone progress to gate on. Report any
+            # violation that is either unconditional, or conditional but past
+            # cycle 0 (cycle-0 signals are free vars, so any assertion is
+            # trivially violable — always spurious there).
+            if self.milestone_free:
+                if is_unconditional or cycle > 0:
+                    if is_unconditional:
+                        print(f"  [Unconditional] assertion violation fires with no path constraints — reporting immediately")
+                    else:
+                        print(f"  [ValuePredict] assertion violation at cycle {cycle} (constrained path) — reporting")
+                    return "VIOLATION", current_progress
+                else:
+                    print(f"  [Suppressed] assertion violation at cycle 0 (free inputs) — likely spurious")
+                    manager.assertion_violation = False
+                    if hasattr(manager, 'violated_assertions'):
+                        manager.violated_assertions = []
+            elif current_progress > 0 or is_unconditional:
                 if is_unconditional:
                     print(f"  [Unconditional] assertion violation fires with no path constraints — reporting immediately")
                 return "VIOLATION", current_progress
@@ -1472,40 +1681,45 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
                 if hasattr(manager, 'violated_assertions'):
                     manager.violated_assertions = []
 
-        if current_progress >= total_milestones - 1 and self.enable_eager_target_eval and self.milestone_manager.check_final_milestone(state):
-            print(
-                f"  [Preemption] Final milestone SAT after reset progress "
-                f"{current_progress}/{total_milestones}; reporting VIOLATION"
-            )
-            return "VIOLATION", current_progress
+        # Milestone gating (preemption / sliding-window advance / ALL_MILESTONES
+        # early exit) only applies when milestones exist. In milestone-free mode
+        # exploration continues until a violation is found or cycles are
+        # exhausted, so skip this block entirely.
+        if not self.milestone_free:
+            if current_progress >= total_milestones - 1 and self.enable_eager_target_eval and self.milestone_manager.check_final_milestone(state):
+                print(
+                    f"  [Preemption] Final milestone SAT after reset progress "
+                    f"{current_progress}/{total_milestones}; reporting VIOLATION"
+                )
+                return "VIOLATION", current_progress
 
-        if self.enable_sliding_window:
-            current_progress, skipped_idx = self.milestone_manager.advance_with_sliding_window(
-                state,
-                current_progress,
-                window_size=1,
-            )
-            if skipped_idx is not None:
-                print(f"  [Sliding Window] Skipped hallucinated milestone {skipped_idx} -> advanced to {current_progress}")
-        else:
-            skipped_idx = None
-            _, current_progress = self.milestone_manager.check_and_lock_stateless(state, current_progress)
+            if self.enable_sliding_window:
+                current_progress, skipped_idx = self.milestone_manager.advance_with_sliding_window(
+                    state,
+                    current_progress,
+                    window_size=1,
+                )
+                if skipped_idx is not None:
+                    print(f"  [Sliding Window] Skipped hallucinated milestone {skipped_idx} -> advanced to {current_progress}")
+            else:
+                skipped_idx = None
+                _, current_progress = self.milestone_manager.check_and_lock_stateless(state, current_progress)
 
-        # Update stagnation counter: reset if milestone advanced, increment otherwise
-        if current_progress > item.milestones_completed:
-            self._stagnation_counter = 0
-        else:
-            self._stagnation_counter += 1
+            # Update stagnation counter: reset if milestone advanced, increment otherwise
+            if current_progress > item.milestones_completed:
+                self._stagnation_counter = 0
+            else:
+                self._stagnation_counter += 1
 
-        if current_progress >= total_milestones:
-            return "ALL_MILESTONES", current_progress
+            if current_progress >= total_milestones:
+                return "ALL_MILESTONES", current_progress
 
-        # If a violation was deferred earlier this cycle and the sliding window
-        # has now advanced us to the penultimate milestone, report it immediately.
-        if (current_progress >= total_milestones - 1
-                and getattr(self, '_deferred_violation', None) is not None):
-            print(f"  [Deferred Violation] Sliding window reached milestone {current_progress}/{total_milestones} — reporting deferred violation")
-            return "VIOLATION", current_progress
+            # If a violation was deferred earlier this cycle and the sliding window
+            # has now advanced us to the penultimate milestone, report it immediately.
+            if (current_progress >= total_milestones - 1
+                    and getattr(self, '_deferred_violation', None) is not None):
+                print(f"  [Deferred Violation] Sliding window reached milestone {current_progress}/{total_milestones} — reporting deferred violation")
+                return "VIOLATION", current_progress
 
         # Step 7: Enqueue next cycle
         # Update cycle_at_last_milestone if milestones advanced this cycle
@@ -1516,6 +1730,13 @@ class MilestoneDirectedStrategy(ExplorationStrategy):
 
         next_cycle = cycle + 1
         if next_cycle < self.max_cycles:
+            # Multi-cycle value prediction (thesis §4.2). Advisory: predict the
+            # next-cycle branch resolutions from the queued register values and
+            # record telemetry. The normal WorkItem below is always enqueued as
+            # a completeness backstop, so prediction never drops paths.
+            if self._predictor is not None:
+                self._run_value_prediction(state, next_cycle)
+
             new_score = self.milestone_manager.compute_score_stateless(current_progress, next_cycle, state)
             new_item = WorkItem(
                 score=new_score,

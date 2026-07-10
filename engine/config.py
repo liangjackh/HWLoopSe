@@ -24,6 +24,7 @@ class EngineConfig:
         coi: Enable Cone of Influence pruning
         enable_eager_target_eval: Enable eager final-milestone pre-check (default True)
         enable_sliding_window: Enable sliding-window lookahead milestone skip (default True)
+        value_predict: Enable multi-cycle register value prediction (thesis §4.2, default False)
     """
     num_cycles: int = 1
     include_paths: List[str] = field(default_factory=list)
@@ -42,6 +43,7 @@ class EngineConfig:
     coi: bool = False
     enable_eager_target_eval: bool = True
     enable_sliding_window: bool = True
+    value_predict: bool = False
 
     @classmethod
     def from_options(cls, options, num_cycles: int) -> "EngineConfig":
@@ -72,4 +74,5 @@ class EngineConfig:
             coi=options.coi or False,
             enable_eager_target_eval=not getattr(options, 'no_eager_target_eval', False),
             enable_sliding_window=not getattr(options, 'no_sliding_window', False),
+            value_predict=getattr(options, 'value_predict', False) or False,
         )

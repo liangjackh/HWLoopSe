@@ -7,6 +7,7 @@ from .symbolic_state import SymbolicState, smt_stats
 from .cfg import CFG
 import re
 import os
+import sys
 import json
 from optparse import OptionParser
 from typing import Optional, List, Tuple, TYPE_CHECKING
@@ -92,6 +93,8 @@ class ExecutionEngine:
         self._symbol_visitor = None
         self.coi_enabled = False
         self.coi_result = None
+        self.value_predict_enabled = False
+        self.dep_result = None
 
     def _compile_design(self, file_path: str, config: "EngineConfig") -> Tuple[any, any, List]:
         """Compile the design using PySlang.
@@ -321,6 +324,7 @@ class ExecutionEngine:
         self.llm_base_url = config.llm_base_url
         self.enable_eager_target_eval = config.enable_eager_target_eval
         self.enable_sliding_window = config.enable_sliding_window
+        self.value_predict_enabled = config.value_predict
 
         if config.debug:
             from helpers.debug import set_debug
@@ -1046,6 +1050,37 @@ class ExecutionEngine:
                 else:
                     print("[ExecutionEngine] No seed signals found for COI, skipping pruning")
 
+        # Step 3.5: Static dependency analysis for multi-cycle value prediction (thesis 4.2)
+        if self.value_predict_enabled:
+            try:
+                from frontend.dep_analyzer import DependencyAnalyzer
+                dep_analyzer = DependencyAnalyzer(
+                    cfgs_by_module, comb_by_module=comb_by_module,
+                    modules_dict=modules_dict, modules=modules)
+                self.dep_result = dep_analyzer.analyze()
+                _n_br = len(self.dep_result.all_branches)
+                _n_nodes = len(self.dep_result.nodes_by_id)
+                _n_cyc = sum(len(v) for v in self.dep_result.cyc_dsets.values())
+                print(f"[DepAnalyzer] {_n_br} branches, {_n_nodes} dep nodes, "
+                      f"{_n_cyc} total CycDSet entries")
+            except Exception as e:
+                import traceback
+                print(f"[DepAnalyzer] Warning: dependency analysis failed, "
+                      f"value prediction disabled: {e}")
+                traceback.print_exc()
+                self.dep_result = None
+
+            # Inject dep_result into a factory-created value-prediction strategy
+            # (milestone-free mode). Strategies built later from a milestone file
+            # receive dep_result directly at construction, so only patch here when
+            # the current strategy is already a value-prediction one lacking it.
+            if (self.dep_result is not None and self.strategy is not None
+                    and getattr(self.strategy, 'enable_value_prediction', False)
+                    and getattr(self.strategy, 'dep_result', None) is None):
+                self.strategy.dep_result = self.dep_result
+                print("[ExecutionEngine] Injected dependency analysis into "
+                      "milestone-free value-prediction strategy")
+
         # Step 4: Load milestones from file (if provided, skips auto-plan)
         print(f"step4: milestone_file={self.milestone_file}, auto_plan_enabled={self.auto_plan_enabled}")
         if self.milestone_file:
@@ -1075,7 +1110,9 @@ class ExecutionEngine:
                 milestone_manager = MilestoneManager(all_milestones)
                 self.strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles),
                     enable_eager_target_eval=self.enable_eager_target_eval,
-                    enable_sliding_window=self.enable_sliding_window)
+                    enable_sliding_window=self.enable_sliding_window,
+                    enable_value_prediction=self.value_predict_enabled,
+                    dep_result=self.dep_result)
                 print(f"[ExecutionEngine] Loaded {len(all_milestones)} milestones from {self.milestone_file}")
             else:
                 print("[ExecutionEngine] No valid milestones in file, using existing strategy")
@@ -1193,7 +1230,9 @@ class ExecutionEngine:
                             # Create a new directed strategy with milestones
                             self.strategy = MilestoneDirectedStrategy(milestone_manager, max_cycles=int(num_cycles),
                                 enable_eager_target_eval=self.enable_eager_target_eval,
-                                enable_sliding_window=self.enable_sliding_window)
+                                enable_sliding_window=self.enable_sliding_window,
+                                enable_value_prediction=self.value_predict_enabled,
+                                dep_result=self.dep_result)
                             print(f"[ExecutionEngine] Created directed strategy with {len(all_milestones)} milestones")
                     else:
                         print("[ExecutionEngine] No valid milestones generated, using blind strategy")

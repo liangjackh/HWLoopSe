@@ -96,6 +96,8 @@ def create_option_parser() -> OptionParser:
                       default=False, help="Disable eager final-milestone pre-check (ablation)")
     parser.add_option("--no-sliding-window", action="store_true", dest="no_sliding_window",
                       default=False, help="Disable sliding-window lookahead milestone skip (ablation)")
+    parser.add_option("--value_predict", action="store_true", dest="value_predict",
+                      default=False, help="Enable multi-cycle register value prediction (thesis 4.2)")
     return parser
 
 

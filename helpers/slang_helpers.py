@@ -36,6 +36,51 @@ def _try_add_constraint(constraint, s, m):
     return True
 
 
+def extract_branch_condition(stmt):
+    """Extract the condition expression node from a conditional statement.
+
+    Handles both semantic (ConditionalStatement with .conditions) and syntax
+    (ConditionalStatementSyntax with .predicate) forms. Returns the expression
+    node or None if no condition can be found.
+
+    Factored out of the Conditional handler in SymbolicDFS.visit_stmt so that
+    the static dependency analyzer and value predictor can extract branch
+    conditions using the exact same logic as the executor.
+    """
+    _conditions = getattr(stmt, 'conditions', None)
+    if _conditions:
+        # Semantic node: ConditionalStatement with conditions list
+        return _conditions[0].expr
+
+    predicate = getattr(stmt, 'predicate', None)
+    if predicate is not None:
+        # Syntax node: ConditionalStatementSyntax with predicate
+        cond_expr = getattr(predicate, 'expr', None) or getattr(predicate, 'expression', None)
+        if cond_expr is not None:
+            return cond_expr
+        _pconds = getattr(predicate, 'conditions', None)
+        if _pconds is not None:
+            for cond in _pconds:
+                cond_expr = getattr(cond, 'expr', None) or getattr(cond, 'expression', None)
+                if cond_expr is not None:
+                    return cond_expr
+    return None
+
+
+def coerce_to_bool(cond_z3):
+    """Coerce a Z3 expression to a boolean for use in the path condition.
+
+    A non-boolean bitvec condition ``c`` becomes ``c != 0`` (Verilog truthiness).
+    Factored out of the Conditional handler so the value predictor produces
+    boolean constraints identical to the executor.
+    """
+    if is_bool(cond_z3):
+        return cond_z3
+    if hasattr(cond_z3, 'size'):
+        return cond_z3 != BitVecVal(0, cond_z3.size())
+    return cond_z3 != BitVecVal(0, 32)
+
+
 def normalize_verilog_literal(val_str: str) -> str:
     """Normalize Verilog literals (e.g., 1'b0, 32'd5) to decimal strings.
 
@@ -1157,23 +1202,7 @@ class SymbolicDFS:
                 m.branch_count += 1
             #print("[slang_helper] branch_count: Conditional Statement:", m.branch_count, "branch_id:", branch_id)  # DEBUG
             # Extract condition expression (handle both semantic and syntax nodes)
-            cond_expr = None
-            _conditions = getattr(stmt, 'conditions', None)
-            if _conditions:
-                # Semantic node: ConditionalStatement with conditions list
-                cond_expr = _conditions[0].expr
-            else:
-                predicate = getattr(stmt, 'predicate', None)
-                if predicate is not None:
-                    # Syntax node: ConditionalStatementSyntax with predicate
-                    cond_expr = getattr(predicate, 'expr', None) or getattr(predicate, 'expression', None)
-                    if cond_expr is None:
-                        _pconds = getattr(predicate, 'conditions', None)
-                        if _pconds is not None:
-                            for cond in _pconds:
-                                cond_expr = getattr(cond, 'expr', None) or getattr(cond, 'expression', None)
-                                if cond_expr is not None:
-                                    break
+            cond_expr = extract_branch_condition(stmt)
 
             if cond_expr:
                 # DEBUG: trace condition extraction
@@ -1186,11 +1215,7 @@ class SymbolicDFS:
                 s.assertion_counter += 1
                 cond_z3 = self.expr_to_z3(m, s, cond_expr)
                 # Ensure cond_z3 is boolean for the path condition
-                if not is_bool(cond_z3):
-                    if hasattr(cond_z3, 'size'):
-                        cond_z3 = cond_z3 != BitVecVal(0, cond_z3.size())
-                    else:
-                        cond_z3 = cond_z3 != BitVecVal(0, 32)
+                cond_z3 = coerce_to_bool(cond_z3)
                 # Persistently add branch condition to path condition
                 # Short-circuit concrete values and deduplicate constraints
                 # direction=None means this conditional is inside a branch body
