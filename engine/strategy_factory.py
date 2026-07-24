@@ -24,27 +24,19 @@ class StrategyFactory:
         """
         strategy_name = config.strategy.lower()
 
-        # Value prediction without milestones: use the directed engine in
-        # milestone-free mode instead of blind search, so the §4.2 value
-        # predictor drives exploration. Only applies when the user did not
-        # already request the directed strategy or provide milestones/auto-plan
-        # (those paths build their own MilestoneDirectedStrategy downstream).
+        # Value prediction without milestones: use the value-predict directed
+        # strategy instead of blind search, so the §4.2 value predictor drives
+        # exploration. Only applies when the user did not already request the
+        # directed strategy or provide milestones/auto-plan (those paths build
+        # their own MilestoneDirectedStrategy downstream).
         if (getattr(config, "value_predict", False)
                 and strategy_name not in ("directed",)
                 and not config.milestone_file
                 and not config.auto_plan):
-            from engine.strategies import MilestoneDirectedStrategy
-            from engine.milestone import MilestoneManager
+            from engine.strategies import ValuePredictDirectedStrategy
             print("[StrategyFactory] value_predict enabled without milestones — "
-                  "using milestone-free directed strategy")
-            return MilestoneDirectedStrategy(
-                MilestoneManager([]),
-                max_cycles=config.num_cycles,
-                enable_eager_target_eval=config.enable_eager_target_eval,
-                enable_sliding_window=config.enable_sliding_window,
-                enable_value_prediction=True,
-                milestone_free=True,
-            )
+                  "using value-predict directed strategy")
+            return ValuePredictDirectedStrategy(max_cycles=config.num_cycles)
 
         if strategy_name == "directed":
             from engine.strategies import MilestoneDirectedStrategy

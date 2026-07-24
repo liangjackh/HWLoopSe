@@ -1300,12 +1300,18 @@ class ExecutionEngine:
 
             # Print violated assertions (constraints are stored here since solver uses push/pop)
             if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+                from engine.strategies import _print_symbol_legend
                 print(f"[cond2]Violated assertions:")
                 for va in manager.violated_assertions:
                     print(f"  - condition: {va.get('condition', 'N/A')}")
                     print(f"    z3_condition: {va.get('z3_condition', 'N/A')}")
                     print(f"    path condition: {va.get('path condition', 'N/A')}")
                     print(f"    kind: {va.get('kind', 'N/A')}")
+                    print(f"    cycle: {va.get('cycle', 'N/A')}")
+                    print(f"    module: {va.get('module', 'N/A')}")
+                    _print_symbol_legend(state,
+                                         [va.get('path condition'), va.get('z3_condition')],
+                                         indent="    ")
         elif manager.debug and not manager.is_child and not manager.init_run_flag and not manager.ignore:
             print("[cond3]Initial state:")
             print(state.store)

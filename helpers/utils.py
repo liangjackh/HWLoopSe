@@ -56,3 +56,65 @@ def topo_sort_nodes(node_ids, writes_of, reads_of):
     except nx.NetworkXUnfeasible:
         # Combinational cycle — preserve original order
         return node_ids
+
+
+def build_symbol_to_signals(state):
+    """Build a reverse map from symbol name -> list of "module.signal".
+
+    A signal's store value is either a random symbol string (produced by
+    init_symbol) or a Z3 expression whose leaves are such symbols. The Z3
+    variable created for a symbolic signal is named exactly by that stored
+    value, so ``str(value)`` gives the symbol name that appears in the path
+    condition. Iterating the store therefore yields the inverse mapping needed
+    to explain which signal each free variable in a violation came from.
+
+    Returns:
+        Dict[str, List[str]] mapping symbol name -> sorted unique "module.signal".
+    """
+    mapping = {}
+    store = getattr(state, 'store', None)
+    if not store:
+        return mapping
+    for module, sigs in store.items():
+        if not isinstance(sigs, dict):
+            continue
+        for signal, value in sigs.items():
+            key = str(value)
+            mapping.setdefault(key, set()).add(f"{module}.{signal}")
+    # Freeze to sorted lists for stable output
+    return {k: sorted(v) for k, v in mapping.items()}
+
+
+def collect_z3_symbols(expr, acc=None):
+    """Recursively collect the names of free (uninterpreted) Z3 variables.
+
+    Works on a single Z3 expression or an iterable of expressions. Falls back
+    to returning an empty set for anything that is not a Z3 AST.
+    """
+    if acc is None:
+        acc = set()
+
+    # Allow passing a list/tuple of assertions
+    if isinstance(expr, (list, tuple)):
+        for e in expr:
+            collect_z3_symbols(e, acc)
+        return acc
+
+    try:
+        import z3
+    except Exception:
+        return acc
+
+    if not isinstance(expr, z3.ExprRef):
+        return acc
+
+    try:
+        # A free variable is a constant (0 children) with an uninterpreted decl.
+        if expr.num_args() == 0 and expr.decl().kind() == z3.Z3_OP_UNINTERPRETED:
+            acc.add(expr.decl().name())
+            return acc
+        for child in expr.children():
+            collect_z3_symbols(child, acc)
+    except Exception:
+        pass
+    return acc

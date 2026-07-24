@@ -1509,7 +1509,9 @@ class SymbolicDFS:
                 'path condition': list(s.pc.assertions()),  # Store Z3 expressions directly
                 'z3_condition': cond_z3,
                 'model': model,
-                'kind': str(assertion_kind) if assertion_kind else 'assert'
+                'kind': str(assertion_kind) if assertion_kind else 'assert',
+                'cycle': getattr(m, 'cycle', None),
+                'module': getattr(m, 'curr_module', None)
             })
 
         # Pop the context
@@ -1575,7 +1577,9 @@ class SymbolicDFS:
                 'path condition': list(s.pc.assertions()),  # Store Z3 expressions directly
                 'z3_condition': cond_z3,
                 'model': model,
-                'kind': assertion_kind
+                'kind': assertion_kind,
+                'cycle': getattr(m, 'cycle', None),
+                'module': getattr(m, 'curr_module', None)
             })
 
         # Pop the context
@@ -1649,7 +1653,9 @@ class SymbolicDFS:
                 'z3_condition': cond_z3,
                 'model': model,
                 'kind': str(assertion_kind) if assertion_kind else 'assert',
-                'type': 'concurrent'
+                'type': 'concurrent',
+                'cycle': getattr(m, 'cycle', None),
+                'module': getattr(m, 'curr_module', None)
             })
 
         s.pc.pop()

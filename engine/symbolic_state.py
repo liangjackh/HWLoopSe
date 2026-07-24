@@ -147,6 +147,28 @@ class SymbolicState:
         new_state._pc_assertions = list(self._pc_assertions)
         return new_state
 
+    def snapshot_pc(self):
+        """Capture the path condition (assertions + dedup set + cached solver)
+        so it can be restored later via `restore_pc`.
+
+        Mirrors `_LazyPC.push()`'s snapshot shape. Needed wherever a clone is
+        taken *before* a branch decision that has since been committed to
+        `self`'s path condition — e.g. lazy-forking a sibling CFG path after
+        the chosen path already added its own branch constraint. Without
+        restoring the pre-branch snapshot on the fork target, the sibling
+        would inherit the chosen path's constraint and could be wrongly
+        judged UNSAT (or, worse, accumulate constraints from an unrelated
+        branch history across many cycles).
+        """
+        return (list(self._pc_assertions), self.pc_constraint_set.copy(), self._pc_solver)
+
+    def restore_pc(self, snapshot):
+        """Restore a path condition captured by `snapshot_pc`."""
+        assertions, constraint_set, solver = snapshot
+        self._pc_assertions = list(assertions)
+        self.pc_constraint_set = constraint_set.copy()
+        self._pc_solver = solver
+
     def get_symbolic_expr(self, module_name: str, var_name: str) -> str:
         """Just looks up a symbolic expression associated with a specific variable name
         in that particular module."""
