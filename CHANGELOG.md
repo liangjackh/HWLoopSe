@@ -1,5 +1,65 @@
 # Changelog
 
+[2026-07-29] [Fix] 修复 `docs/analysis_0724_additional_findings.md` 遗留的三个问题：隐式空转周期、SMT 查询重复计数、反例信息不够详细
+
+**问题 1（隐式空转周期）**：`engine/strategies.py` 的 `_DirectedSearchBase._execute_cycle`（`MilestoneDirectedStrategy`/`ValuePredictDirectedStrategy` 共享）在"本周期涉及的所有 CFG 的所有路径都因分支约束 UNSAT 被放弃"时,对 forked work item 会正确剪枝(`return None`),但对非 forked 的"preferred-path"item 却没有剪枝,而是打印一行日志后直接落入 `_execute_cycle_tail`,后者无条件把 `cycle` 推进到 `cycle+1` 并入队新 WorkItem——寄存器根本没有做过一次真实的时钟转移,但周期计数器却往前走了。该周期已经在 `_execute_cycle` 开头刷新出来的主输入符号(`_c<cycle>`)也随着这个"空转周期"被孤立丢弃,导致 Z3 变量名出现跳号(例如 `RST_c0` 之后直接是 `RST_c2`,中间的 `RST_c1` 从未真正参与任何约束)。日志证据：`[AllSkipped] cycle 1: preferred-path item, all CFGs abandoned — continuing to next cycle`。
+
+**修复 1**：删除"是否 forked"的特殊判断,统一剪枝——lazy forking 在每个分支点都已经把除当前选择之外的每个方向单独 fork 成了 WorkItem 排入 worklist,所以当前 item 如果本周期确实无路可走,要么有 sibling WorkItem 已经覆盖了这个组合的其他可能性,要么这个组合本身就不可行,两种情况下剪掉当前 item 都不丢失覆盖率。`engine/strategies.py:1687-1696` 的 `is_forked_item` 分支判断整段删除,只保留统一的 `if not any_cfg_executed: return None, item.milestones_completed`。
+
+**验证 1**：新增 `test_allskipped_pruning.py`,不走完整 `execute_sv` 流水线,直接用 PySlang 构建一个真实的两路径 CFG(`if (r==1) r<=10; else r<=20;`),把 `r` 固定为一个使两条路径分支 guard 都 UNSAT 的具体值,直接调用 `_DirectedSearchBase._execute_cycle`,断言返回 `(None, 0)` 且 worklist 保持为空(证明 item 被剪枝、没有隐式推进周期);另有一条测试确认 forked item 命中同样情况时行为不变(统一剪枝而非引入新特例),以及一条 sanity 测试确认真正可行的路径依然正常执行。3 个测试全部通过。
+
+**问题 2（SMT 查询重复计数）**：`helpers/rvalue_to_z3.py` 的 `solve_pc(s)` 用 `smt_stats.timed_check(s)` 包住调用,但所有调用点(`helpers/slang_helpers.py` 6 处、`engine/value_predictor.py` 2 处)传入的 `s` 都是 `state.pc`(`_LazyPC` 实例)。`_LazyPC.check()` 自身就是 `return smt_stats.timed_check(self._build_solver())`,已经对真实 `z3.Solver` 做了完整统计。由于 `_LazyPC` 对 `.assertions()`/`.check()` 做了 duck-typing,外层 `timed_check(lazy_pc)` 会重新触发内层这整套流程,导致同一次真实求解被记两次——日志里同一个 `[Z3-QUERY #N]` 打印两次,`query_count` 和 `total_time` 都虚高。`_LazyPC._build_solver()` 会缓存 solver 实例,所以这纯粹是记账重复,不是真的多做了一次求解。
+
+**修复 2**：`solve_pc` 改为直接调用 `s.check()`,把统计职责完全交还给 `_LazyPC.check()` 自己。返回值语义不变(`z3.CheckSatResult`,`== z3_sat` 比较照常工作)。顺带确认 `ExecutionEngine.solve_pc`/`check_pc_SAT`/`MilestoneManager.check_milestone` 有同样的写法但全仓库零调用点(死代码),本次不动。
+
+**验证 2**：新增 `test_solve_pc_single_count.py`,用 before/after 差值断言单次 `solve_pc()` 调用让 `smt_stats.query_count` 恰好加 1(而非 2),且 stdout 里 `[Z3-QUERY #`/`[Z3-RESULT #` 各只出现一次(SAT、UNSAT 两种情况都测)。用 `test_2.v` 跑 `--strategy directed`(SMT queries 5→3)和 `--value_predict`(SMT queries 230→122)对比修复前后,确认 SAT/UNSAT 结论、探索路径数(均为 26 条)完全一致,只是查询计数减半左右。
+
+**问题 3（反例信息不够详细）**：`format_assertion_violation`(`engine/strategies.py`)的逐周期反例回填逻辑只处理"文本上出现在被违反 assertion 条件字符串里"的信号(`_assertion_signals`,从 `manager.violated_assertions` 的 `condition` 正则提取标识符)。像 `test_vp_fsm.v` 里的 `state`(assert 只写了 `at_three==0`,没提到 `state`)这种对理解反例因果链至关重要的内部寄存器,完全不会出现在 trace 里。
+
+**修复 3（范围收窄）**：去掉 `_assertion_signals` 过滤,让 `state.store` 里所有信号都参与按周期回填(`engine/strategies.py:294,303` 附近,外层 `if _assertion_signals and by_cycle:` 改为 `if by_cycle:`,内层 `if _sig_name not in _assertion_signals: continue` 整行删除)。用于变量名显示映射的 `_z3base_to_sig` 逆向映射(assertion-signal 优先级的 tie-break 逻辑)是完全独立、已经正确的另一段代码,未改动。**明确不做的部分**：CFG path/basic-block 决策历史、NBA 排队/应用历史、pre-NBA vs post-NBA 区分——这些需要在执行热路径(`BlindSearchStrategy.run()`/`_DirectedSearchBase._execute_cycle`)新增结构化记录,改动量和性能权衡都更大,留作后续单独设计。
+
+**验证 3**：扩展 `test_blind_search_cycle_trace.py`,新增一个 `flag <= (acc==3); acc <= acc+A; assert(flag==0)` 的设计——`acc` 从未出现在 assert 文本里,断言其现在出现在 trace 中。实测发现：这个基于 `model.eval` 回填的机制,只能救回"求解模型里还留着可追溯到某个 `_cN` 符号的自由变量/派生表达式"的信号;`test_vp_fsm.v` 的 `state` 在选定 RST 路径后已经在 store 里坍缩成一个完全具体的 `BitVecVal`(零自由变量),这次修复救不回它——这是 eval 回填这条路径本身的天花板,不是过滤条件的问题,同样留给"结构化记录"那条后续路径去解决。
+
+**改动文件**：`engine/strategies.py`(修复1、修复3)、`helpers/rvalue_to_z3.py`(修复2);新增 `test_allskipped_pruning.py`、`test_solve_pc_single_count.py`;扩展 `test_blind_search_cycle_trace.py`。
+
+---
+
+[2026-07-28] [Enhancement] 让 `BlindSearchStrategy`（默认探索策略）支持逐周期主输入刷新与统一的反例 trace 输出
+
+**问题**：修完上一条 CFG 假反例的 bug 后，用户实际跑 `python3 -m main 5 designs/test-designs/test_vp_fsm.v --sv`（未指定 `--strategy directed` 或 `--value_predict`，因此走默认的 `BlindSearchStrategy`）发现反例只打印一行 `{'RST': 0}`，完全看不出"RST 连续 5 个周期为 0，第 4 周期违例"这个语义。根因：`engine/strategies.py` 里 `_DirectedSearchBase`（`--strategy directed`/`--value_predict` 用的基类）每个周期都会用 `_refresh_primary_inputs` 给主输入铸造带周期戳的新符号 `<sig>_c<cycle>`，所以它的反例格式化逻辑能按 `_c<N>` 后缀把取值分组打印成"Counterexample trace (cycle-by-cycle)"；而 `BlindSearchStrategy`（默认策略）只在整条路径开始前铸造一次符号，全程复用同一个随机字符串，天生没有"周期"维度可分组，`_handle_assertion_violation` 也只是简单 `print(counterexample)` 打印扁平字典。这导致同一个工具，仅因为策略不同，反例的可读性天差地别——这不该是偶然结果，而应该是所有策略共享的基础能力。
+
+**修复**：
+1. 把 `_DirectedSearchBase._collect_primary_input_ports`/`_refresh_primary_inputs` 提升为模块级函数 `collect_primary_input_ports`/`refresh_primary_inputs`（逻辑不变），`_DirectedSearchBase` 改为转调，不影响其现有调用点。
+2. `BlindSearchStrategy.run()` 接入这两个函数：初始化阶段给主输入端口铸造 `BitVec(f"{var}_c0", width)`（而不是随机字符串)；每个周期（`manager.cycle > 0`，NBA 应用之后）调用 `refresh_primary_inputs` 铸造新的 `<sig>_c<cycle>` 符号。寄存器/内部网线的初始化逻辑保持不变，只扩大主输入的建模精度。
+3. 把 `_DirectedSearchBase._handle_assertion_violation`（含完整的"Counterexample trace (cycle-by-cycle)"格式化逻辑，审查确认其内部只依赖方法参数、唯一一处 `self.` 引用已用 `getattr(..., None)` 优雅处理）提升为模块级函数 `format_assertion_violation`，两个策略的 `_handle_assertion_violation` 都改为薄包装转调它。
+
+**验证**：
+- 新增 `test_blind_search_cycle_trace.py`（2 个测试通过，直接跑 `python3 -m main` 子进程验证真实 CLI 输出）：违例中的主输入符号带 `_c<N>` 后缀（而非随机字符串）；多周期违例的输出包含按 `Cycle 0:`...`Cycle N:` 分组的 trace，且每个周期显示的输入值与该周期实际生效的值一致。
+- 重跑 `python3 -m main 5 designs/test-designs/test_vp_fsm.v --sv`：输出从原来一行 `{'RST': 0}` 变成清晰的逐周期 trace，且因为求解器现在能给每周期独立取值，找到的反例是 `RST` 前 4 周期为 0、第 4 周期为 1（与"cycle 3 排队 `at_three<=1`，NBA 生效后 cycle 4 读到旧值违例"这一真实语义等价，只是求解器在更大自由度下选的另一个满足解，并非新 bug）。
+- 回归：`test_value_predictor.py`、`test_cfg_leaf_threading.py` 保持通过；`designs/test-designs/test_2.v`（跨模块 wire group 多模块设计）改动前后跑出的路径数与 SAT/UNSAT 分布完全一致（512 条路径全 SAT），确认没有破坏已验证正确的 directed/value_predict 路径或多模块场景。
+
+**改动文件**：`engine/strategies.py`（核心修复）、新增 `test_blind_search_cycle_trace.py`（回归测试）。
+
+---
+
+[2026-07-27] [Fix] 修复 `engine/cfg.py` 中 CFG 构图缺陷导致的假反例（`test_vp_fsm.v` 的 `at_three==0` 误报）
+
+**问题**：`log.txt` 报告在 `RST=1` 时 `assert(at_three==0)` 违例，但这是假反例。根因是 `basic_blocks_sv` 用共享的全局计数器 `curr_idx - 1` 来猜测"上一条语句的出口"，以及 `resolve_independent_branch_pts` 直接把相邻的独立条件语句"头对头"相连，而不是连到真实的分支叶子节点。这两个位置性启发式在相邻语句本身是多分支结构时（例如 `if(RST) begin...end else begin <if-elif链>...end`）会产生非法边：一是让互斥的 `RST=1` 分支直接串到 `else` 分支的状态机逻辑上；二是让路径跳过整条 if-elif 链、不提交任何分支就直接进入下一个独立 `if`。二者叠加后拼出了一条硬件上不可能出现的执行路径，触发了对上一周期残留的 `at_three` 旧值的误判违例。此外还发现一个同根因的漏报风险：跟在 if/else 之后的 `assert` 语句只挂在最后处理的那个基本块上，导致 `at_three<=1` 分支永远走不到 assert。
+
+**修复**：将 `_process_conditional_sv` 和 `_process_case_sv` 改为返回它们各自产生的真实叶子节点索引列表；`basic_blocks_sv` 用一个显式的 `prev_leaves` 变量在同级语句间传递这些叶子，按真实叶子而不是猜测的位置连边。据此彻底删除了 `resolve_independent_branch_pts` 方法及其依赖的 `ind_branch_points`/`block_smt`/`block_stmt_depth` 状态（已通过 grep 确认这些名字仅在 `cfg.py` 内部使用，无外部依赖）。
+
+**验证**：
+- 新增 `test_cfg_leaf_threading.py`（4 个断言全部通过）：RST 分支不再串入 else 分支；state 的 4 个 if-elif 分支叶子均能连到第二个独立 `if`；assert 从每条路径都可达；`test_nested_ifs.v` 恢复到数学上正确的 9 条路径（此前是 7 条，同样漏了组合）。
+- 现有 `test_value_predictor.py` 保持通过。
+- 用 `daio.v`/`ACW.v`（含 `case` 语句的设计）做前后路径数对比：`_process_case_sv` 的分支到叶子连线逻辑未改动，两个设计的路径数变化均可用同一类 bug 解释（其中 daio.v 的 cfg1 之前是被 `MAX_PATHS_PER_CFG=100` 静默截断的假 100，修复后真实值是 15）。
+- 实际跑 `python3 -m main 5 designs/test-designs/test_vp_fsm.v --sv`：工具不再报告原来的假反例，而是在 `RST` 连续 5 周期为 0 时，在周期 4 找到一个真实的 assertion violation（`state` 在周期 3 为 3 时排队 `at_three<=1`，该值在 NBA 生效后于周期 4 被 assert 读到）——这与项目内 `docs/analysis_0724_additional_findings.md` 中独立分析的结论一致：该属性本身不是安全属性，工具修复后应当拒绝原假证据、转而报告周期 4 的合法真实反例。
+
+**PySlang 使用方式总结**：本次修复没有引入新的 PySlang API 用法，核心是重新组织已有的 `ConditionalStatementSyntax`/`CaseStatementSyntax` 递归遍历的返回值传递方式，让 `_process_conditional_sv`/`_process_case_sv`/`basic_blocks_sv` 三者显式返回并传递"真实叶子节点索引列表"，取代此前依赖 `curr_idx` 全局计数器位置做启发式猜测的方式；`CaseArmMarker` 的插入逻辑和 `case` 分支到 marker 再到 arm body 的边构造保持不变，仅补充收集每个 arm 的真实出口用于返回。
+
+**改动文件**：`engine/cfg.py`（核心修复）、新增 `test_cfg_leaf_threading.py`（回归测试）。
+
+---
+
 [2026-05-22] [Fix] Fixed COI over-pruning for or1200 benchmark: bare signal names in milestone files caused `Relevant instances: set()`, producing spurious violations in ~1.7s.
 
 **Problem**: All 71 or1200 milestone files used bare signal names (`rst_i`, `except_wb_pc`, `sprs_spr_dat_ppc`, etc.) in `target_expr` and `condition` fields. The COI seeding code in `execution_engine.py` explicitly skips bare signals (no `.` separator) to avoid seeding every module. With no valid seeds, COI fell back to a hardcoded `top_wrapper.clk_top` / `top_wrapper.rstn_top` seed — a hackatdac-specific module that doesn't exist in or1200. Result: `Relevant instances: set()`, all design CFGs pruned, only `u_assertions` executed, and `except_wb_pc`/`sprs_spr_dat_ppc` remained unconstrained free Z3 variables → trivial spurious violation in 1.7s.

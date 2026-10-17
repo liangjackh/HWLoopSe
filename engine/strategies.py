@@ -58,6 +58,317 @@ def _print_symbol_legend(state, exprs, indent=""):
         print(f"{indent}  {sym} -> {target}{cycle_note}")
 
 
+def collect_primary_input_ports(modules_dict):
+    """Map every top-level module input port to its bit width.
+
+    Returns Dict[(instance, signal)] -> width. "Top-level" means an instance
+    not instantiated by any other module in the design. These ports are the
+    design's free inputs and must be re-symbolised each cycle so the solver
+    can explore all input sequences — even when they belong to no cross-
+    module wire group (e.g. a single-module design).
+
+    Module-level so every exploration strategy (blind or directed) can model
+    primary inputs identically instead of each reinventing this traversal.
+    """
+    import pyslang as ps
+
+    ports = {}
+    try:
+        all_instances = set(modules_dict.keys())
+        child_instances = set()
+        for parent in modules_dict.values():
+            if not hasattr(parent, 'body'):
+                continue
+            for child in parent.body:
+                if getattr(child, 'kind', None) == ps.SymbolKind.Instance:
+                    child_instances.add(child.name)
+        top_level = all_instances - child_instances
+
+        for inst in top_level:
+            module = modules_dict.get(inst)
+            if module is None or not hasattr(module, 'body'):
+                continue
+            for member in module.body:
+                if (getattr(member, 'kind', None) == ps.SymbolKind.Port and
+                        hasattr(member, 'direction') and
+                        'In' in str(member.direction)):
+                    width = 1
+                    try:
+                        t = getattr(member, 'type', None)
+                        bw = getattr(t, 'bitWidth', None)
+                        if bw:
+                            width = int(bw)
+                    except Exception:
+                        width = 1
+                    ports[(inst, member.name)] = max(1, width)
+    except Exception:
+        pass
+    return ports
+
+
+def refresh_primary_inputs(state: SymbolicState, cycle: int, primary_input_ports,
+                            wire_groups=None, primary_input_flags=None,
+                            wire_group_widths=None):
+    """Assign fresh Z3 BitVec symbols to primary inputs for this cycle.
+
+    Two sources of primary inputs are refreshed so the solver can explore
+    different input values at every cycle:
+      1. Cross-module wire groups flagged as primary inputs.
+      2. Top-level input ports (see `collect_primary_input_ports`), which may
+         have no wire group at all — this covers single-module designs.
+    Internal wires and registers keep their computed / NBA values.
+
+    Module-level so every exploration strategy (blind or directed) refreshes
+    primary inputs identically, giving each cycle its own `<sig>_cN` symbol —
+    this is what lets `format_assertion_violation` group a counterexample by
+    cycle regardless of which strategy found it.
+    """
+    # 1. Wire-group primary inputs (multi-module port propagation).
+    if wire_groups and primary_input_flags:
+        for i, group in enumerate(wire_groups):
+            if i >= len(primary_input_flags) or not primary_input_flags[i]:
+                continue  # Not a primary input group
+
+            rep_inst, rep_sig = next(iter(group))
+            sym_name = f"{rep_sig}_c{cycle}"
+            width = wire_group_widths[i] if wire_group_widths and i < len(wire_group_widths) else 32
+            shared_bv = BitVec(sym_name, width)
+
+            for inst, sig in group:
+                if inst in state.store:
+                    state.store[inst][sig] = shared_bv
+
+    # 2. Top-level input ports not covered by any wire group.
+    for (inst, sig), width in (primary_input_ports or {}).items():
+        if inst in state.store:
+            state.store[inst][sig] = BitVec(f"{sig}_c{cycle}", width)
+
+
+def format_assertion_violation(
+    engine: 'ExecutionEngine',
+    manager: ExecutionManager,
+    state: SymbolicState,
+    deferred_violation=None
+) -> None:
+    """Print assertion violation details plus a cycle-by-cycle counterexample trace.
+
+    Module-level so every exploration strategy shares one counterexample
+    format instead of directed/value-predict strategies having a detailed
+    per-cycle trace while BlindSearchStrategy only prints a flat dict.
+    Relies on primary-input symbols being cycle-stamped as ``<sig>_cN``
+    (see `refresh_primary_inputs`) to group values by cycle.
+    """
+    import re
+    from z3 import Solver, sat as z3_sat
+
+    print("Assertion violation detected!")
+
+    # Collect assertion signal names from violated_assertions conditions
+    # so we can prioritize them in the reverse map below.
+    _assertion_signals: set = set()
+    if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+        for _va in manager.violated_assertions:
+            _cond_str = _va.get('condition', '')
+            # Extract bare identifiers from the condition string
+            for _tok in re.findall(r'[a-zA-Z_][a-zA-Z0-9_]*', _cond_str):
+                _assertion_signals.add(_tok)
+
+    # Build reverse map: z3_var_base -> assertion signal name (used for display).
+    # Priority: (1) signal appears in assertion condition, (2) longer name.
+    _cycle_re_rev = re.compile(r'^(.+)_c(\d+)$')
+    _z3base_to_sig: Dict[str, str] = {}
+    for _mod, _sigs in state.store.items():
+        for _sig_name, _z3_val in _sigs.items():
+            try:
+                if hasattr(_z3_val, 'decl') and _z3_val.num_args() == 0:
+                    _z3_full = _z3_val.decl().name()
+                    _m2 = _cycle_re_rev.match(_z3_full)
+                    _z3_base = _m2.group(1) if _m2 else _z3_full
+                    _existing = _z3base_to_sig.get(_z3_base, '')
+                    _new_in_assert = _sig_name in _assertion_signals
+                    _old_in_assert = _existing in _assertion_signals
+                    # Prefer assertion signal names; break ties by length
+                    if (_new_in_assert and not _old_in_assert) or \
+                       (_new_in_assert == _old_in_assert and len(_sig_name) > len(_existing)):
+                        _z3base_to_sig[_z3_base] = _sig_name
+            except Exception:
+                pass
+
+    if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+        print("Violated assertion details:")
+        for va in manager.violated_assertions:
+            print(f"  - condition: {va.get('condition', 'N/A')}")
+            z3_cond = va.get('z3_condition')
+            if z3_cond is not None:
+                try:
+                    z3_str = z3_cond.sexpr() if hasattr(z3_cond, 'sexpr') else str(z3_cond)
+                    # Replace underlying Z3 var names with assertion signal names.
+                    # Sort by descending key length so longer names are replaced first,
+                    # preventing short names (e.g. "o") from matching inside longer
+                    # ones (e.g. "FC_DATA_gnt_o").
+                    for _z3b, _sn in sorted(_z3base_to_sig.items(), key=lambda kv: -len(kv[0])):
+                        # Match base_cN pattern (cycle-stamped variables).
+                        # Use negative lookbehind to avoid matching inside longer names.
+                        z3_str = re.sub(
+                            r'(?<![A-Za-z0-9_])' + re.escape(_z3b) + r'(_c\d+)',
+                            _sn + r'\1', z3_str)
+                        # Also replace bare (non-cycle-stamped) occurrences
+                        z3_str = re.sub(
+                            r'(?<![A-Za-z0-9_])' + re.escape(_z3b) + r'(?![A-Za-z0-9_])',
+                            _sn, z3_str)
+                    if len(z3_str) > 200:
+                        z3_str = z3_str[:200] + "... (truncated)"
+                    print(f"    z3_condition: {z3_str}")
+                except Exception as e:
+                    print(f"    z3_condition: (error: {e})")
+            print(f"    kind: {va.get('kind', 'N/A')}")
+
+    # Solve the CURRENT path condition (accumulated over all cycles) to get
+    # the full multi-cycle model with _c0, _c1, ..., _cN stamped symbols.
+    # Also add the negated assertion condition (the violation witness) so that
+    # unconstrained signals like FC_DATA_gnt_o get concrete values that actually
+    # satisfy the violation (e.g. gnt_o=1), not arbitrary solver defaults.
+    ce_solver = Solver()
+    for assertion in state.pc.assertions():
+        ce_solver.add(assertion)
+    # Add violation witness constraints from all violated assertions
+    if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+        from z3 import Not as z3_Not
+        for _va in manager.violated_assertions:
+            _z3_cond = _va.get('z3_condition')
+            if _z3_cond is not None:
+                ce_solver.add(z3_Not(_z3_cond))
+    if ce_solver.check() != z3_sat:
+        print("\n(path condition UNSAT — cannot derive counterexample)")
+        return
+
+    model = ce_solver.model()
+    decls = model.decls()
+    if not decls:
+        # Path condition has no symbolic constraints — the assertion fires for any
+        # input. Try to get a concrete witness by adding the z3_condition itself.
+        if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
+            va = manager.violated_assertions[-1]
+            z3_cond = va.get('z3_condition')
+            if z3_cond is not None:
+                from z3 import Not as z3_Not
+                witness_solver = Solver()
+                witness_solver.add(z3_Not(z3_cond))
+                if witness_solver.check() == z3_sat:
+                    model = witness_solver.model()
+                    decls = model.decls()
+        if not decls:
+            print("\nCounterexample: violation is unconditional (no free variables).")
+            return
+
+    # Build symbol-name -> concrete value mapping
+    sym_vals = {d.name(): model[d] for d in decls}
+
+    # Parse _cN suffix: symbol name format is "<signal>_c<cycle>"
+    cycle_re = re.compile(r'^(.+)_c(\d+)$')
+
+    # Group by cycle number; use assertion signal names where available
+    # Reuse _z3base_to_sig (built above with assertion-priority logic)
+    by_cycle: Dict[int, Dict[str, Any]] = {}
+    ungrouped: Dict[str, Any] = {}
+    for sym_name, val in sym_vals.items():
+        m = cycle_re.match(sym_name)
+        if m:
+            sig, cyc = m.group(1), int(m.group(2))
+            display = _z3base_to_sig.get(sig, sig)
+            by_cycle.setdefault(cyc, {})[display] = val
+        else:
+            display = _z3base_to_sig.get(sym_name, sym_name)
+            ungrouped[display] = val
+
+    # Supplement by_cycle with every signal in state.store that wasn't already
+    # assigned by the solver (unconstrained free variables, derived expressions
+    # like Extract from concat-assign, or internal registers the violated
+    # assertion never textually mentions — e.g. a state-machine's `state`
+    # register when the assertion only names a derived flag like `at_three`).
+    # Not limiting this to `_assertion_signals` is what makes signals like
+    # `state` visible in the trace at all.
+    # model.eval(..., model_completion=True) evaluates any Z3 expression.
+    #
+    # Search both the current state.store (has _cN symbols for the latest cycle)
+    # and the deferred violation's saved state (has _c0 symbols for cycle 0).
+    # This covers the case where a deferred violation fires at cycle N but the
+    # assertion signal is a derived expression (e.g. Extract from concat-assign)
+    # that only appears in the model via its free variables.
+    if by_cycle:
+        import z3 as _z3
+        _deferred = deferred_violation
+        _stores_to_search = [state.store]
+        if _deferred is not None:
+            _stores_to_search.append(_deferred[1].store)
+        for _search_store in _stores_to_search:
+            for _mod, _sigs in _search_store.items():
+                for _sig_name, _z3_val in _sigs.items():
+                    try:
+                        # Determine the cycle from the Z3 variable name.
+                        # For free vars: decl().name() gives e.g. "FC_DATA_gnt_o_c1"
+                        # For compound exprs (Extract etc.): walk free variables.
+                        _cyc = None
+                        if hasattr(_z3_val, 'decl') and _z3_val.num_args() == 0:
+                            _z3_name = _z3_val.decl().name()
+                            _m = cycle_re.match(_z3_name)
+                            if _m:
+                                _cyc = int(_m.group(2))
+                        else:
+                            _free = _z3.z3util.get_vars(_z3_val)
+                            for _fv in _free:
+                                _m = cycle_re.match(_fv.decl().name())
+                                if _m:
+                                    _cyc = int(_m.group(2))
+                                    break
+                        if _cyc is None or _cyc not in by_cycle:
+                            continue
+                        _display = _sig_name
+                        _eval_val = model.eval(_z3_val, model_completion=True)
+                        # Add to the found cycle and all later cycles that lack this signal.
+                        # Combinational signals may retain an earlier cycle stamp (_c0)
+                        # even in later cycles, so propagate the value forward.
+                        for _target_cyc in sorted(by_cycle.keys()):
+                            if _target_cyc >= _cyc and _display not in by_cycle[_target_cyc]:
+                                by_cycle[_target_cyc][_display] = _eval_val
+                    except Exception:
+                        pass
+
+    def _fmt_val(v) -> str:
+        """Format a Z3 model value as hex (with decimal in parentheses).
+
+        For BitVec values we show 0x<hex> (decimal).
+        For Bool values we show True/False.
+        Anything else falls back to str().
+        """
+        try:
+            import z3 as _z3
+            if isinstance(v, _z3.BitVecNumRef):
+                int_val = v.as_long()
+                size = v.size()
+                hex_digits = (size + 3) // 4
+                return f"0x{int_val:0{hex_digits}X}  ({int_val})"
+            if isinstance(v, _z3.BoolRef):
+                return str(v)
+        except Exception:
+            pass
+        return str(v)
+
+    if by_cycle:
+        print("\nCounterexample trace (cycle-by-cycle):")
+        for cyc in sorted(by_cycle.keys()):
+            print(f"  Cycle {cyc}:")
+            for sig in sorted(by_cycle[cyc].keys()):
+                print(f"    {sig} = {_fmt_val(by_cycle[cyc][sig])}")
+    if ungrouped:
+        print("\nOther model values:")
+        for sym, val in sorted(ungrouped.items()):
+            print(f"  {sym} = {_fmt_val(val)}")
+
+
+
+
+
 class ExplorationStrategy(ABC):
     """Abstract base class for exploration strategies."""
 
@@ -151,6 +462,13 @@ class BlindSearchStrategy(ExplorationStrategy):
         manager.branch_points_seen = set()
         manager.path_count = 0
 
+        # Top-level input ports, collected once (modules_dict doesn't change
+        # across paths). Minting a fresh <sig>_cN symbol for these every
+        # cycle (below) is what lets format_assertion_violation group a
+        # counterexample by cycle, matching the directed/value-predict
+        # strategies instead of reusing one flat symbol for the whole run.
+        primary_input_ports = collect_primary_input_ports(modules_dict)
+
         print("[BlindSearchStrategy] Starting exhaustive search via generator...")
 
         # 3. Main exploration loop directly consuming the generator
@@ -174,7 +492,15 @@ class BlindSearchStrategy(ExplorationStrategy):
                 visitor.dfs(modules_dict[module_name])
                 for var_name in visitor.symbolic_store:
                     if var_name not in state.store[module_name]:
-                        state.store[module_name][var_name] = init_symbol()
+                        if (module_name, var_name) in primary_input_ports:
+                            # Primary inputs get a cycle-0-stamped symbol so
+                            # they can be refreshed per cycle below, instead
+                            # of the random init_symbol() string that would
+                            # otherwise be reused unchanged for all 5 cycles.
+                            width = primary_input_ports[(module_name, var_name)]
+                            state.store[module_name][var_name] = BitVec(f"{var_name}_c0", width)
+                        else:
+                            state.store[module_name][var_name] = init_symbol()
 
             # Process declarations and combinational logic
             for c in cfgs_by_module[manager.curr_module]:
@@ -195,6 +521,9 @@ class BlindSearchStrategy(ExplorationStrategy):
                 for complete_single_cycle_path in curr_path[module_name]:
                     if manager.cycle > 0:
                         state.apply_pending_nba()
+                        refresh_primary_inputs(
+                            state, manager.cycle, primary_input_ports,
+                            wire_groups, primary_input_flags, wire_group_widths)
 
                     for cfg_idx, cfg_path in enumerate(complete_single_cycle_path):
                         # Handle empty paths generated as fallbacks
@@ -267,49 +596,16 @@ class BlindSearchStrategy(ExplorationStrategy):
         manager: ExecutionManager,
         state: SymbolicState
     ) -> None:
-        """Handle assertion violation: print details and generate counterexample."""
-        print("Assertion violation")
-        if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
-            print("Violated assertion details:")
-            for va in manager.violated_assertions:
-                print(f"  - condition: {va.get('condition', 'N/A')}")
-                print(f"    z3_condition: {va.get('z3_condition', 'N/A')}")
-                print(f"    path condition: {va.get('path condition', 'N/A')}")
-                print(f"    kind: {va.get('kind', 'N/A')}")
-                print(f"    cycle: {va.get('cycle', 'N/A')}")
-                print(f"    module: {va.get('module', 'N/A')}")
-                _print_symbol_legend(state,
-                                     [va.get('path condition'), va.get('z3_condition')],
-                                     indent="    ")
+        """Handle assertion violation: print details and cycle-by-cycle trace.
 
-        counterexample = {}
-        symbols_to_values = {}
-        solver_start = time.process_time()
+        Delegates to the shared `format_assertion_violation` (same formatter
+        used by the directed/value-predict strategies) so the counterexample
+        is grouped by cycle whenever primary inputs are cycle-stamped (see
+        `refresh_primary_inputs`, wired into `BlindSearchStrategy.run` above),
+        instead of this strategy printing its own flat, ungrouped dict.
+        """
+        format_assertion_violation(engine, manager, state)
 
-        if engine.solve_pc(state.pc):
-            solver_end = time.process_time()
-            manager.solver_time += solver_end - solver_start
-            solved_model = state.pc.model()
-            decls = solved_model.decls()
-            for item in decls:
-                symbols_to_values[item.name()] = solved_model[item]
-
-            for module in state.store:
-                for signal in state.store[module]:
-                    # Match by symbol name: store values are Z3 exprs, the model
-                    # decls are keyed by name (str). Comparing a Z3 expr to a
-                    # string makes Z3 try to parse the string as a numeral and
-                    # raise a parser error, so compare string representations.
-                    store_val = state.store[module][signal]
-                    store_val_str = str(store_val)
-                    for symbol in symbols_to_values:
-                        if store_val_str == symbol:
-                            counterexample[signal] = symbols_to_values[symbol]
-
-            print(counterexample)
-        else:
-            print("UNSAT")
-            
 
 class WorkItem:
     """
@@ -733,76 +1029,23 @@ class _DirectedSearchBase(ExplorationStrategy):
     def _collect_primary_input_ports(self, modules_dict):
         """Map every top-level module input port to its bit width.
 
-        Returns Dict[(instance, signal)] -> width. "Top-level" means an instance
-        not instantiated by any other module in the design. These ports are the
-        design's free inputs and must be re-symbolised each cycle so the solver
-        can explore all input sequences — even when they belong to no cross-
-        module wire group (e.g. a single-module design).
+        Thin wrapper around the module-level `collect_primary_input_ports`
+        (shared with `BlindSearchStrategy` so all strategies model primary
+        inputs the same way).
         """
-        import pyslang as ps
-
-        ports = {}
-        try:
-            all_instances = set(modules_dict.keys())
-            child_instances = set()
-            for parent in modules_dict.values():
-                if not hasattr(parent, 'body'):
-                    continue
-                for child in parent.body:
-                    if getattr(child, 'kind', None) == ps.SymbolKind.Instance:
-                        child_instances.add(child.name)
-            top_level = all_instances - child_instances
-
-            for inst in top_level:
-                module = modules_dict.get(inst)
-                if module is None or not hasattr(module, 'body'):
-                    continue
-                for member in module.body:
-                    if (getattr(member, 'kind', None) == ps.SymbolKind.Port and
-                            hasattr(member, 'direction') and
-                            'In' in str(member.direction)):
-                        width = 1
-                        try:
-                            t = getattr(member, 'type', None)
-                            bw = getattr(t, 'bitWidth', None)
-                            if bw:
-                                width = int(bw)
-                        except Exception:
-                            width = 1
-                        ports[(inst, member.name)] = max(1, width)
-        except Exception:
-            pass
-        return ports
+        return collect_primary_input_ports(modules_dict)
 
     def _refresh_primary_inputs(self, state: SymbolicState, cycle: int):
         """Assign fresh Z3 BitVec symbols to primary inputs for this cycle.
 
-        Two sources of primary inputs are refreshed so the solver can explore
-        different input values at every cycle:
-          1. Cross-module wire groups flagged as primary inputs.
-          2. Top-level input ports (collected in _initialize_state), which may
-             have no wire group at all — this covers single-module designs.
-        Internal wires and registers keep their computed / NBA values.
+        Thin wrapper around the module-level `refresh_primary_inputs` (shared
+        with `BlindSearchStrategy`), forwarding this strategy's wire-group /
+        primary-input-port bookkeeping.
         """
-        # 1. Wire-group primary inputs (multi-module port propagation).
-        if self._wire_groups and self._primary_input_flags:
-            for i, group in enumerate(self._wire_groups):
-                if i >= len(self._primary_input_flags) or not self._primary_input_flags[i]:
-                    continue  # Not a primary input group
-
-                rep_inst, rep_sig = next(iter(group))
-                sym_name = f"{rep_sig}_c{cycle}"
-                width = self._wire_group_widths[i] if i < len(self._wire_group_widths) else 32
-                shared_bv = BitVec(sym_name, width)
-
-                for inst, sig in group:
-                    if inst in state.store:
-                        state.store[inst][sig] = shared_bv
-
-        # 2. Top-level input ports not covered by any wire group.
-        for (inst, sig), width in getattr(self, '_primary_input_ports', {}).items():
-            if inst in state.store:
-                state.store[inst][sig] = BitVec(f"{sig}_c{cycle}", width)
+        refresh_primary_inputs(
+            state, cycle,
+            getattr(self, '_primary_input_ports', {}),
+            self._wire_groups, self._primary_input_flags, self._wire_group_widths)
 
     def _topo_sort_comb(self, cfgs_by_module, manager) -> Dict[str, List[Any]]:
         """Topologically sort combinational logic nodes per module.
@@ -1211,213 +1454,10 @@ class _DirectedSearchBase(ExplorationStrategy):
         manager: ExecutionManager,
         state: SymbolicState
     ) -> None:
-        """Handle assertion violation with cycle-by-cycle counterexample trace."""
-        import re
-        from z3 import Solver, sat as z3_sat
-
-        print("Assertion violation detected!")
-
-        # Collect assertion signal names from violated_assertions conditions
-        # so we can prioritize them in the reverse map below.
-        _assertion_signals: set = set()
-        if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
-            for _va in manager.violated_assertions:
-                _cond_str = _va.get('condition', '')
-                # Extract bare identifiers from the condition string
-                for _tok in re.findall(r'[a-zA-Z_][a-zA-Z0-9_]*', _cond_str):
-                    _assertion_signals.add(_tok)
-
-        # Build reverse map: z3_var_base -> assertion signal name (used for display).
-        # Priority: (1) signal appears in assertion condition, (2) longer name.
-        _cycle_re_rev = re.compile(r'^(.+)_c(\d+)$')
-        _z3base_to_sig: Dict[str, str] = {}
-        for _mod, _sigs in state.store.items():
-            for _sig_name, _z3_val in _sigs.items():
-                try:
-                    if hasattr(_z3_val, 'decl') and _z3_val.num_args() == 0:
-                        _z3_full = _z3_val.decl().name()
-                        _m2 = _cycle_re_rev.match(_z3_full)
-                        _z3_base = _m2.group(1) if _m2 else _z3_full
-                        _existing = _z3base_to_sig.get(_z3_base, '')
-                        _new_in_assert = _sig_name in _assertion_signals
-                        _old_in_assert = _existing in _assertion_signals
-                        # Prefer assertion signal names; break ties by length
-                        if (_new_in_assert and not _old_in_assert) or \
-                           (_new_in_assert == _old_in_assert and len(_sig_name) > len(_existing)):
-                            _z3base_to_sig[_z3_base] = _sig_name
-                except Exception:
-                    pass
-
-        if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
-            print("Violated assertion details:")
-            for va in manager.violated_assertions:
-                print(f"  - condition: {va.get('condition', 'N/A')}")
-                z3_cond = va.get('z3_condition')
-                if z3_cond is not None:
-                    try:
-                        z3_str = z3_cond.sexpr() if hasattr(z3_cond, 'sexpr') else str(z3_cond)
-                        # Replace underlying Z3 var names with assertion signal names.
-                        # Sort by descending key length so longer names are replaced first,
-                        # preventing short names (e.g. "o") from matching inside longer
-                        # ones (e.g. "FC_DATA_gnt_o").
-                        for _z3b, _sn in sorted(_z3base_to_sig.items(), key=lambda kv: -len(kv[0])):
-                            # Match base_cN pattern (cycle-stamped variables).
-                            # Use negative lookbehind to avoid matching inside longer names.
-                            z3_str = re.sub(
-                                r'(?<![A-Za-z0-9_])' + re.escape(_z3b) + r'(_c\d+)',
-                                _sn + r'\1', z3_str)
-                            # Also replace bare (non-cycle-stamped) occurrences
-                            z3_str = re.sub(
-                                r'(?<![A-Za-z0-9_])' + re.escape(_z3b) + r'(?![A-Za-z0-9_])',
-                                _sn, z3_str)
-                        if len(z3_str) > 200:
-                            z3_str = z3_str[:200] + "... (truncated)"
-                        print(f"    z3_condition: {z3_str}")
-                    except Exception as e:
-                        print(f"    z3_condition: (error: {e})")
-                print(f"    kind: {va.get('kind', 'N/A')}")
-
-        # Solve the CURRENT path condition (accumulated over all cycles) to get
-        # the full multi-cycle model with _c0, _c1, ..., _cN stamped symbols.
-        # Also add the negated assertion condition (the violation witness) so that
-        # unconstrained signals like FC_DATA_gnt_o get concrete values that actually
-        # satisfy the violation (e.g. gnt_o=1), not arbitrary solver defaults.
-        ce_solver = Solver()
-        for assertion in state.pc.assertions():
-            ce_solver.add(assertion)
-        # Add violation witness constraints from all violated assertions
-        if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
-            from z3 import Not as z3_Not
-            for _va in manager.violated_assertions:
-                _z3_cond = _va.get('z3_condition')
-                if _z3_cond is not None:
-                    ce_solver.add(z3_Not(_z3_cond))
-        if ce_solver.check() != z3_sat:
-            print("\n(path condition UNSAT — cannot derive counterexample)")
-            return
-
-        model = ce_solver.model()
-        decls = model.decls()
-        if not decls:
-            # Path condition has no symbolic constraints — the assertion fires for any
-            # input. Try to get a concrete witness by adding the z3_condition itself.
-            if hasattr(manager, 'violated_assertions') and manager.violated_assertions:
-                va = manager.violated_assertions[-1]
-                z3_cond = va.get('z3_condition')
-                if z3_cond is not None:
-                    from z3 import Not as z3_Not
-                    witness_solver = Solver()
-                    witness_solver.add(z3_Not(z3_cond))
-                    if witness_solver.check() == z3_sat:
-                        model = witness_solver.model()
-                        decls = model.decls()
-            if not decls:
-                print("\nCounterexample: violation is unconditional (no free variables).")
-                return
-
-        # Build symbol-name -> concrete value mapping
-        sym_vals = {d.name(): model[d] for d in decls}
-
-        # Parse _cN suffix: symbol name format is "<signal>_c<cycle>"
-        cycle_re = re.compile(r'^(.+)_c(\d+)$')
-
-        # Group by cycle number; use assertion signal names where available
-        # Reuse _z3base_to_sig (built above with assertion-priority logic)
-        by_cycle: Dict[int, Dict[str, Any]] = {}
-        ungrouped: Dict[str, Any] = {}
-        for sym_name, val in sym_vals.items():
-            m = cycle_re.match(sym_name)
-            if m:
-                sig, cyc = m.group(1), int(m.group(2))
-                display = _z3base_to_sig.get(sig, sig)
-                by_cycle.setdefault(cyc, {})[display] = val
-            else:
-                display = _z3base_to_sig.get(sym_name, sym_name)
-                ungrouped[display] = val
-
-        # Supplement by_cycle with assertion signals that are in state.store but
-        # were not assigned by the solver (unconstrained free variables or derived
-        # expressions like Extract from concat-assign).
-        # model.eval(..., model_completion=True) evaluates any Z3 expression.
-        #
-        # Search both the current state.store (has _cN symbols for the latest cycle)
-        # and the deferred violation's saved state (has _c0 symbols for cycle 0).
-        # This covers the case where a deferred violation fires at cycle N but the
-        # assertion signal is a derived expression (e.g. Extract from concat-assign)
-        # that only appears in the model via its free variables.
-        if _assertion_signals and by_cycle:
-            import z3 as _z3
-            _deferred = getattr(self, '_deferred_violation', None)
-            _stores_to_search = [state.store]
-            if _deferred is not None:
-                _stores_to_search.append(_deferred[1].store)
-            for _search_store in _stores_to_search:
-                for _mod, _sigs in _search_store.items():
-                    for _sig_name, _z3_val in _sigs.items():
-                        if _sig_name not in _assertion_signals:
-                            continue
-                        try:
-                            # Determine the cycle from the Z3 variable name.
-                            # For free vars: decl().name() gives e.g. "FC_DATA_gnt_o_c1"
-                            # For compound exprs (Extract etc.): walk free variables.
-                            _cyc = None
-                            if hasattr(_z3_val, 'decl') and _z3_val.num_args() == 0:
-                                _z3_name = _z3_val.decl().name()
-                                _m = cycle_re.match(_z3_name)
-                                if _m:
-                                    _cyc = int(_m.group(2))
-                            else:
-                                _free = _z3.z3util.get_vars(_z3_val)
-                                for _fv in _free:
-                                    _m = cycle_re.match(_fv.decl().name())
-                                    if _m:
-                                        _cyc = int(_m.group(2))
-                                        break
-                            if _cyc is None or _cyc not in by_cycle:
-                                continue
-                            _display = _sig_name
-                            _eval_val = model.eval(_z3_val, model_completion=True)
-                            # Add to the found cycle and all later cycles that lack this signal.
-                            # Combinational signals may retain an earlier cycle stamp (_c0)
-                            # even in later cycles, so propagate the value forward.
-                            for _target_cyc in sorted(by_cycle.keys()):
-                                if _target_cyc >= _cyc and _display not in by_cycle[_target_cyc]:
-                                    by_cycle[_target_cyc][_display] = _eval_val
-                        except Exception:
-                            pass
-
-        def _fmt_val(v) -> str:
-            """Format a Z3 model value as hex (with decimal in parentheses).
-
-            For BitVec values we show 0x<hex> (decimal).
-            For Bool values we show True/False.
-            Anything else falls back to str().
-            """
-            try:
-                import z3 as _z3
-                if isinstance(v, _z3.BitVecNumRef):
-                    int_val = v.as_long()
-                    size = v.size()
-                    hex_digits = (size + 3) // 4
-                    return f"0x{int_val:0{hex_digits}X}  ({int_val})"
-                if isinstance(v, _z3.BoolRef):
-                    return str(v)
-            except Exception:
-                pass
-            return str(v)
-
-        if by_cycle:
-            print("\nCounterexample trace (cycle-by-cycle):")
-            for cyc in sorted(by_cycle.keys()):
-                print(f"  Cycle {cyc}:")
-                for sig in sorted(by_cycle[cyc].keys()):
-                    print(f"    {sig} = {_fmt_val(by_cycle[cyc][sig])}")
-        if ungrouped:
-            print("\nOther model values:")
-            for sym, val in sorted(ungrouped.items()):
-                print(f"  {sym} = {_fmt_val(val)}")
-
-
+        """Thin wrapper: format_assertion_violation shared with BlindSearchStrategy."""
+        format_assertion_violation(
+            engine, manager, state,
+            deferred_violation=getattr(self, '_deferred_violation', None))
 
     def _execute_cycle(
         self,
@@ -1646,16 +1686,18 @@ class _DirectedSearchBase(ExplorationStrategy):
             if _comb_elapsed > 0.1:
                 print(f"  [Slow] {module_name}/cfg{cfg_idx}: targeted_comb={_comb_elapsed:.3f}s", flush=True)
 
-        # If all CFGs were skipped/abandoned, only continue if this is the preferred-path
-        # item (not a forked alternative). Forked items that hit UNSAT should die here —
-        # their siblings will cover the other paths. The preferred-path item should advance
-        # so the work item isn't lost when the preferred path is UNSAT at this cycle.
+        # If all CFGs were skipped/abandoned, this work item's accumulated path
+        # condition has no feasible path this cycle — prune it. Every alternative
+        # direction at every prior branch point was already forked into its own
+        # WorkItem before reaching this point, so pruning here loses no coverage:
+        # either a sibling WorkItem covers the alternative, or this combination is
+        # genuinely infeasible. Advancing the cycle anyway (as this code used to do
+        # for the non-forked "preferred path" item) would fake a clocked transition
+        # that never happened, silently orphaning that cycle's refreshed primary-input
+        # symbols and skewing later cycle-stamped symbol numbering.
         if not any_cfg_executed:
-            is_forked_item = any(rc.get('forked', False) for rc in remaining_cfgs)
-            if is_forked_item:
-                print(f"  [AllSkipped] cycle {cycle}: forked item, all CFGs abandoned — pruning path")
-                return None, item.milestones_completed
-            print(f"  [AllSkipped] cycle {cycle}: preferred-path item, all CFGs abandoned — continuing to next cycle")
+            print(f"  [AllSkipped] cycle {cycle}: all CFGs abandoned — pruning path")
+            return None, item.milestones_completed
 
         # Step 4: Re-evaluate comb after sequential logic
         self._evaluate_comb_topo(visitor, manager, state)

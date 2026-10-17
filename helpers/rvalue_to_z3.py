@@ -1664,9 +1664,15 @@ def _fallback_dispatch(e, s, m):
     return BitVecVal(0, 32)
 
 def solve_pc(s: Solver) -> bool:
-    """Solve path condition."""
+    """Solve path condition.
+
+    Every call site passes a `_LazyPC` (state.pc), whose own `check()`
+    already calls `smt_stats.timed_check(...)` internally. Wrapping it in
+    another `timed_check()` here would double-count the same real Z3
+    `Solver.check()` call.
+    """
     from z3 import sat as z3_sat
-    if smt_stats.timed_check(s) == z3_sat:
+    if s.check() == z3_sat:
         model = s.model()
         return True
     else:

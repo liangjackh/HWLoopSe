@@ -85,18 +85,8 @@ class CFG:
         # the nodes in the AST that correspond to always blocks
         self.always_blocks = []
 
-        # branch-point set
-        # for each basic statement, there may be some indpendent branching points
-        self.ind_branch_points = {1: set()}
-
-        # stack of flags for if we are looking at a block statement
-        self.block_smt = [False]
-
         # Whether this CFG is from an initial block (should only execute once)
         self.is_initial = False
-
-        # how many nested block statements we've seen so far
-        self.block_stmt_depth = 0
 
         #submodules defined
         self.submodules = []
@@ -104,19 +94,6 @@ class CFG:
     def reset(self):
         """Return to defaults."""
         self.__init__()
-        """self.basic_block_list = []
-        self.curr_idx = 0
-        self.all_nodes = []
-        self.partition_points = set()
-        self.partition_points.add(0)
-        self.edgelist = []
-        self.cfg_edges = []
-        self.leaves = set()
-        self.paths = []
-        self.always_blocks = []
-        self.ind_branch_points = {1: set()}
-        self.block_smt = [False]
-        self.block_stmt_depth = 0"""
 
     def compute_direction(self, path):
         """Given a path, figure out the direction"""
@@ -127,21 +104,6 @@ class CFG:
             else:
                 directions.append(0)
         return directions
-    
-    def resolve_independent_branch_pts(self, idx):
-        """After visiting a basic block, form sequential edges between sibling branch points.
-
-        When a block body contains multiple independent conditionals/cases,
-        they need sequential flow edges so paths can traverse them in order.
-        Creates pairwise edges between consecutive branch points (sorted by
-        node index) instead of N-element combination tuples.
-        """
-        if len(self.ind_branch_points[idx]) <= 1:
-            return
-
-        sorted_pts = sorted(self.ind_branch_points[idx])
-        for i in range(len(sorted_pts) - 1):
-            self.edgelist.append((sorted_pts[i], sorted_pts[i + 1]))
 
 
     def _collect_from_body(self, body):
@@ -365,7 +327,7 @@ class CFG:
                         self.decls.append(ast)
                 ...
 
-    def _process_case_sv(self, m: ExecutionManager, s: SymbolicState, parent_idx: int, node) -> None:
+    def _process_case_sv(self, m: ExecutionManager, s: SymbolicState, parent_idx: int, node) -> list:
         """Handle CaseStatementSyntax nodes by creating one CFG edge per case arm.
 
         Each case item (including default) gets:
@@ -374,15 +336,20 @@ class CFG:
 
         The CaseArmMarker carries enough information for visit_stmt to add the
         correct match/mismatch constraints without relying on a direction bit.
+
+        Returns the list of real leaf node indices across all arms (the actual
+        reachable exit points), so callers can wire subsequent siblings to
+        every arm's true exit instead of guessing from curr_idx.
         """
         items = getattr(node, 'items', None)
         if items is None:
-            return
+            return []
 
         case_expr = getattr(node, 'expr', None)
 
         arm_found = False
         prev_arms_exprs = []   # accumulates expr-lists for all arms processed so far
+        leaves = []
 
         for case_item in items:
             if not isinstance(case_item, ps.CaseItemSyntax):
@@ -421,11 +388,14 @@ class CFG:
 
             # Process body (may add more nodes / partition points)
             body_start_after_marker = self.curr_idx
-            self.basic_blocks_sv(m, s, body)
+            arm_leaves = self.basic_blocks_sv(m, s, body)
             if self.curr_idx == body_start_after_marker:
                 # Empty body beyond the marker: add a dummy node
                 self.all_nodes.append(None)
                 self.curr_idx += 1
+                arm_leaves = [body_start_after_marker]
+            if not arm_leaves:
+                arm_leaves = [arm_start_idx]
 
             self.edgelist.append((parent_idx, arm_start_idx))
             # Connect the arm marker to the first node of the body so the
@@ -435,6 +405,7 @@ class CFG:
             arm_found = True
 
             prev_arms_exprs.append(arm_exprs_list)
+            leaves.extend(arm_leaves)
 
         if not arm_found:
             # No case items at all: treat like an empty else (skip path)
@@ -443,9 +414,18 @@ class CFG:
             self.all_nodes.append(None)
             self.curr_idx += 1
             self.edgelist.append((parent_idx, skip_idx))
+            leaves.append(skip_idx)
 
-    def _process_conditional_sv(self, m: ExecutionManager, s: SymbolicState, parent_idx: int, node) -> None:
-        """Handle ConditionalStatementSyntax nodes, including nested else-if chains."""
+        return leaves
+
+    def _process_conditional_sv(self, m: ExecutionManager, s: SymbolicState, parent_idx: int, node) -> list:
+        """Handle ConditionalStatementSyntax nodes, including nested else-if chains.
+
+        Returns the list of real leaf node indices across both the then- and
+        else-branch (the actual reachable exit points), so callers can wire
+        subsequent siblings to every branch's true exit instead of guessing
+        from curr_idx.
+        """
         then_body = getattr(node, "ifTrue", getattr(node, "statement", None))
         else_clause = getattr(node, "elseClause", None)
         else_body = None
@@ -455,11 +435,14 @@ class CFG:
         # Process the true branch
         then_start_idx = self.curr_idx
         self.partition_points.add(self.curr_idx)
-        self.basic_blocks_sv(m, s, then_body)
+        then_leaves = self.basic_blocks_sv(m, s, then_body)
         if self.curr_idx == then_start_idx:
             # Empty branch: allocate a dummy node so the edge has a destination
             self.all_nodes.append(None)
             self.curr_idx += 1
+            then_leaves = [then_start_idx]
+        if not then_leaves:
+            then_leaves = [then_start_idx]
         self.edgelist.append((parent_idx, then_start_idx))
 
         if else_body is None:
@@ -470,7 +453,7 @@ class CFG:
             self.all_nodes.append(None)  # Dummy node for the skip path
             self.curr_idx += 1
             self.edgelist.append((parent_idx, skip_idx))
-            return
+            return then_leaves + [skip_idx]
 
         if isinstance(else_body, ps.ConditionalStatementSyntax):
             # Nested else-if: treat the nested conditional as its own node
@@ -479,95 +462,131 @@ class CFG:
             self.partition_points.add(self.curr_idx)
             self.curr_idx += 1
             self.edgelist.append((parent_idx, nested_parent_idx))
-            self._process_conditional_sv(m, s, nested_parent_idx, else_body)
+            else_leaves = self._process_conditional_sv(m, s, nested_parent_idx, else_body)
         else:
             else_start_idx = self.curr_idx
             self.partition_points.add(self.curr_idx)
-            self.basic_blocks_sv(m, s, else_body)
+            else_leaves = self.basic_blocks_sv(m, s, else_body)
             if self.curr_idx == else_start_idx:
                 # Empty else branch: allocate a dummy node to terminate this path
                 self.all_nodes.append(None)
                 self.curr_idx += 1
+                else_leaves = [else_start_idx]
+            if not else_leaves:
+                else_leaves = [else_start_idx]
             self.edgelist.append((parent_idx, else_start_idx))
+
+        return then_leaves + else_leaves
 
     def basic_blocks_sv(self, m:ExecutionManager, s: SymbolicState, ast):
         """We want to get a list of AST nodes partitioned into basic blocks.
-        Need to keep track of children/parent indices of each block in the list."""
+        Need to keep track of children/parent indices of each block in the list.
+
+        Returns the list of real leaf node indices reachable at the end of
+        whatever fragment *ast* represents (empty list if nothing was added).
+        Callers thread this explicitly to wire sequential-flow edges, instead
+        of guessing a predecessor from curr_idx - 1 (which breaks whenever the
+        actual predecessor was itself a multi-arm conditional/case with more
+        than one real exit, or with an exit that isn't the last-appended node).
+        """
         if hasattr(ast, '__iter__'):
             # BlockStatementSyntax is iterable but iterating it directly yields raw
             # tokens (BeginKeyword, SyntaxList, EndKeyword) instead of statements.
             # Route through ast.items to get the actual statement children.
             if isinstance(ast, ps.BlockStatementSyntax):
-                self.block_stmt_depth += 1
-                self.block_smt.append(True)
-                self.basic_blocks_sv(m, s, ast.items)
-                if self.block_stmt_depth in self.ind_branch_points:
-                    self.resolve_independent_branch_pts(self.block_stmt_depth)
-                self.block_smt.pop()
-                self.block_stmt_depth -= 1
-                return
+                return self.basic_blocks_sv(m, s, ast.items)
+
+            prev_leaves = []
+
+            def needs_edge():
+                # No edge needed when the sole leaf is exactly the immediately
+                # preceding node: the new item can just fall into the same
+                # block positionally, same as a plain statement run today.
+                return not (len(prev_leaves) == 1 and prev_leaves[0] == self.curr_idx - 1)
+
             for item in ast:
-                if self.block_smt[self.block_stmt_depth] and (isinstance(item, ps.ConditionalStatementSyntax) or isinstance(item, ps.CaseStatementSyntax) or isinstance(item, ps.ForLoopStatementSyntax)):
-                    if not self.block_stmt_depth in self.ind_branch_points:
-                        self.ind_branch_points[self.block_stmt_depth] = set()
-
-                    self.ind_branch_points[self.block_stmt_depth].add(self.curr_idx)
-
                 if isinstance(item, ps.ConditionalStatementSyntax):
                     self.all_nodes.append(item)
                     self.partition_points.add(self.curr_idx)
                     parent_idx = self.curr_idx
-                    # Add sequential flow edge from the previous node to this conditional
-                    if parent_idx > 0 and (parent_idx - 1) not in self.partition_points:
-                        self.edgelist.append((parent_idx - 1, parent_idx))
+                    if prev_leaves and needs_edge():
+                        for leaf in prev_leaves:
+                            self.edgelist.append((leaf, parent_idx))
                     self.curr_idx += 1
 
-                    self._process_conditional_sv(m, s, parent_idx, item)
+                    prev_leaves = self._process_conditional_sv(m, s, parent_idx, item)
 
                 elif isinstance(item, ps.CaseStatementSyntax):
                     self.all_nodes.append(item)
                     self.partition_points.add(self.curr_idx)
                     parent_idx = self.curr_idx
+                    if prev_leaves and needs_edge():
+                        for leaf in prev_leaves:
+                            self.edgelist.append((leaf, parent_idx))
                     self.curr_idx += 1
-                    self._process_case_sv(m, s, parent_idx, item)
+                    prev_leaves = self._process_case_sv(m, s, parent_idx, item)
                 elif isinstance(item, ps.CaseItemSyntax):
                     body = getattr(item, "clause", getattr(item, "statements", getattr(item, "statement", None)))
-                    self.basic_blocks_sv(m, s, body)
-
+                    body_leaves = self.basic_blocks_sv(m, s, body)
+                    if body_leaves:
+                        prev_leaves = body_leaves
 
                 elif isinstance(item, ps.ForLoopStatementSyntax):
                     self.all_nodes.append(item)
-                    #self.all_nodes.append(ast)
                     self.partition_points.add(self.curr_idx)
+                    parent_idx = self.curr_idx
+                    if prev_leaves and needs_edge():
+                        for leaf in prev_leaves:
+                            self.edgelist.append((leaf, parent_idx))
                     self.curr_idx += 1
-                    self.basic_blocks_sv(m, s, item.statement) 
+                    body_leaves = self.basic_blocks_sv(m, s, item.statement)
+                    prev_leaves = body_leaves if body_leaves else [parent_idx]
                 elif isinstance(item, ps.BlockStatementSyntax):
-                    self.block_stmt_depth += 1
-                    self.block_smt.append(True)
-                    self.basic_blocks_sv(m, s, item.items)
-                    if self.block_stmt_depth in self.ind_branch_points:
-                        self.resolve_independent_branch_pts(self.block_stmt_depth)
-                    self.block_smt.pop()
-                    self.block_stmt_depth -= 1
+                    block_leaves = self.basic_blocks_sv(m, s, item.items)
+                    if block_leaves:
+                        prev_leaves = block_leaves
+                    # else: empty block added nothing, prev_leaves carries through unchanged
                 elif isinstance(item, ps.ProceduralBlockSyntax):
+                    idx = self.curr_idx
+                    if prev_leaves and needs_edge():
+                        self.partition_points.add(idx)
+                        for leaf in prev_leaves:
+                            self.edgelist.append((leaf, idx))
                     self.all_nodes.append(item)
                     self.curr_idx += 1
-                    self.basic_blocks_sv(m, s, item.statement)
+                    body_leaves = self.basic_blocks_sv(m, s, item.statement)
+                    prev_leaves = body_leaves if body_leaves else [idx]
                 elif item.__class__.__name__ == "TimingControlStatementSyntax":
                     # Handle @(posedge clk) etc. - drill down to the actual statement
                     if hasattr(item, 'statement') and item.statement is not None:
-                        self.basic_blocks_sv(m, s, item.statement)
+                        body_leaves = self.basic_blocks_sv(m, s, item.statement)
+                        if body_leaves:
+                            prev_leaves = body_leaves
                     else:
                         # No statement body, just add as a node
+                        idx = self.curr_idx
+                        if prev_leaves and needs_edge():
+                            self.partition_points.add(idx)
+                            for leaf in prev_leaves:
+                                self.edgelist.append((leaf, idx))
                         self.all_nodes.append(item)
                         self.curr_idx += 1
+                        prev_leaves = [idx]
                 # elif isinstance(item, ps.InitialConstructSyntax):
                 #     self.all_nodes.append(item)
                 #     self.curr_idx += 1
                 #     self.basic_blocks(m, s, item.statement)
                 else:
+                    idx = self.curr_idx
+                    if prev_leaves and needs_edge():
+                        self.partition_points.add(idx)
+                        for leaf in prev_leaves:
+                            self.edgelist.append((leaf, idx))
                     self.all_nodes.append(item)
                     self.curr_idx += 1
+                    prev_leaves = [idx]
+
+            return prev_leaves
 
         elif ast != None:
             if isinstance(ast, ps.ConditionalStatementSyntax):
@@ -576,44 +595,47 @@ class CFG:
                 parent_idx = self.curr_idx
                 self.curr_idx += 1
 
-                self._process_conditional_sv(m, s, parent_idx, ast)
+                return self._process_conditional_sv(m, s, parent_idx, ast)
             elif isinstance(ast, ps.CaseStatementSyntax):
                 self.all_nodes.append(ast)
                 self.partition_points.add(self.curr_idx)
                 parent_idx = self.curr_idx
                 self.curr_idx += 1
-                self._process_case_sv(m, s, parent_idx, ast)
+                return self._process_case_sv(m, s, parent_idx, ast)
             elif isinstance(ast, ps.CaseItemSyntax):
                 body = getattr(ast, "clause", getattr(ast, "statements", getattr(ast, "statement", None)))
-                self.basic_blocks_sv(m, s, body)
+                return self.basic_blocks_sv(m, s, body)
             elif isinstance(ast, ps.ForLoopStatementSyntax):
                 self.all_nodes.append(ast)
                 self.partition_points.add(self.curr_idx)
+                parent_idx = self.curr_idx
                 self.curr_idx += 1
-                self.basic_blocks_sv(m, s, ast.statement)
+                body_leaves = self.basic_blocks_sv(m, s, ast.statement)
+                return body_leaves if body_leaves else [parent_idx]
             elif isinstance(ast, ps.BlockStatementSyntax):
-                self.block_stmt_depth += 1
-                self.block_smt.append(True)
-                self.basic_blocks_sv(m, s, ast.items)
-                if self.block_stmt_depth in self.ind_branch_points:
-                    self.resolve_independent_branch_pts(self.block_stmt_depth)
-                self.block_smt.pop()
-                self.block_stmt_depth -= 1
+                return self.basic_blocks_sv(m, s, ast.items)
             elif isinstance(ast, ps.ProceduralBlockSyntax):
+                idx = self.curr_idx
                 self.all_nodes.append(ast)
                 self.curr_idx += 1
-                self.basic_blocks_sv(m, s, ast.statement)
+                body_leaves = self.basic_blocks_sv(m, s, ast.statement)
+                return body_leaves if body_leaves else [idx]
             elif ast.__class__.__name__ == "TimingControlStatementSyntax":
                 # Handle @(posedge clk) etc. - drill down to the actual statement
                 if hasattr(ast, 'statement') and ast.statement is not None:
-                    self.basic_blocks_sv(m, s, ast.statement)
+                    return self.basic_blocks_sv(m, s, ast.statement)
                 else:
                     # No statement body, just add as a node
+                    idx = self.curr_idx
                     self.all_nodes.append(ast)
                     self.curr_idx += 1
+                    return [idx]
             else:
+                idx = self.curr_idx
                 self.all_nodes.append(ast)
                 self.curr_idx += 1
+                return [idx]
+        return []
 
     def map_to_path(self):
         """Just return the paths"""
@@ -679,14 +701,12 @@ class CFG:
     def make_paths(self):
         """Map the edge between AST nodes to a path between basic blocks.
 
-        Only process 2-element tuples (source, target).  Multi-element tuples
-        produced by resolve_independent_branch_pts represent sets of sibling
-        branch points and are not direct edges; processing them as (edge[0],
-        edge[1]) creates spurious cross-arm connections.
+        Defensive: every edge in edgelist should already be a 2-tuple
+        (source, target); skip anything else rather than crash.
         """
         for edge in self.edgelist:
             if len(edge) != 2:
-                continue  # skip resolve_independent_branch_pts tuples
+                continue
             block1 = self.find_basic_block(edge[0])
             block2 = self.find_basic_block(edge[1])
             path = (block1, block2)
